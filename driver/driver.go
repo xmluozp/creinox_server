@@ -17,7 +17,7 @@ func logFatal(err error) {
 
 func ConnectDB() *sql.DB {
 
-	db, err := sql.Open("mysql", "creinox:123456@creinox")
+	db, err := sql.Open("mysql", "creinox:123456@/creinox")
 	logFatal(err)
 
 	err = db.Ping()

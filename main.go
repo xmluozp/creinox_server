@@ -39,11 +39,11 @@ func main() {
 	// router.Handle("/", http.FileServer(http.Dir("./static")))
 
 	// router.Use(static.Serve("/", static.LocalFile("./views", true)))
-	router.HandleFunc("/roles", controller.GetRoles(db)).Methods("GET") // 加个api避免混淆
-	router.HandleFunc("/roles/{id}", controller.GetRole(db)).Methods("GET")
-	router.HandleFunc("/roles", controller.AddRole(db)).Methods("POST")
-	router.HandleFunc("/roles", controller.UpdateRole(db)).Methods("PUT")
-	router.HandleFunc("/roles/{id}", controller.DeleteRole(db)).Methods("DELETE")
+	router.HandleFunc("/api/role", controller.GetRoles(db)).Methods("GET") // 加个api避免混淆
+	router.HandleFunc("/api/role/{id}", controller.GetRole(db)).Methods("GET")
+	router.HandleFunc("/api/role", controller.AddRole(db)).Methods("POST")
+	router.HandleFunc("/api/role", controller.UpdateRole(db)).Methods("PUT")
+	router.HandleFunc("/api/role/{id}", controller.DeleteRole(db)).Methods("DELETE")
 
 	fmt.Println("Server is running at port ", PORT)
 	//第一个是端口，第二个是响应端口用的function。这里是router
