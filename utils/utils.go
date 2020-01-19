@@ -13,11 +13,11 @@ import (
 
 var validate *validator.Validate
 
-func SendError(w http.ResponseWriter, status int, err models.Error) {
+func SendError(w http.ResponseWriter, status int, data models.JsonRowsReturn) {
 
 	// ??
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(err)
+	json.NewEncoder(w).Encode(data)
 }
 
 func SendJsonError(w http.ResponseWriter, status int, data models.JsonRowsReturn) {
@@ -60,6 +60,16 @@ func ValidateInputs(obj interface{}) (bool, models.JsonRowsReturn) {
 	}
 
 	return errValidation == nil, returnValue
+}
+
+func ParseError(err reflect.Value) error {
+
+	myErr, converr := err.Interface().(error)
+	if myErr == nil || converr {
+		return nil
+	}
+
+	return myErr
 }
 
 func parseInt(s string) int {
