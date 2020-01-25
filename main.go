@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/xmluozp/creinox_server/auth"
 	"github.com/xmluozp/creinox_server/driver"
 	"github.com/xmluozp/creinox_server/routes"
 
@@ -16,8 +17,6 @@ import (
 
 const PORT = "8000"
 
-// 创建一个空的slice叫roles. Role类型
-// var roles []models.Role
 var db *sql.DB
 
 func init() {
@@ -27,7 +26,9 @@ func init() {
 func main() {
 
 	db = driver.ConnectDB()
-	// controller := controllers.Controller{}
+
+	auth.JwtKey = []byte{1}
+	// rand.Read(auth.JwtKey)
 
 	// 建立一个router
 	router := mux.NewRouter()
@@ -39,14 +40,9 @@ func main() {
 
 	// router.Use(static.Serve("/", static.LocalFile("./views", true)))
 
-	routes.Routing(router)
-	// router.HandleFunc("/api/role", controller.GetRoles(db)).Methods("GET") // 加个api避免混淆
-	// router.HandleFunc("/api/role/{id}", controller.GetRole(db)).Methods("GET")
-	// router.HandleFunc("/api/role", controller.AddRole(db)).Methods("POST")
-	// router.HandleFunc("/api/role", controller.UpdateRole(db)).Methods("PUT")
-	// router.HandleFunc("/api/role/{id}", controller.DeleteRole(db)).Methods("DELETE")
+	routes.Routing(router, db)
 
 	fmt.Println("Server is running at port ", PORT)
 	//第一个是端口，第二个是响应端口用的function。这里是router
-	log.Fatal(http.ListenAndServe(":8000", router))
+	log.Fatal(http.ListenAndServe(":"+PORT, router))
 }

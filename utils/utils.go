@@ -64,8 +64,9 @@ func ValidateInputs(obj interface{}) (bool, models.JsonRowsReturn) {
 
 func ParseError(err reflect.Value) error {
 
-	myErr, converr := err.Interface().(error)
-	if myErr == nil || converr {
+	myErr, ok := err.Interface().(error)
+
+	if myErr == nil || !ok {
 		return nil
 	}
 

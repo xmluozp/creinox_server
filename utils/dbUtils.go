@@ -3,6 +3,7 @@ package utils
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/xmluozp/creinox_server/models"
 )
 
@@ -73,9 +75,11 @@ func DbQueryRows(db *sql.DB,
 
 	if pagination.OrderBy != "" {
 		newQueryString += " ORDER BY " + pagination.OrderBy + " " + pagination.Order
+	} else {
+		newQueryString += " ORDER BY 1 DESC"
 	}
 
-	if pagination.PerPage >= 0 {
+	if pagination.PerPage > 0 {
 		// page从0开始，在前端才转成1
 		newQueryString += fmt.Sprintf(" LIMIT %d, %d", pagination.Page*pagination.PerPage, pagination.PerPage)
 	}
@@ -83,7 +87,11 @@ func DbQueryRows(db *sql.DB,
 	// pagination: 基础查询加query加order和分页
 	rows, err := db.Query(newQueryStringBegin + newQueryStringSearchTerms + newQueryString)
 
-	db.QueryRow("SELECT COUNT(*) FROM " + tableName + newQueryStringSearchTerms).Scan(&count)
+	scanErr := db.QueryRow("SELECT COUNT(*) FROM " + tableName + " WHERE 1=1 " + newQueryStringSearchTerms).Scan(&count)
+
+	if scanErr != nil {
+		fmt.Println("scan出错", scanErr.Error())
+	}
 
 	pagination.TotalCount = count
 	pagination.TotalPage = int(math.Ceil(float64(count) / float64(pagination.PerPage)))
@@ -91,6 +99,12 @@ func DbQueryRows(db *sql.DB,
 	rowCount = min(count-pagination.PerPage*(pagination.Page), pagination.PerPage)
 
 	pagination.RowCount = rowCount
+
+	fmt.Println("测试看sql语句：", newQueryStringBegin+newQueryStringSearchTerms+newQueryString)
+
+	if err != nil {
+		err = errors.New(err.Error() + ". Sql: " + newQueryStringBegin + newQueryStringSearchTerms + newQueryString)
+	}
 
 	return rows, err
 }
@@ -146,7 +160,7 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 	values = append(values, reflect.ValueOf(""))
 
 	for i := 1; i < v.NumField(); i++ {
-		if _, isCol := t.Field(i).Tag.Lookup("col"); isCol && t.Field(i).Name != "ID" {
+		if col, isCol := t.Field(i).Tag.Lookup("col"); isCol && col != "default" && t.Field(i).Name != "ID" {
 			values = append(values, v.Field(i))
 			columns = append(columns, t.Field(i).Tag.Get("json")) // 等同于数据库里的column name
 			questionMarks = append(questionMarks, "?")
@@ -201,6 +215,23 @@ func DbQueryUpdate(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 
 	result, _ := out[0].Interface().(sql.Result)
 	err := ParseError(out[1])
+
+	return result, err
+}
+
+func DbQueryDelete(db *sql.DB, tableName string, id int) (sql.Result, error) {
+
+	result, err := db.Exec("DELETE FROM "+tableName+" WHERE id = ?", id)
+
+	if err != nil {
+
+		if driverErr, ok := err.(*mysql.MySQLError); ok {
+			if driverErr.Number == 1451 {
+				err = errors.New("外键约束：有其他数据引用此数据。无法删除。")
+			}
+		}
+
+	}
 
 	return result, err
 }

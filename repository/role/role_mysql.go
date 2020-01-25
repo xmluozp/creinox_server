@@ -7,11 +7,13 @@ import (
 	"github.com/xmluozp/creinox_server/utils"
 )
 
-type RoleRepository struct{}
+type Repository struct{}
 type modelName = models.Role
-type repositoryName = RoleRepository
+type repositoryName = Repository
 
 var tableName = "role"
+
+// =============================================== basic CRUD
 
 func (b repositoryName) GetRows(
 	db *sql.DB,
@@ -48,7 +50,6 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-// 为什么要用外来的变量，却传回一个拷贝？ —— reflection好像只能拷贝
 func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
 	var item modelName
 	row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
@@ -61,7 +62,7 @@ func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName) (modelName, error) {
+func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
 
 	// result, errInsert := db.Exec("INSERT INTO role (name, rank, auth) VALUES(?, ?, ?);", item.Name, item.Rank, item.Auth)
 
@@ -80,7 +81,7 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName) (modelName, error) {
 	return item, errId
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName) (int64, error) {
+func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
 
 	result, err := utils.DbQueryUpdate(db, tableName, item)
 
@@ -97,9 +98,9 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName) (int64, error) {
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int) (int64, error) {
+func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (int64, error) {
 
-	result, err := db.Exec("DELETE FROM "+tableName+" WHERE id = ?", id)
+	result, err := utils.DbQueryDelete(db, tableName, id)
 
 	if err != nil {
 		return 0, err

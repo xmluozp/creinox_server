@@ -29,8 +29,6 @@ func GetFunc_RowsWithHTTPReturn(
 	items := reflect.Zero(reflect.SliceOf(modelType)).Interface()
 	item := reflect.New(modelType).Elem().Interface()
 
-	// roles = []models.Role{}
-	// pagination & search
 	pagination := GetPagination(r)
 	searchTerms := GetSearchTerms(r)
 
@@ -49,7 +47,9 @@ func GetFunc_RowsWithHTTPReturn(
 	err := ParseError(out[2])
 
 	if err != nil {
-		returnValue.Info = "Server error"
+
+		fmt.Println("ge rows error: ", err)
+		returnValue.Info = "Server error" + err.Error()
 		return func() { SendError(w, http.StatusInternalServerError, returnValue) }
 	}
 
@@ -88,12 +88,14 @@ func GetFunc_RowWithHTTPReturn(
 	err := ParseError(out[1])
 
 	if err != nil {
+
+		fmt.Println("取单数据出错", err.Error())
 		if err == sql.ErrNoRows {
-			returnValue.Info = "Not Found"
+			returnValue.Info = "Not Found" + err.Error()
 			return func() { SendError(w, http.StatusNotFound, returnValue) }
 
 		} else {
-			returnValue.Info = "Server error"
+			returnValue.Info = "Server error" + err.Error()
 			return func() { SendError(w, http.StatusInternalServerError, returnValue) }
 		}
 	}
@@ -109,7 +111,8 @@ func GetFunc_AddWithHTTPReturn(
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
-	repo interface{}) func() {
+	repo interface{},
+	userId int) func() {
 
 	// 声明变量
 	var returnValue models.JsonRowsReturn
@@ -121,7 +124,8 @@ func GetFunc_AddWithHTTPReturn(
 	item := reflect.ValueOf(itemPtr).Elem().Interface()
 
 	if err != nil {
-		returnValue.Info = "Server error"
+		fmt.Println("Insert error on controller: ", err)
+		returnValue.Info = "Server error" + err.Error()
 		return func() { SendError(w, http.StatusInternalServerError, returnValue) }
 	}
 
@@ -135,14 +139,15 @@ func GetFunc_AddWithHTTPReturn(
 	addRow := reflect.ValueOf(repo).MethodByName("AddRow")
 	args := []reflect.Value{
 		reflect.ValueOf(db),
-		reflect.ValueOf(item)}
+		reflect.ValueOf(item),
+		reflect.ValueOf(userId)}
 	out := addRow.Call(args)
 
 	row := out[0].Interface()
 	errAdd := ParseError(out[1])
 
 	if errAdd != nil {
-		returnValue.Info = "Server error"
+		returnValue.Info = "Server error" + errAdd.Error()
 		return func() { SendError(w, http.StatusInternalServerError, returnValue) }
 	}
 
@@ -157,7 +162,8 @@ func GetFunc_UpdateWithHTTPReturn(
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
-	repo interface{}) func() {
+	repo interface{},
+	userId int) func() {
 
 	// 声明变量
 	var returnValue models.JsonRowsReturn
@@ -169,7 +175,7 @@ func GetFunc_UpdateWithHTTPReturn(
 	item := reflect.ValueOf(itemPtr).Elem().Interface()
 
 	if err != nil {
-		returnValue.Info = "Server error"
+		returnValue.Info = "Server error" + err.Error()
 		return func() { SendError(w, http.StatusInternalServerError, returnValue) }
 	}
 
@@ -182,14 +188,15 @@ func GetFunc_UpdateWithHTTPReturn(
 	addRow := reflect.ValueOf(repo).MethodByName("UpdateRow")
 	args := []reflect.Value{
 		reflect.ValueOf(db),
-		reflect.ValueOf(item)}
+		reflect.ValueOf(item),
+		reflect.ValueOf(userId)}
 	out := addRow.Call(args)
 
 	rowsUpdated := out[0].Interface()
 	errAdd := ParseError(out[1])
 
 	if errAdd != nil {
-		returnValue.Info = "Server error"
+		returnValue.Info = "Server error" + errAdd.Error()
 		return func() { SendError(w, http.StatusInternalServerError, returnValue) }
 	}
 
@@ -204,7 +211,8 @@ func GetFunc_DeleteWithHTTPReturn(
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
-	repo interface{}) func() {
+	repo interface{},
+	userId int) func() {
 
 	var returnValue models.JsonRowsReturn
 
@@ -215,14 +223,17 @@ func GetFunc_DeleteWithHTTPReturn(
 	getRow := reflect.ValueOf(repo).MethodByName("DeleteRow")
 	args := []reflect.Value{
 		reflect.ValueOf(db),
-		reflect.ValueOf(id)}
+		reflect.ValueOf(id),
+		reflect.ValueOf(userId)}
 	out := getRow.Call(args)
 
 	// rowsDeleted := out[0].Interface()
 	err := ParseError(out[1])
 
 	if err != nil {
-		returnValue.Info = "Server error"
+
+		returnValue.Info = "Server error" + err.Error()
+
 		return func() { SendError(w, http.StatusInternalServerError, returnValue) }
 		// 千万不要忘了return。否则下面的数据也会加在返回的json后
 	}

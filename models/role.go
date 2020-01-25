@@ -1,12 +1,15 @@
 package models
 
-import "database/sql"
+import (
+	"database/sql"
+	"github.com/gobuffalo/nulls"
+)
 
 type Role struct {
-	ID   int    `col:"" json:"id"`
-	Name string `col:"" json:"name" validate:"required" errm:"角色名必填"`
-	Rank int    `col:"" json:"rank"`
-	Auth string `col:"" json:"auth" validate:"required" errm:"必须选择"`
+	ID   int          `col:"" json:"id"`
+	Name nulls.String `col:"" json:"name" validate:"required" errm:"角色名必填"`
+	Rank nulls.Int    `col:"" json:"rank"` // 权限可以后期改
+	Auth nulls.String `col:"" json:"auth" validate:"required" errm:"必须选择"`
 }
 
 type RoleList struct {
