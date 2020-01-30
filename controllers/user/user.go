@@ -1,4 +1,4 @@
-package userControllr
+package userController
 
 import (
 	"database/sql"
@@ -146,8 +146,8 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 
 		var item modelName
 		repo := repository.Repository{}
-		f := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
-		f()
+		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		utils.SendJson(w, status, returnValue, err)
 	}
 }
 
@@ -161,8 +161,8 @@ func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
 
 		var item modelName
 		repo := repository.Repository{}
-		f := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
-		f()
+		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		utils.SendJson(w, status, returnValue, err)
 	}
 }
 func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
@@ -177,7 +177,7 @@ func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
 		var item modelName
 
 		repo := repository.Repository{}
-		f := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+		f, _, _ := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		f()
 	}
 }
@@ -193,7 +193,7 @@ func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
 
 		var item modelName
 		repo := repository.Repository{}
-		f := utils.GetFunc_UpdateWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+		f, _, _ := utils.GetFunc_UpdateWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		f()
 	}
 }
@@ -209,7 +209,7 @@ func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 
 		var item modelName
 		repo := repository.Repository{}
-		f := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+		f, _, _ := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		f()
 	}
 }

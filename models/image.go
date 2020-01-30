@@ -15,7 +15,7 @@ type Image struct {
 	Path                nulls.String `col:"" json:"path"`
 	ThumbnailPath       nulls.String `col:"" json:"thumbnailPath"`
 	Ext                 nulls.String `col:"" json:"ext"`
-	CreateAt            nulls.String `col:"" json:"createAt"`
+	CreateAt            nulls.String `col:"default" json:"createAt"`
 	Gallary_folder_id   nulls.Int    `col:"" json:"gallary_folder_id"`
 	Gallary_folder_memo nulls.Nulls  `json:"gallary_folder_id.memo"`
 }

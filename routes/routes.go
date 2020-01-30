@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/gorilla/mux"
+	categoryController "github.com/xmluozp/creinox_server/controllers/category"
 	companyController "github.com/xmluozp/creinox_server/controllers/company"
 	regionController "github.com/xmluozp/creinox_server/controllers/region"
 	roleController "github.com/xmluozp/creinox_server/controllers/role"
@@ -22,7 +23,7 @@ func Routing(router *mux.Router, db *sql.DB) {
 
 	// ------------ user
 	userController := userController.Controller{}
-	router.HandleFunc("/api/user", userController.GetItems(db)).Methods("GET") // 加个api避免混淆
+	router.HandleFunc("/api/user", userController.GetItems(db)).Methods("GET")
 	router.HandleFunc("/api/user/{id}", userController.GetItem(db)).Methods("GET")
 	router.HandleFunc("/api/user", userController.AddItem(db)).Methods("POST")
 	router.HandleFunc("/api/user", userController.UpdateItem(db)).Methods("PUT")
@@ -31,7 +32,7 @@ func Routing(router *mux.Router, db *sql.DB) {
 
 	// ------------ company
 	companyController := companyController.Controller{}
-	router.HandleFunc("/api/company", companyController.GetItems(db)).Methods("GET") // 加个api避免混淆
+	router.HandleFunc("/api/company", companyController.GetItems(db)).Methods("GET")
 	router.HandleFunc("/api/company/{id}", companyController.GetItem(db)).Methods("GET")
 	router.HandleFunc("/api/company", companyController.AddItem(db)).Methods("POST")
 	router.HandleFunc("/api/company", companyController.UpdateItem(db)).Methods("PUT")
@@ -39,9 +40,18 @@ func Routing(router *mux.Router, db *sql.DB) {
 
 	// ------------ region
 	regionController := regionController.Controller{}
-	router.HandleFunc("/api/region", regionController.GetItems(db)).Methods("GET") // 加个api避免混淆
+	router.HandleFunc("/api/region", regionController.GetItems(db)).Methods("GET")
 	router.HandleFunc("/api/region/{id}", regionController.GetItem(db)).Methods("GET")
 	router.HandleFunc("/api/region", regionController.AddItem(db)).Methods("POST")
 	router.HandleFunc("/api/region", regionController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/region/{id}", regionController.DeleteItem(db)).Methods("DELETE")
+
+	// ------------ category
+	categoryController := categoryController.Controller{}
+	router.HandleFunc("/api/category", categoryController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/category/{id}", categoryController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/category", categoryController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/category", categoryController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/category/{id}", categoryController.DeleteItem(db)).Methods("DELETE")
+
 }

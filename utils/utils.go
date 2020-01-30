@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/go-playground/validator"
 	"github.com/xmluozp/creinox_server/models"
@@ -13,14 +14,16 @@ import (
 
 var validate *validator.Validate
 
-func SendError(w http.ResponseWriter, status int, data models.JsonRowsReturn) {
-
-	// ??
-	w.WriteHeader(status)
+func SendJson(w http.ResponseWriter, status int, data models.JsonRowsReturn, err error) {
+	if err != nil {
+		w.WriteHeader(status)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+	}
 	json.NewEncoder(w).Encode(data)
 }
 
-func SendJsonError(w http.ResponseWriter, status int, data models.JsonRowsReturn) {
+func SendError(w http.ResponseWriter, status int, data models.JsonRowsReturn) {
 
 	// ??
 	w.WriteHeader(status)
@@ -50,7 +53,9 @@ func ValidateInputs(obj interface{}) (bool, models.JsonRowsReturn) {
 			t := reflect.TypeOf(obj)
 			field, isFound := t.FieldByName(errValidation.Field())
 			if isFound {
-				tag := field.Tag.Get("json")
+
+				tag := strings.Split(field.Tag.Get("json"), ",")[0] // use split to ignore tag "options" like omitempty, etc.
+				// tag := field.Tag.Get("json")
 				errMessage := field.Tag.Get("errm")
 
 				fmt.Println("errm", errMessage)
@@ -81,5 +86,62 @@ func parseInt(s string) int {
 		return 0
 	} else {
 		return returnValue
+	}
+}
+
+func GetField(tag, key string, s interface{}) reflect.Value {
+	rt := reflect.TypeOf(s)
+	v := reflect.ValueOf(s)
+	if rt.Kind() != reflect.Struct {
+		panic("bad type")
+	}
+	for i := 0; i < rt.NumField(); i++ {
+		f := rt.Field(i)
+		tagv := strings.Split(f.Tag.Get(key), ",")[0] // use split to ignore tag "options" like omitempty, etc.
+
+		if tagv == tag {
+			return v.Field(i)
+		}
+	}
+	return reflect.Value{}
+}
+
+func GetFieldName(tag, key string, s interface{}) (fieldname string) {
+	rt := reflect.TypeOf(s)
+	if rt.Kind() != reflect.Struct {
+		panic("bad type")
+	}
+	for i := 0; i < rt.NumField(); i++ {
+		f := rt.Field(i)
+		v := strings.Split(f.Tag.Get(key), ",")[0] // use split to ignore tag "options" like omitempty, etc.
+		if v == tag {
+			return f.Name
+		}
+	}
+	return ""
+}
+
+func GetFieldValue(tag, key string, s interface{}) (value interface{}) {
+	// rt := reflect.TypeOf(s)
+	// v := reflect.ValueOf(s)
+	// if rt.Kind() != reflect.Struct {
+	// 	panic("bad type")
+	// }
+	// for i := 0; i < rt.NumField(); i++ {
+	// 	f := rt.Field(i)
+	// 	tagv := strings.Split(f.Tag.Get(key), ",")[0] // use split to ignore tag "options" like omitempty, etc.
+	// 	if tagv == tag {
+	// 		return v.Field(i).Interface()
+	// 	}
+	// }
+	returnValue := GetField(tag, key, s)
+
+	// returnValue.Interface()
+	fmt.Println("getfield value", returnValue.Interface())
+
+	if returnValue.IsValid() {
+		return returnValue.Interface()
+	} else {
+		return nil
 	}
 }

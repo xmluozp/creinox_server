@@ -1,4 +1,4 @@
-package imageReposiory
+package imagedataRepository
 
 import (
 	"database/sql"
@@ -95,9 +95,9 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (int64, error) {
+func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
-	result, err := utils.DbQueryDelete(db, tableName, id)
+	result, _, err := utils.DbQueryDelete(db, tableName, id)
 
 	if err != nil {
 		return 0, err
@@ -105,9 +105,26 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (int64, error)
 
 	rowsDeleted, err := result.RowsAffected()
 
-	if err != nil {
-		return 0, err
+	if err != nil || rowsDeleted == 0 {
+		return nil, err
 	}
 
-	return rowsDeleted, err
+	return nil, err
 }
+
+// func (b repositoryName) DeleteRowMultiple(db *sql.DB, ids []int, userId int) (int64, error) {
+
+// 	result, err := utils.DbQueryDelete_Multiple(db, tableName, ids)
+
+// 	if err != nil {
+// 		return 0, err
+// 	}
+
+// 	rowsDeleted, err := result.RowsAffected()
+
+// 	if err != nil {
+// 		return 0, err
+// 	}
+
+// 	return rowsDeleted, err
+// }

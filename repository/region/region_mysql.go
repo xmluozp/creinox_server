@@ -1,4 +1,4 @@
-package regionReposiory
+package regionRepository
 
 import (
 	"database/sql"
@@ -26,7 +26,15 @@ func (b repositoryName) GetRows(
 	root_id := searchTerms["root_id"]
 	delete(searchTerms, "root_id")
 
-	rows, err := utils.DbQueryRows(db, "SELECT * FROM "+tableName+" WHERE path LIKE '"+root_id+"%'", tableName, &pagination, searchTerms, item)
+	var sqlString string
+
+	// SELECT * FROM region WHERE path LIKE CONCAT((SELECT path FROM region WHERE id = 1), ',',1, '%') ORDER BY path ASC
+	if root_id != "0" {
+		sqlString = "SELECT * FROM " + tableName + " WHERE path LIKE CONCAT((SELECT path FROM " + tableName + " WHERE id = " + root_id + "), ',' , " + root_id + " , '%')"
+	} else {
+		sqlString = ""
+	}
+	rows, err := utils.DbQueryRows(db, sqlString, tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -91,9 +99,9 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (int64, error) {
+func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
-	result, err := utils.DbQueryDelete(db, tableName, id)
+	result, _, err := utils.DbQueryDelete(db, tableName, id)
 
 	if err != nil {
 		return 0, err
@@ -101,9 +109,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (int64, error)
 
 	rowsDeleted, err := result.RowsAffected()
 
-	if err != nil {
-		return 0, err
+	if err != nil || rowsDeleted == 0 {
+		return nil, err
 	}
 
-	return rowsDeleted, err
+	return nil, err
 }

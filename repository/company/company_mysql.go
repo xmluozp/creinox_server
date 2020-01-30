@@ -1,4 +1,4 @@
-package companyRepoitory
+package companyRepository
 
 import (
 	"database/sql"
@@ -67,6 +67,8 @@ func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
 
 	err := item.ScanRow(row)
 
+	fmt.Println("公司：", item)
+
 	return item, err
 }
 
@@ -120,6 +122,8 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	item.UpdateUser_id = nulls.NewInt(userId)
 	result, err := utils.DbQueryUpdate(db, tableName, item)
 
+	// fmt.Println("database updateRow", item)
+
 	if err != nil {
 		return 0, err
 	}
@@ -133,20 +137,34 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (int64, error) {
+func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
-	// delete folder
-	result, err := db.Exec("DELETE f, c FROM company c LEFT JOIN folder f ON f.id = c.gallary_folder_id WHERE c.id = ?", id)
+	// 取到item
+
+	// delete folder 不能用join，否则无法处理图片
+
+	// control是和界面交互的，
+	var item modelName
+	result, row, err := utils.DbQueryDelete(db, tableName, id)
+	err = item.ScanRow(row)
+
+	// result, err := db.Exec("DELETE f, c FROM company c LEFT JOIN folder f ON f.id = c.gallary_folder_id WHERE c.id = ?", id)
+
+	// delete
+
+	// todo: delete image( bizcard, license)
+	// LEFT JOIN airports a1 ON a1.IATA = r.origin
+	// LEFT JOIN airports a2 ON a1.IATA = r.destination
 
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	rowsDeleted, err := result.RowsAffected()
 
-	if err != nil {
-		return 0, err
+	if err != nil || rowsDeleted == 0 {
+		return nil, err
 	}
 
-	return rowsDeleted, err
+	return item, err
 }

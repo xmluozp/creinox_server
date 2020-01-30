@@ -160,9 +160,19 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 	values = append(values, reflect.ValueOf(""))
 
 	for i := 1; i < v.NumField(); i++ {
-		if col, isCol := t.Field(i).Tag.Lookup("col"); isCol && col != "default" && t.Field(i).Name != "ID" {
+
+		col, isCol := t.Field(i).Tag.Lookup("col")
+		isValid := true
+
+		// 忽略不出现在json里的（通过nulls的valid来判断: 也就是说本系统不允许上传null）
+		if v.Field(i).FieldByName("Valid").IsValid() { // if its a "nulls"
+			isValid = v.Field(i).FieldByName("Valid").Interface().(bool)
+		}
+
+		if isValid && isCol && col != "default" && t.Field(i).Name != "ID" {
 			values = append(values, v.Field(i))
-			columns = append(columns, t.Field(i).Tag.Get("json")) // 等同于数据库里的column name
+			tagName := strings.Split(t.Field(i).Tag.Get("json"), ",")[0] // use split to ignore tag "options" like omitempty, etc.
+			columns = append(columns, tagName)                           // 等同于数据库里的column name
 			questionMarks = append(questionMarks, "?")
 		}
 	}
@@ -180,6 +190,7 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 	return result, err
 }
 
+// col属性是 newtime 的，update的时候取系统时间
 func DbQueryUpdate(db *sql.DB, tableName string, item interface{}) (sql.Result, error) {
 
 	// 获取item的值和类型
@@ -194,9 +205,26 @@ func DbQueryUpdate(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 	values = append(values, reflect.ValueOf(""))
 
 	for i := 1; i < v.NumField(); i++ {
-		if _, isCol := t.Field(i).Tag.Lookup("col"); isCol && t.Field(i).Name != "ID" {
-			values = append(values, v.Field(i))
-			columns = append(columns, t.Field(i).Tag.Get("json")+"=?") // 等同于数据库里的column name
+		col, isCol := t.Field(i).Tag.Lookup("col")
+		isValid := true
+
+		// 忽略不出现在json里的（通过nulls的valid来判断: 也就是说本系统不允许上传null）
+		if v.Field(i).FieldByName("Valid").IsValid() { // if its a "nulls"
+			isValid = v.Field(i).FieldByName("Valid").Interface().(bool)
+		}
+
+		if isValid && isCol && t.Field(i).Name != "ID" {
+			tagName := strings.Split(t.Field(i).Tag.Get("json"), ",")[0] // use split to ignore tag "options" like omitempty, etc.
+
+			fmt.Println("dbUtils_update", t.Field(i).Name, v.Field(i), v.Field(i).FieldByName("Valid").IsValid())
+			if col == "newtime" {
+				columns = append(columns, tagName+"=CURRENT_TIMESTAMP")
+			} else {
+
+				// 判断是不是nulls的空。如果是就跳过
+				values = append(values, v.Field(i))
+				columns = append(columns, tagName+"=?") // 等同于数据库里的column name
+			}
 		}
 	}
 
@@ -219,7 +247,10 @@ func DbQueryUpdate(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 	return result, err
 }
 
-func DbQueryDelete(db *sql.DB, tableName string, id int) (sql.Result, error) {
+// called from repository
+func DbQueryDelete(db *sql.DB, tableName string, id int) (sql.Result, *sql.Row, error) {
+
+	rowDeleted := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
 
 	result, err := db.Exec("DELETE FROM "+tableName+" WHERE id = ?", id)
 
@@ -233,8 +264,26 @@ func DbQueryDelete(db *sql.DB, tableName string, id int) (sql.Result, error) {
 
 	}
 
-	return result, err
+	return result, rowDeleted, err
 }
+
+// called from repository
+// func DbQueryDelete_multiple(db *sql.DB, tableName string, id int) (sql.Result, error) {
+
+// 	result, err := db.Exec("DELETE FROM "+tableName+" WHERE id = ?", id)
+
+// 	if err != nil {
+
+// 		if driverErr, ok := err.(*mysql.MySQLError); ok {
+// 			if driverErr.Number == 1451 {
+// 				err = errors.New("外键约束：有其他数据引用此数据。无法删除。")
+// 			}
+// 		}
+
+// 	}
+
+// 	return result, err
+// }
 
 //------------ private
 func checkCount(row *sql.Row) (count int) {

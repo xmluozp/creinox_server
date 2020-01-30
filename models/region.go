@@ -15,8 +15,8 @@ type Region struct {
 	TreeLock  nulls.Bool   `col:"" json:"treeLock"`
 	Memo      nulls.String `col:"" json:"memo"`
 	Path      nulls.String `col:"" json:"path"`
-	UpdateAt  nulls.Time   `col:"" json:"updateAt"`
-	CreateAt  nulls.Time   `col:"" json:"createAt"`
+	UpdateAt  nulls.Time   `col:"newtime" json:"updateAt"`
+	CreateAt  nulls.Time   `col:"default" json:"createAt"`
 	IsDelete  nulls.Bool   `col:"" json:"isDelete"`
 	Parent_id nulls.Int    `col:"" json:"parent_id"`
 	Root_id   nulls.Int    `json:"root_id"`
