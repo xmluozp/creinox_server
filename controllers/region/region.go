@@ -58,8 +58,8 @@ func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
 
 		var item modelName
 		repo := repository.Repository{}
-		f, _, _ := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		f()
+		status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+		utils.SendJson(w, status, returnValue, err)
 	}
 }
 
@@ -74,8 +74,8 @@ func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
 
 		var item modelName
 		repo := repository.Repository{}
-		f, _, _ := utils.GetFunc_UpdateWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		f()
+		status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+		utils.SendJson(w, status, returnValue, err)
 	}
 }
 
@@ -91,7 +91,7 @@ func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 
 		var item modelName
 		repo := repository.Repository{}
-		f, _, _ := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		f()
+		status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+		utils.SendJson(w, status, returnValue, err)
 	}
 }

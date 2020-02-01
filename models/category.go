@@ -19,8 +19,8 @@ type Category struct {
 	UpdateAt    nulls.Time   `col:"newtime" json:"updateAt"`
 	CreateAt    nulls.Time   `col:"default" json:"createAt"`
 	IsDelete    nulls.Bool   `col:"" json:"isDelete"`
-	Parent_id   nulls.Int    `col:"" json:"parent_id"`
-	Root_id     nulls.Int    `json:"root_id"`
+	Parent_id   nulls.Int    `col:"fk" json:"parent_id"`
+	Root_id     nulls.Int    `json:"root_id"` // to display tree
 }
 
 type CategoryList struct {

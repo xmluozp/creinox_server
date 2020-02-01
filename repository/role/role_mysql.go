@@ -100,10 +100,18 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 
 func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
-	result, _, err := utils.DbQueryDelete(db, tableName, id)
+	var item modelName
+
+	result, row, err := utils.DbQueryDelete(db, tableName, id)
 
 	if err != nil {
-		return 0, err
+		return nil, err
+	}
+
+	err = item.ScanRow(row)
+
+	if err != nil {
+		return nil, err
 	}
 
 	rowsDeleted, err := result.RowsAffected()
@@ -112,5 +120,5 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 		return nil, err
 	}
 
-	return nil, err
+	return item, err
 }

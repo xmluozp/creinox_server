@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
 )
 
@@ -214,14 +215,32 @@ func DbQueryUpdate(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 		}
 
 		if isValid && isCol && t.Field(i).Name != "ID" {
+
 			tagName := strings.Split(t.Field(i).Tag.Get("json"), ",")[0] // use split to ignore tag "options" like omitempty, etc.
 
-			fmt.Println("dbUtils_update", t.Field(i).Name, v.Field(i), v.Field(i).FieldByName("Valid").IsValid())
-			if col == "newtime" {
-				columns = append(columns, tagName+"=CURRENT_TIMESTAMP")
-			} else {
+			// 假如fk字段是 -1，就设置成null（为了补救上面那个不分青红皂白删掉null的）
 
-				// 判断是不是nulls的空。如果是就跳过
+			fmt.Println("dbUtils_update", t.Field(i).Name, v.Field(i), v.Field(i).FieldByName("Valid").IsValid())
+
+			if col == "newtime" { // 如果每次提交都无论如何要更新时间
+
+				columns = append(columns, tagName+"=CURRENT_TIMESTAMP")
+
+			} else if col == "fk" { // 如果是个外键
+				foreignKey := v.Field(i).Interface().(nulls.Int)
+
+				// 如果外键不是0，就设置成空。
+				if foreignKey.Int <= 0 {
+					newFK := nulls.Int{}
+					newFK.Int = 0
+					newFK.Valid = false
+					values = append(values, reflect.ValueOf(newFK))
+
+				} else {
+					values = append(values, v.Field(i))
+				}
+				columns = append(columns, tagName+"=?")
+			} else {
 				values = append(values, v.Field(i))
 				columns = append(columns, tagName+"=?") // 等同于数据库里的column name
 			}
@@ -260,6 +279,8 @@ func DbQueryDelete(db *sql.DB, tableName string, id int) (sql.Result, *sql.Row, 
 			if driverErr.Number == 1451 {
 				err = errors.New("外键约束：有其他数据引用此数据。无法删除。")
 			}
+		} else {
+			fmt.Println("删除出错", err.Error())
 		}
 
 	}

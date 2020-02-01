@@ -14,7 +14,9 @@ import (
 
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/auth"
+	folderController "github.com/xmluozp/creinox_server/controllers/folder"
 	imageController "github.com/xmluozp/creinox_server/controllers/imagedata"
+
 	"github.com/xmluozp/creinox_server/models"
 	repository "github.com/xmluozp/creinox_server/repository/company"
 	"github.com/xmluozp/creinox_server/utils"
@@ -73,10 +75,11 @@ func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
 		repo := repository.Repository{}
 		// f, _, _ := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 
-		f, returnItem, files, err := utils.GetFunc_AddWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
+		status, returnValue, returnItem, files, err := utils.GetFunc_AddWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
+
+		// 验证不通过之类的问题就不需要传图
 		if err != nil {
-			f()
-			fmt.Println("update error", err.Error())
+			utils.SendJson(w, status, returnValue, err)
 			return
 		}
 
@@ -91,7 +94,7 @@ func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		f()
+		utils.SendJson(w, status, returnValue, err)
 	}
 }
 
@@ -108,16 +111,20 @@ func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
 		repo := repository.Repository{}
 
 		// upload form
-		f, returnItem, files, err := utils.GetFunc_UpdateWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
+		status, returnValue, returnItem, files, err := utils.GetFunc_UpdateWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
+
+		// 验证不通过之类的问题就不需要传图
 		if err != nil {
-			f()
-			fmt.Println("update error", err.Error())
+			utils.SendJson(w, status, returnValue, err)
 			return
 		}
 
 		// convert "reflected" item into company type
 		itemFromRequest := returnItem.(models.Company)
 
+		fmt.Println("看看营业执照：", itemFromRequest.ImageLicense_id)
+
+		// 更新公司的两张图片. 如果没有就是删除
 		err = updateImage(db, itemFromRequest, files, userId)
 
 		if err != nil {
@@ -127,8 +134,12 @@ func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		// 取最新row返回
+		updatedCompany, err := repo.GetRow(db, itemFromRequest.ID)
+		returnValue.Row = updatedCompany
+
 		// send success message to front-end
-		f()
+		utils.SendJson(w, status, returnValue, err)
 	}
 }
 
@@ -144,13 +155,27 @@ func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		f, company, _ := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		f()
+		status, returnValue, itemReturn, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+		company := itemReturn.(models.Company)
 
-		itemReturn := company.(models.Company)
+		if err == nil {
 
-		fmt.Println("返回外层", itemReturn)
+			// 删除营业执照和名片
+			imageCtrl := imageController.Controller{}
+			imageCtrl.Delete(db, company.ImageLicense_id.Int, userId)
+			imageCtrl.Delete(db, company.ImageBizCard_id.Int, userId)
 
+			// 删除folder (folder下面images的删除在folder处理)
+			folderCtrl := folderController.Controller{}
+			err = folderCtrl.Delete(db, company.Gallary_folder_id.Int, userId)
+
+			if err != nil {
+				returnValue.Info = "删除公司对应图库失败" + err.Error()
+				utils.SendJson(w, http.StatusFailedDependency, returnValue, err)
+			}
+		}
+
+		utils.SendJson(w, status, returnValue, err)
 	}
 }
 
@@ -174,12 +199,18 @@ func updateImage(db *sql.DB, company models.Company, files map[string][]byte, us
 		// 截它是因为它的格式是image_id.row
 		columnName := strings.Split(key, ".")[0]
 
-		var oldImage_id int
+		oldImage_id := -1
 
-		oldImage_id = utils.GetFieldValue(columnName, "json", updatedItem).(nulls.Int).Int
+		oldImage_id_value := utils.GetFieldValue(columnName, "json", updatedItem)
+
+		if oldImage_id_value != nil {
+			oldImage_id = oldImage_id_value.(nulls.Int).Int
+		}
 
 		var err error
-		newImageId, err := imageCtrl.Upload(db, oldImage_id, fileBytes, userId)
+		newImageId, err := imageCtrl.Upload(db, oldImage_id, key, fileBytes, -1, userId)
+
+		fmt.Println("newImageId", newImageId, key)
 
 		if newImageId != 0 {
 			newImageIds[columnName] = newImageId

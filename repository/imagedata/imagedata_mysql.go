@@ -2,7 +2,10 @@ package imagedataRepository
 
 import (
 	"database/sql"
+	"fmt"
 
+	"github.com/Unknwon/goconfig"
+	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
 	"github.com/xmluozp/creinox_server/utils"
 )
@@ -12,6 +15,7 @@ type modelName = models.Image
 type repositoryName = Repository
 
 var tableName = "image"
+var UPLOAD_FOLDER = "uploads/"
 
 // =============================================== basic CRUD
 
@@ -31,11 +35,23 @@ func (b repositoryName) GetRows(
 
 	defer rows.Close() // 以下代码执行完了，关闭连接
 
+	cfg, err := goconfig.LoadConfigFile("conf.ini")
+	if err != nil {
+		panic("错误，找不到conf.ini配置文件")
+	}
+
+	rootUrl, err := cfg.GetValue("site", "root")
+	port, err := cfg.Int("site", "port")
+	uploadFolder := fmt.Sprintf("%s:%d/%s", rootUrl, port, UPLOAD_FOLDER)
+
 	for rows.Next() {
 
 		// 把数据库读出来的列填进对应的变量里 (如果只想取对应的列怎么办？)
 		// 取的时候，类型[]byte就不关心是不是null。不然null转其他的报错
 		item.ScanRows(rows)
+		item.ThumbnailPath = nulls.NewString(UPLOAD_FOLDER + item.ThumbnailPath.String)
+		item.Path = nulls.NewString(uploadFolder + item.Path.String)
+
 		items = append(items, item)
 	}
 
@@ -56,6 +72,19 @@ func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
 	row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
 
 	err := item.ScanRow(row)
+
+	cfg, err := goconfig.LoadConfigFile("conf.ini")
+
+	if err != nil {
+		panic("错误，找不到conf.ini配置文件")
+	}
+
+	rootUrl, err := cfg.GetValue("site", "root")
+	port, err := cfg.Int("site", "port")
+	uploadFolder := fmt.Sprintf("%s:%d/%s", rootUrl, port, UPLOAD_FOLDER)
+
+	item.ThumbnailPath = nulls.NewString(UPLOAD_FOLDER + item.ThumbnailPath.String)
+	item.Path = nulls.NewString(uploadFolder + item.Path.String)
 
 	return item, err
 }
@@ -97,10 +126,18 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 
 func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
-	result, _, err := utils.DbQueryDelete(db, tableName, id)
+	var item modelName
+
+	result, row, err := utils.DbQueryDelete(db, tableName, id)
 
 	if err != nil {
-		return 0, err
+		return nil, err
+	}
+
+	err = item.ScanRow(row)
+
+	if err != nil {
+		return nil, err
 	}
 
 	rowsDeleted, err := result.RowsAffected()
@@ -109,22 +146,30 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 		return nil, err
 	}
 
-	return nil, err
+	return item, err
 }
 
-// func (b repositoryName) DeleteRowMultiple(db *sql.DB, ids []int, userId int) (int64, error) {
+func (b repositoryName) GetRowsByFolder(
+	db *sql.DB,
+	folderId int) (items []modelName, err error) {
 
-// 	result, err := utils.DbQueryDelete_Multiple(db, tableName, ids)
+	// 需要用join SELECT a.runoob_id, a.runoob_author, b.runoob_count FROM runoob_tbl a INNER JOIN tcount_tbl b ON a.runoob_author = b.runoob_author;
+	rows, err := db.Query("SELECT * FROM "+tableName+" WHERE gallary_folder_id=?", folderId)
 
-// 	if err != nil {
-// 		return 0, err
-// 	}
+	if err != nil {
+		return items, err
+	}
 
-// 	rowsDeleted, err := result.RowsAffected()
+	defer rows.Close() // 以下代码执行完了，关闭连接
 
-// 	if err != nil {
-// 		return 0, err
-// 	}
+	for rows.Next() {
+		var item modelName
+		item.ScanRows(rows)
+		items = append(items, item)
+	}
 
-// 	return rowsDeleted, err
-// }
+	return items, nil
+}
+
+// 因为要处理image，所以一个一个删
+// DeleteRowMultiple

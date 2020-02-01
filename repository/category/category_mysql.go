@@ -2,6 +2,8 @@ package categoryRepository
 
 import (
 	"database/sql"
+	"fmt"
+	"strconv"
 
 	"github.com/xmluozp/creinox_server/models"
 	"github.com/xmluozp/creinox_server/utils"
@@ -28,8 +30,10 @@ func (b repositoryName) GetRows(
 
 	var sqlString string
 
-	if root_id != "0" {
-		sqlString = "SELECT * FROM " + tableName + " WHERE path LIKE CONCAT((SELECT path FROM " + tableName + " WHERE id = " + root_id + "), ',' , " + root_id + " , '%')"
+	root_id_int, err := strconv.Atoi(root_id)
+
+	if err == nil && root_id_int > 0 {
+		sqlString = fmt.Sprintf("SELECT * FROM %s WHERE path LIKE CONCAT((SELECT path FROM %s WHERE id = %d), ',' ,  %d , '%%')", tableName, tableName, root_id_int, root_id_int)
 	} else {
 		sqlString = ""
 	}
@@ -100,10 +104,18 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 
 func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
-	result, _, err := utils.DbQueryDelete(db, tableName, id)
+	var item modelName
+
+	result, row, err := utils.DbQueryDelete(db, tableName, id)
 
 	if err != nil {
-		return 0, err
+		return nil, err
+	}
+
+	err = item.ScanRow(row)
+
+	if err != nil {
+		return nil, err
 	}
 
 	rowsDeleted, err := result.RowsAffected()
@@ -112,5 +124,5 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 		return nil, err
 	}
 
-	return nil, err
+	return item, err
 }

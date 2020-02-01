@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	imageController "github.com/xmluozp/creinox_server/controllers/imagedata"
+
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
 	"github.com/xmluozp/creinox_server/utils"
@@ -60,12 +62,28 @@ func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
 	row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
 
 	// todo: 取图片
+
 	fmt.Println("取公司", row, "SELECT * FROM "+tableName+" WHERE id = ?", id)
-	// 假如不是平的struct而有子选项
-	// 就要改写Scan
-	// https://stackoverflow.com/questions/47335697/golang-decode-json-request-in-nested-struct-and-insert-in-db-as-blob
 
 	err := item.ScanRow(row)
+
+	imageCtrl := imageController.Controller{}
+
+	if item.ImageLicense_id.Valid {
+		license, err := imageCtrl.Item(db, item.ImageLicense_id.Int)
+		if err != nil {
+			return item, err
+		}
+		item.ImageLicense = license
+	}
+
+	if item.ImageBizCard_id.Valid {
+		bizcard, err := imageCtrl.Item(db, item.ImageBizCard_id.Int)
+		if err != nil {
+			return item, err
+		}
+		item.ImageBizCard = bizcard
+	}
 
 	fmt.Println("公司：", item)
 
@@ -139,22 +157,11 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 
 func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
-	// 取到item
-
-	// delete folder 不能用join，否则无法处理图片
-
-	// control是和界面交互的，
 	var item modelName
 	result, row, err := utils.DbQueryDelete(db, tableName, id)
 	err = item.ScanRow(row)
 
 	// result, err := db.Exec("DELETE f, c FROM company c LEFT JOIN folder f ON f.id = c.gallary_folder_id WHERE c.id = ?", id)
-
-	// delete
-
-	// todo: delete image( bizcard, license)
-	// LEFT JOIN airports a1 ON a1.IATA = r.origin
-	// LEFT JOIN airports a2 ON a1.IATA = r.destination
 
 	if err != nil {
 		return nil, err

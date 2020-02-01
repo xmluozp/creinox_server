@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	categoryController "github.com/xmluozp/creinox_server/controllers/category"
 	companyController "github.com/xmluozp/creinox_server/controllers/company"
+	imageController "github.com/xmluozp/creinox_server/controllers/imagedata"
 	regionController "github.com/xmluozp/creinox_server/controllers/region"
 	roleController "github.com/xmluozp/creinox_server/controllers/role"
 	userController "github.com/xmluozp/creinox_server/controllers/user"
@@ -29,6 +30,17 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/user", userController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/user/{id}", userController.DeleteItem(db)).Methods("DELETE")
 	router.HandleFunc("/api/user/login", userController.Login(db)).Methods("POST")
+
+	// ------------ image
+	imageController := imageController.Controller{}
+	router.HandleFunc("/api/image", imageController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/image/{id}", imageController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/image", imageController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/image/{folder_id}", imageController.AddItems(db)).Methods("POST")
+	router.HandleFunc("/uploads/{path}", imageController.Show(db)).Methods("GET")
+
+	router.HandleFunc("/api/image", imageController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/image_delete", imageController.DeleteItems(db)).Methods("PUT")
 
 	// ------------ company
 	companyController := companyController.Controller{}

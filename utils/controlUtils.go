@@ -24,9 +24,6 @@ func GetFunc_RowsWithHTTPReturn(
 
 	// 完整query:  page=1&rowCount=5&perPage=15&totalCount=10&totalPage=2&order=desc&orderBy=id&q=%7B%22fullName%22%3A%22%E7%8E%8B%E6%80%9D%E8%81%AA%22%7D
 
-	// 权限判断
-	// auth := r.Header.Get("Authorization")
-
 	// 声明变量
 	items := reflect.Zero(reflect.SliceOf(modelType)).Interface()
 	item := reflect.New(modelType).Elem().Interface()
@@ -128,12 +125,6 @@ func GetFunc_AddWithHTTPReturn(
 	// ====================================== 保存数据库
 	status, returnValue, row, err := addDateBase(db, item, repo, userId)
 
-	if err != nil {
-		fmt.Println("update err:", err)
-		return status, returnValue, nil, err
-	}
-
-	// ======================================
 	return http.StatusOK, returnValue, row, nil
 }
 
@@ -143,120 +134,66 @@ func GetFunc_UpdateWithHTTPReturn(
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
 	repo interface{},
-	userId int) (func(), interface{}, error) {
-
-	// 声明变量
-	var returnValue models.JsonRowsReturn
+	userId int) (status int, returnValue models.JsonRowsReturn, returnItem interface{}, err error) {
 
 	itemPtr := reflect.New(modelType).Interface()
 
 	// 不用指针取了再转的话，item会被强行变成map类型
-	err := json.NewDecoder(r.Body).Decode(itemPtr)
+	err = json.NewDecoder(r.Body).Decode(itemPtr)
 
 	item := reflect.ValueOf(itemPtr).Elem().Interface()
 
 	if err != nil {
 		returnValue.Info = "Server error" + err.Error()
-		return func() { SendError(w, http.StatusInternalServerError, returnValue) }, item, err
+		return http.StatusInternalServerError, returnValue, item, err
 	}
 
 	//  ---------------------------------------  保存数据库
-	status, returnValue, err := updateDateBase(db, item, repo, userId)
-
-	if err != nil {
-		fmt.Println("update err:", err)
-		return func() { SendError(w, status, returnValue) }, nil, err
-	}
-
+	status, returnValue, err = updateDateBase(db, item, repo, userId)
 	//  ---------------------------------------
-	return func() { SendSuccess(w, returnValue) }, item, nil
+	return status, returnValue, item, nil
 }
 
 // TODO: 批量删除
-func GetFunc_DeleteWithHTTPReturn_Multiple(
-	db *sql.DB,
-	w http.ResponseWriter,
-	r *http.Request,
-	modelType reflect.Type, // 数据模型
-	repo interface{},
-	userId int) func() {
-
-	var returnValue models.JsonRowsReturn
-
-	params := mux.Vars(r)
-
-	id, _ := strconv.Atoi(params["id"])
-
-	getRow := reflect.ValueOf(repo).MethodByName("DeleteRow")
-	args := []reflect.Value{
-		reflect.ValueOf(db),
-		reflect.ValueOf(id),
-		reflect.ValueOf(userId)}
-	out := getRow.Call(args)
-
-	// rowsDeleted := out[0].Interface()
-	err := ParseError(out[1])
-
-	if err != nil {
-
-		returnValue.Info = "Server error" + err.Error()
-
-		return func() { SendError(w, http.StatusInternalServerError, returnValue) }
-		// 千万不要忘了return。否则下面的数据也会加在返回的json后
-	}
-
-	if out[0].IsZero() {
-
-		returnValue.Info = "Not Found"
-		return func() { SendError(w, http.StatusNotFound, returnValue) }
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	return func() { SendSuccess(w, returnValue) }
-}
-
-// func GetFunc_DeleteWithHTTPReturn(
+// func GetFunc_DeleteWithHTTPReturn_Multiple(
 // 	db *sql.DB,
 // 	w http.ResponseWriter,
 // 	r *http.Request,
 // 	modelType reflect.Type, // 数据模型
 // 	repo interface{},
-// 	userId int) (jsonBack func(), deletedItem interface{}, err error) {
+// 	userId int) (status int, returnValue models.JsonRowsReturn, returnItem interface{}, err error) {
 
-// 	var returnValue models.JsonRowsReturn
+// 	var idList []int
 
-// 	params := mux.Vars(r)
+// 	err = json.NewDecoder(r.Body).Decode(&idList)
 
-// 	id, _ := strconv.Atoi(params["id"])
+// 	fmt.Println("idList", idList)
 
-// 	getRow := reflect.ValueOf(repo).MethodByName("DeleteRow")
+// 	deleteRows := reflect.ValueOf(repo).MethodByName("DeleteRows")
 // 	args := []reflect.Value{
 // 		reflect.ValueOf(db),
-// 		reflect.ValueOf(id),
+// 		reflect.ValueOf(idList),
 // 		reflect.ValueOf(userId)}
-// 	out := getRow.Call(args)
+// 	out := deleteRows.Call(args)
 
-// 	// rowsDeleted := out[0].Interface()
+// 	rowsDeleted := out[0].Interface()
 // 	err = ParseError(out[1])
 
-// 	if err != nil {
+// 	// if err != nil {
 
-// 		returnValue.Info = "Server error" + err.Error()
+// 	// 	returnValue.Info = "Server error" + err.Error()
 
-// 		return func() { SendError(w, http.StatusInternalServerError, returnValue) }, nil, err
-// 		// 千万不要忘了return。否则下面的数据也会加在返回的json后
-// 	}
+// 	// 	return http.StatusInternalServerError, returnValue, err
+// 	// 	// 千万不要忘了return。否则下面的数据也会加在返回的json后
+// 	// }
 
-// 	if out[0].IsNil() {
+// 	// if out[0].IsZero() {
 
-// 		returnValue.Info = "Not Found"
-// 		return func() { SendError(w, http.StatusNotFound, returnValue) }, nil, err
-// 	}
+// 	// 	returnValue.Info = "Not Found"
+// 	// 	return http.StatusNotFound, returnValue, err
+// 	// }
 
-// 	row := out[0].Interface()
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	return func() { SendSuccess(w, returnValue) }, row, nil
+// 	return http.StatusOK, returnValue, rowsDeleted, err
 // }
 
 func GetFunc_DeleteWithHTTPReturn(
@@ -265,9 +202,7 @@ func GetFunc_DeleteWithHTTPReturn(
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
 	repo interface{},
-	userId int) (jsonBack func(), deletedItem interface{}, err error) {
-
-	var returnValue models.JsonRowsReturn
+	userId int) (status int, returnValue models.JsonRowsReturn, deletedItem interface{}, err error) {
 
 	params := mux.Vars(r)
 
@@ -287,20 +222,18 @@ func GetFunc_DeleteWithHTTPReturn(
 
 		returnValue.Info = "Server error" + err.Error()
 
-		return func() { SendError(w, http.StatusInternalServerError, returnValue) }, nil, err
+		return http.StatusInternalServerError, returnValue, nil, err
 		// 千万不要忘了return。否则下面的数据也会加在返回的json后
 	}
 
 	if out[0].IsNil() {
-
 		returnValue.Info = "Not Found"
-		return func() { SendError(w, http.StatusNotFound, returnValue) }, nil, err
+		return http.StatusNotFound, returnValue, nil, err
 	}
 
 	row := out[0].Interface()
 
-	w.Header().Set("Content-Type", "application/json")
-	return func() { SendSuccess(w, returnValue) }, row, nil
+	return http.StatusOK, returnValue, row, nil
 }
 
 // Here returns function to shows message to the front. In case we want to pop a message afterall instead of pop it on halfway
@@ -310,15 +243,13 @@ func GetFunc_AddWithHTTPReturn_FormData(
 	r *http.Request,
 	modelType reflect.Type,
 	repo interface{},
-	userId int) (func(), interface{}, map[string][]byte, error) {
+	userId int) (status int, returnValue models.JsonRowsReturn, itemReturn interface{}, files map[string][]byte, err error) {
 
-	var returnValue models.JsonRowsReturn
-
-	status, returnValue, item, files, err := decodeFormData(r, modelType)
+	status, returnValue, item, files, err := DecodeFormData(r, modelType)
 
 	if err != nil {
 		fmt.Println("decode err:", err)
-		return func() { SendError(w, status, returnValue) }, nil, nil, err
+		return status, returnValue, nil, nil, err
 	}
 
 	//  ---------------------------------------  保存数据库
@@ -326,11 +257,11 @@ func GetFunc_AddWithHTTPReturn_FormData(
 
 	if err != nil {
 		fmt.Println("update err:", err)
-		return func() { SendError(w, status, returnValue) }, nil, nil, err
+		return status, returnValue, nil, nil, err
 	}
 
 	//  ---------------------------------------
-	return func() { SendSuccess(w, returnValue) }, row, files, nil
+	return http.StatusOK, returnValue, row, files, nil
 }
 
 // Here returns function to shows message to the front. In case we want to pop a message afterall instead of pop it on halfway
@@ -340,15 +271,13 @@ func GetFunc_UpdateWithHTTPReturn_FormData(
 	r *http.Request,
 	modelType reflect.Type,
 	repo interface{},
-	userId int) (func(), interface{}, map[string][]byte, error) {
+	userId int) (status int, returnValue models.JsonRowsReturn, itemReturn interface{}, files map[string][]byte, err error) {
 
-	var returnValue models.JsonRowsReturn
-
-	status, returnValue, item, files, err := decodeFormData(r, modelType)
+	status, returnValue, item, files, err := DecodeFormData(r, modelType)
 
 	if err != nil {
 		fmt.Println("decode err:", err)
-		return func() { SendError(w, status, returnValue) }, nil, nil, err
+		return status, returnValue, nil, nil, err
 	}
 
 	// --------------------------------------- 保存数据库
@@ -356,11 +285,11 @@ func GetFunc_UpdateWithHTTPReturn_FormData(
 
 	if err != nil {
 		fmt.Println("update err:", err)
-		return func() { SendError(w, status, returnValue) }, nil, nil, err
+		return status, returnValue, nil, nil, err
 	}
 
 	// ---------------------------------------
-	return func() { SendSuccess(w, returnValue) }, item, files, nil
+	return http.StatusOK, returnValue, item, files, nil
 }
 
 // ====================== private ======================
@@ -430,17 +359,15 @@ func addDateBase(
 	return http.StatusOK, returnValue, row, nil
 }
 
-func decodeFormData(
+// 把前端传来的multipart/formData变成 string: []byte的map
+func DecodeFormData(
 	r *http.Request,
 	modelType reflect.Type,
-) (int, models.JsonRowsReturn, interface{}, map[string][]byte, error) {
-	var returnValue models.JsonRowsReturn
-
-	// prepare to store the file
-	files := make(map[string][]byte)
+) (status int, returnValue models.JsonRowsReturn, itemReturn interface{}, files map[string][]byte, err error) {
 
 	// prepare to store the form values
 	var jsonString []byte
+	files = make(map[string][]byte)
 
 	mr, err := r.MultipartReader()
 
@@ -463,6 +390,7 @@ func decodeFormData(
 		}
 
 		data, _ := ioutil.ReadAll(part)
+		// fmt.Println(part.FormName(), part.FileName())
 
 		if part.FileName() != "" {
 
@@ -471,15 +399,17 @@ func decodeFormData(
 		} else if part.FormName() == "doc" { // only a convention: 前端传过来的doc下面放的是整个json，直接用它unmrshal
 
 			jsonString = data
+			err = json.Unmarshal(jsonString, itemPtr)
+
+			if err != nil {
+				returnValue.Info = "Server error" + err.Error()
+				return http.StatusInternalServerError, returnValue, nil, nil, err
+			}
 		}
 	}
 
-	err = json.Unmarshal(jsonString, itemPtr)
+	fmt.Println("jsonString", jsonString)
 
-	if err != nil {
-		returnValue.Info = "Server error" + err.Error()
-		return http.StatusInternalServerError, returnValue, nil, nil, err
-	}
 	item := reflect.ValueOf(itemPtr).Elem().Interface()
 
 	return http.StatusOK, returnValue, item, files, err

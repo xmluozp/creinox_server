@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator"
 	"github.com/xmluozp/creinox_server/models"
@@ -16,6 +17,7 @@ var validate *validator.Validate
 
 func SendJson(w http.ResponseWriter, status int, data models.JsonRowsReturn, err error) {
 	if err != nil {
+		Log(err, data.Info)
 		w.WriteHeader(status)
 	} else {
 		w.Header().Set("Content-Type", "application/json")
@@ -137,11 +139,21 @@ func GetFieldValue(tag, key string, s interface{}) (value interface{}) {
 	returnValue := GetField(tag, key, s)
 
 	// returnValue.Interface()
-	fmt.Println("getfield value", returnValue.Interface())
+	// fmt.Println("getfield value", returnValue.Interface())
 
 	if returnValue.IsValid() {
 		return returnValue.Interface()
 	} else {
 		return nil
 	}
+}
+
+func Log(err error, a ...interface{}) {
+
+	if err != nil {
+		fmt.Println(time.Now().Format(time.RFC850), err.Error(), a)
+	} else {
+		fmt.Println(time.Now().Format(time.RFC850), "Works Fine: ", a)
+	}
+
 }

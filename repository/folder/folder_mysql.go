@@ -1,19 +1,17 @@
-package regionRepository
+package folderRepository
 
 import (
 	"database/sql"
-	"fmt"
-	"strconv"
 
 	"github.com/xmluozp/creinox_server/models"
 	"github.com/xmluozp/creinox_server/utils"
 )
 
 type Repository struct{}
-type modelName = models.Region
+type modelName = models.Folder
 type repositoryName = Repository
 
-var tableName = "region"
+var tableName = "folder"
 
 // =============================================== basic CRUD
 
@@ -21,24 +19,11 @@ func (b repositoryName) GetRows(
 	db *sql.DB,
 	item modelName,
 	items []modelName,
-	pagination models.Pagination,
+	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
 
-	// 拦截 search
-	root_id := searchTerms["root_id"]
-	delete(searchTerms, "root_id")
-
-	var sqlString string
-
-	root_id_int, err := strconv.Atoi(root_id)
-
-	// SELECT * FROM region WHERE path LIKE CONCAT((SELECT path FROM region WHERE id = 1), ',',1, '%') ORDER BY path ASC
-	if err == nil && root_id_int > 0 {
-		sqlString = fmt.Sprintf("SELECT * FROM %s WHERE path LIKE CONCAT((SELECT path FROM %s WHERE id = %d), ',' ,  %d , '%%')", tableName, tableName, root_id_int, root_id_int)
-	} else {
-		sqlString = ""
-	}
-	rows, err := utils.DbQueryRows(db, sqlString, tableName, &pagination, searchTerms, item)
+	// rows这里是一个cursor.
+	rows, err := utils.DbQueryRows(db, "SELECT * FROM "+tableName+" WHERE 1=1 ", tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -47,6 +32,7 @@ func (b repositoryName) GetRows(
 	defer rows.Close() // 以下代码执行完了，关闭连接
 
 	for rows.Next() {
+
 		item.ScanRows(rows)
 		items = append(items, item)
 	}
@@ -59,7 +45,6 @@ func (b repositoryName) GetRows(
 }
 
 func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
-
 	var item modelName
 	row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
 
@@ -71,6 +56,7 @@ func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
 func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
 
 	// result, errInsert := db.Exec("INSERT INTO role (name, rank, auth) VALUES(?, ?, ?);", item.Name, item.Rank, item.Auth)
+
 	result, errInsert := utils.DbQueryInsert(db, tableName, item)
 
 	if errInsert != nil {

@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/BurntSushi/graphics-go v0.0.0-20160129215708-b43f31a4a966
+	github.com/Unknwon/goconfig v0.0.0-20191126170842-860a72fb44fd
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-playground/validator v9.31.0+incompatible
 	github.com/go-playground/validator/v10 v10.1.0
