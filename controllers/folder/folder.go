@@ -30,7 +30,7 @@ func (c Controller) Delete(db *sql.DB, id int, userId int) error {
 		return err
 	}
 
-	images, err := imageCtrl.ItemsByFolder(db, folder.ID)
+	images, err := imageCtrl.ItemsByFolder(db, folder.ID.Int)
 
 	if err != nil {
 		utils.Log(err)
@@ -40,7 +40,7 @@ func (c Controller) Delete(db *sql.DB, id int, userId int) error {
 	fmt.Println("images", images)
 
 	for key := range images {
-		err = imageCtrl.Delete(db, images[key].ID, userId)
+		err = imageCtrl.Delete(db, images[key].ID.Int, userId)
 		if err != nil {
 			utils.Log(err)
 			return err

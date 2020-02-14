@@ -8,7 +8,7 @@ import (
 
 // validator参考：https://github.com/go-playground/validator/blob/v9/_examples/simple/main.go
 type User struct {
-	ID          int          `col:"" json:"id"`
+	ID          nulls.Int    `col:"" json:"id"`
 	UserName    nulls.String `col:"" json:"userName" validate:"required" errm:"用户名必填"`
 	FullName    nulls.String `col:"" json:"fullName" `
 	Password    nulls.String `col:"" json:"password" validate:"gt=3,lt=16" errm:"密码是3-16位长的字符"`
@@ -20,46 +20,69 @@ type User struct {
 	Memo        nulls.String `col:"" json:"memo"`
 	IsActive    nulls.Bool   `col:"" json:"isActive"`
 	Role_id     nulls.Int    `col:"fk" json:"role_id" validate:"required" errm:"角色必选"`
+
+	RoleItem Role `ref:"role,role_id" json:"role_id.row"`
 }
 
 type UserList struct {
 	Items []*User
 }
 
-// 取的时候，类型[]byte就不关心是不是null。不然null转其他的报错
+func (item *User) Receivers() (itemPtrs []interface{}) {
+
+	values := []interface{}{
+		&item.ID,
+		&item.UserName,
+		&item.FullName,
+		&item.Password,
+		&item.IP,
+		&item.BargainCode,
+		&item.LastLogin,
+		&item.CreateAt,
+		&item.Token,
+		&item.Memo,
+		&item.IsActive,
+		&item.Role_id}
+
+	valuePtrs := make([]interface{}, len(values))
+
+	for i := range values {
+		valuePtrs[i] = values[i]
+	}
+
+	return valuePtrs
+}
 
 // learned from: https://stackoverflow.com/questions/53175792/how-to-make-scanning-db-rows-in-go-dry
 
 func (item *User) ScanRow(r *sql.Row) error {
-	return r.Scan(
-		&item.ID,
-		&item.UserName,
-		&item.FullName,
-		&item.Password,
-		&item.IP,
-		&item.BargainCode,
-		&item.LastLogin,
-		&item.CreateAt,
-		&item.Token,
-		&item.Memo,
-		&item.IsActive,
-		&item.Role_id)
+
+	var columns []interface{}
+
+	RoleItem := Role{}
+
+	columns = append(item.Receivers(), RoleItem.Receivers()...)
+
+	err := r.Scan(columns...)
+
+	item.RoleItem = RoleItem
+
+	return err
 }
 
 func (item *User) ScanRows(r *sql.Rows) error {
-	return r.Scan(
-		&item.ID,
-		&item.UserName,
-		&item.FullName,
-		&item.Password,
-		&item.IP,
-		&item.BargainCode,
-		&item.LastLogin,
-		&item.CreateAt,
-		&item.Token,
-		&item.Memo,
-		&item.IsActive,
-		&item.Role_id)
+
+	var columns []interface{}
+
+	RoleItem := Role{}
+
+	columns = append(item.Receivers(), RoleItem.Receivers()...)
+
+	err := r.Scan(columns...)
+
+	item.RoleItem = RoleItem
+
+	return err
 }
 
 func (list *UserList) ScanRow(r *sql.Rows) error {

@@ -15,23 +15,23 @@ import (
 	"github.com/xmluozp/creinox_server/models"
 )
 
-func GetFunc_RowsWithHTTPReturn(
+func GetFunc_FetchListHTTPReturn(
 	db *sql.DB,
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
+	methodName string, // repo方法名
 	repo interface{}) (status int, returnValue models.JsonRowsReturn, err error) {
 
-	// 完整query:  page=1&rowCount=5&perPage=15&totalCount=10&totalPage=2&order=desc&orderBy=id&q=%7B%22fullName%22%3A%22%E7%8E%8B%E6%80%9D%E8%81%AA%22%7D
-
-	// 声明变量
 	items := reflect.Zero(reflect.SliceOf(modelType)).Interface()
 	item := reflect.New(modelType).Elem().Interface()
+
+	// query sample:  page=1&rowCount=5&perPage=15&totalCount=10&totalPage=2&order=desc&orderBy=id&q=%7B%22fullName%22%3A%22%E7%8E%8B%E6%80%9D%E8%81%AA%22%7D
 
 	pagination := GetPagination(r)
 	searchTerms := GetSearchTerms(r)
 
-	gerRows := reflect.ValueOf(repo).MethodByName("GetRows")
+	gerRows := reflect.ValueOf(repo).MethodByName(methodName)
 	args := []reflect.Value{
 		reflect.ValueOf(db),
 		reflect.ValueOf(item),
@@ -60,6 +60,17 @@ func GetFunc_RowsWithHTTPReturn(
 	returnValue.Rows = rows
 
 	return http.StatusOK, returnValue, nil
+
+}
+
+func GetFunc_RowsWithHTTPReturn(
+	db *sql.DB,
+	w http.ResponseWriter,
+	r *http.Request,
+	modelType reflect.Type, // 数据模型
+	repo interface{}) (status int, returnValue models.JsonRowsReturn, err error) {
+
+	return GetFunc_FetchListHTTPReturn(db, w, r, modelType, "GetRows", repo)
 }
 
 func GetFunc_RowWithHTTPReturn(

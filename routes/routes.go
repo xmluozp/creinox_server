@@ -4,15 +4,26 @@ import (
 	"database/sql"
 
 	"github.com/gorilla/mux"
+	bankaccountController "github.com/xmluozp/creinox_server/controllers/bankAccount"
 	categoryController "github.com/xmluozp/creinox_server/controllers/category"
+	commonitemController "github.com/xmluozp/creinox_server/controllers/commonItem"
 	companyController "github.com/xmluozp/creinox_server/controllers/company"
+	productController "github.com/xmluozp/creinox_server/controllers/product"
+
+	testController "github.com/xmluozp/creinox_server/controllers/test"
+
 	imageController "github.com/xmluozp/creinox_server/controllers/imagedata"
 	regionController "github.com/xmluozp/creinox_server/controllers/region"
 	roleController "github.com/xmluozp/creinox_server/controllers/role"
+	rostercontactController "github.com/xmluozp/creinox_server/controllers/rosterContact"
 	userController "github.com/xmluozp/creinox_server/controllers/user"
 )
 
 func Routing(router *mux.Router, db *sql.DB) {
+
+	// ------------ test
+	testController := testController.Controller{}
+	router.HandleFunc("/api/test/{v}", testController.Test(db)).Methods("GET") // 加个api避免混淆
 
 	// ------------ role
 	roleController := roleController.Controller{}
@@ -30,6 +41,16 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/user", userController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/user/{id}", userController.DeleteItem(db)).Methods("DELETE")
 	router.HandleFunc("/api/user/login", userController.Login(db)).Methods("POST")
+
+	// ------------ commonitem
+	commonitemController := commonitemController.Controller{}
+	router.HandleFunc("/api/commonitem", commonitemController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/commonitem/{id}", commonitemController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/commonitem", commonitemController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/commonitem", commonitemController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/commonitem/{id}", commonitemController.DeleteItem(db)).Methods("DELETE")
+
+	router.HandleFunc("/api/commonitem_dropDown", commonitemController.GetItems_DropDown(db)).Methods("GET")
 
 	// ------------ image
 	imageController := imageController.Controller{}
@@ -50,6 +71,22 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/company", companyController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/company/{id}", companyController.DeleteItem(db)).Methods("DELETE")
 
+	// ------------ company: rostercontactController
+	rostercontactController := rostercontactController.Controller{}
+	router.HandleFunc("/api/rostercontact", rostercontactController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/rostercontact/{id}", rostercontactController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/rostercontact", rostercontactController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/rostercontact", rostercontactController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/rostercontact/{id}", rostercontactController.DeleteItem(db)).Methods("DELETE")
+
+	// ------------ company: bankAccount
+	bankaccountController := bankaccountController.Controller{}
+	router.HandleFunc("/api/bankaccount", bankaccountController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/bankaccount/{id}", bankaccountController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/bankaccount", bankaccountController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/bankaccount", bankaccountController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/bankaccount/{id}", bankaccountController.DeleteItem(db)).Methods("DELETE")
+
 	// ------------ region
 	regionController := regionController.Controller{}
 	router.HandleFunc("/api/region", regionController.GetItems(db)).Methods("GET")
@@ -66,4 +103,13 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/category", categoryController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/category/{id}", categoryController.DeleteItem(db)).Methods("DELETE")
 
+	// ------------ product
+	productController := productController.Controller{}
+	router.HandleFunc("/api/product", productController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/product/{id}", productController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/product", productController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/product", productController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/product/{id}", productController.DeleteItem(db)).Methods("DELETE")
+
+	router.HandleFunc("/api/product_dropDown", productController.GetItems_DropDown(db)).Methods("GET")
 }

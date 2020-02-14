@@ -7,7 +7,7 @@ import (
 )
 
 type Folder struct {
-	ID         int          `col:"" json:"id"`
+	ID         nulls.Int    `col:"" json:"id"`
 	Memo       nulls.String `col:"" json:"memo"`
 	FolderType nulls.Int    `col:"" json:"FolderType"` // 权限可以后期改
 	ViewSource nulls.String `col:"" json:"ViewSource"`
@@ -19,28 +19,39 @@ type FolderList struct {
 	Items []*Folder
 }
 
-// 取的时候，类型[]byte就不关心是不是null。不然null转其他的报错
+func (item *Folder) Receivers() (itemPtrs []interface{}) {
+
+	values := []interface{}{
+		&item.ID,
+		&item.Memo,
+		&item.FolderType,
+		&item.ViewSource,
+		&item.RefSource,
+		&item.RefId}
+
+	valuePtrs := make([]interface{}, len(values))
+
+	for i := range values {
+		valuePtrs[i] = values[i]
+	}
+
+	return valuePtrs
+}
 
 // learned from: https://stackoverflow.com/questions/53175792/how-to-make-scanning-db-rows-in-go-dry
 
 func (item *Folder) ScanRow(r *sql.Row) error {
-	return r.Scan(
-		&item.ID,
-		&item.Memo,
-		&item.FolderType,
-		&item.ViewSource,
-		&item.RefSource,
-		&item.RefId)
+
+	err := r.Scan(item.Receivers()...)
+
+	return err
 }
 
 func (item *Folder) ScanRows(r *sql.Rows) error {
-	return r.Scan(
-		&item.ID,
-		&item.Memo,
-		&item.FolderType,
-		&item.ViewSource,
-		&item.RefSource,
-		&item.RefId)
+
+	err := r.Scan(item.Receivers()...)
+
+	return err
 }
 
 func (list *FolderList) ScanRow(r *sql.Rows) error {

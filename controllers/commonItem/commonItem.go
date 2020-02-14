@@ -1,4 +1,4 @@
-package categoryController
+package commonItemController
 
 import (
 	"database/sql"
@@ -7,14 +7,14 @@ import (
 
 	"github.com/xmluozp/creinox_server/auth"
 	"github.com/xmluozp/creinox_server/models"
-	repository "github.com/xmluozp/creinox_server/repository/category"
+	repository "github.com/xmluozp/creinox_server/repository/commonItem"
 	"github.com/xmluozp/creinox_server/utils"
 )
 
 type Controller struct{}
-type modelName = models.Category
+type modelName = models.CommonItem
 
-var authName = "category"
+var authName = "commonitem"
 
 // =============================================== basic CRUD
 
@@ -28,8 +28,24 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 
 		var item modelName
 		repo := repository.Repository{}
-		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
 
+		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		utils.SendJson(w, status, returnValue, err)
+	}
+}
+
+func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		pass, _ := auth.CheckAuth(db, w, r, authName)
+		if !pass {
+			return
+		}
+
+		var item modelName
+		repo := repository.Repository{}
+
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -91,16 +107,8 @@ func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 
 		var item modelName
 		repo := repository.Repository{}
+
 		status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
-}
-
-func (c Controller) Update_currentCode(db *sql.DB, id int, code string) error {
-
-	repo := repository.Repository{}
-
-	_, err := repo.UpdateRow_currentCode(db, id, code)
-
-	return err
 }

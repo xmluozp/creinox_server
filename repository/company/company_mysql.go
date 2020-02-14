@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strconv"
 
-	imageController "github.com/xmluozp/creinox_server/controllers/imagedata"
-
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
 	"github.com/xmluozp/creinox_server/utils"
@@ -27,11 +25,7 @@ func (b repositoryName) GetRows(
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
 
-	// 需要用join SELECT c.id, c.code, c.name, c.shortname, c.address, c.retrieveTime, u.userName FROM company c LEFT JOIN user u ON c.retriever_id = u.id
-	rows, err := utils.DbQueryRows(db,
-		"SELECT c.*, u.userName as 'retriever_id.userName' FROM "+
-			tableName+" c LEFT JOIN user u ON c.retriever_id = u.id WHERE 1=1",
-		tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -59,38 +53,36 @@ func (b repositoryName) GetRows(
 func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
 
 	var item modelName
-	row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
+	// row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
 
 	// todo: 取图片
-
-	fmt.Println("取公司", row, "SELECT * FROM "+tableName+" WHERE id = ?", id)
-
+	row := utils.DbQueryRow(db, "", tableName, id, item)
 	err := item.ScanRow(row)
 
-	imageCtrl := imageController.Controller{}
+	// imageCtrl := imageController.Controller{}
 
-	if item.ImageLicense_id.Valid {
-		license, err := imageCtrl.Item(db, item.ImageLicense_id.Int)
-		if err != nil {
-			return item, err
-		}
-		item.ImageLicense = license
-	}
+	// if item.ImageLicense_id.Valid {
+	// 	license, err := imageCtrl.Item(db, item.ImageLicense_id.Int)
+	// 	if err != nil {
+	// 		return item, err
+	// 	}
+	// 	item.ImageLicense = license
+	// }
 
-	if item.ImageBizCard_id.Valid {
-		bizcard, err := imageCtrl.Item(db, item.ImageBizCard_id.Int)
-		if err != nil {
-			return item, err
-		}
-		item.ImageBizCard = bizcard
-	}
-
-	fmt.Println("公司：", item)
+	// if item.ImageBizCard_id.Valid {
+	// 	bizcard, err := imageCtrl.Item(db, item.ImageBizCard_id.Int)
+	// 	if err != nil {
+	// 		return item, err
+	// 	}
+	// 	item.ImageBizCard = bizcard
+	// }
 
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(db *sql.DB, itemRec interface{}, userId int) (modelName, error) {
+
+	item := itemRec.(modelName)
 
 	folder := models.Folder{}
 
@@ -113,18 +105,18 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 	id, errId := result.LastInsertId()
 
-	item.ID = int(id)
+	item.ID = nulls.NewInt(int(id))
 
 	if errId != nil {
 		return item, errId
 	}
 
 	// update folder
-	folder.ID = int(folderId)
-	folder.Memo = nulls.NewString("company/" + strconv.Itoa(item.ID))
+	folder.ID = nulls.NewInt(int(folderId))
+	folder.Memo = nulls.NewString("company/" + strconv.Itoa(item.ID.Int))
 	folder.FolderType = nulls.NewInt(1)
 	folder.RefSource = nulls.NewString("company.gallary_folder_id")
-	folder.RefId = nulls.NewInt(item.ID)
+	folder.RefId = item.ID
 
 	result, errFolderUpdate := utils.DbQueryUpdate(db, "folder", folder)
 
@@ -135,7 +127,10 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	return item, errId
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(db *sql.DB, itemRec interface{}, userId int) (int64, error) {
+
+	fmt.Println("h", itemRec)
+	item := itemRec.(modelName)
 
 	item.UpdateUser_id = nulls.NewInt(userId)
 	result, err := utils.DbQueryUpdate(db, tableName, item)
@@ -158,9 +153,10 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
 	var item modelName
-	result, row, err := utils.DbQueryDelete(db, tableName, id)
+	result, row, err := utils.DbQueryDelete(db, tableName, id, item)
 	err = item.ScanRow(row)
 
+	fmt.Println("scaned 扫描以后", item)
 	// result, err := db.Exec("DELETE f, c FROM company c LEFT JOIN folder f ON f.id = c.gallary_folder_id WHERE c.id = ?", id)
 
 	if err != nil {

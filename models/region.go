@@ -7,7 +7,7 @@ import (
 )
 
 type Region struct {
-	ID        int          `col:"" json:"id"`
+	ID        nulls.Int    `col:"" json:"id"`
 	Name      nulls.String `col:"" json:"name" validate:"required" errm:"地区名必填"`
 	Ename     nulls.String `col:"" json:"ename"`
 	TelPrefix nulls.String `col:"" json:"telPrefix"`
@@ -26,40 +26,41 @@ type RegionList struct {
 	Items []*Region
 }
 
-// 取的时候，类型[]byte就不关心是不是null。不然null转其他的报错
+func (item *Region) Receivers() (itemPtrs []interface{}) {
+
+	values := []interface{}{
+		&item.ID,
+		&item.Name,
+		&item.Ename,
+		&item.TelPrefix,
+		&item.Code,
+		&item.TreeLock,
+		&item.Memo,
+		&item.Path,
+		&item.UpdateAt,
+		&item.CreateAt,
+		&item.IsDelete,
+		&item.Parent_id}
+
+	valuePtrs := make([]interface{}, len(values))
+
+	for i := range values {
+		valuePtrs[i] = values[i]
+	}
+
+	return valuePtrs
+}
 
 // learned from: https://stackoverflow.com/questions/53175792/how-to-make-scanning-db-rows-in-go-dry
 
 func (item *Region) ScanRow(r *sql.Row) error {
-	return r.Scan(
-		&item.ID,
-		&item.Name,
-		&item.Ename,
-		&item.TelPrefix,
-		&item.Code,
-		&item.TreeLock,
-		&item.Memo,
-		&item.Path,
-		&item.UpdateAt,
-		&item.CreateAt,
-		&item.IsDelete,
-		&item.Parent_id)
+	err := r.Scan(item.Receivers()...)
+	return err
 }
 
 func (item *Region) ScanRows(r *sql.Rows) error {
-	return r.Scan(
-		&item.ID,
-		&item.Name,
-		&item.Ename,
-		&item.TelPrefix,
-		&item.Code,
-		&item.TreeLock,
-		&item.Memo,
-		&item.Path,
-		&item.UpdateAt,
-		&item.CreateAt,
-		&item.IsDelete,
-		&item.Parent_id)
+	err := r.Scan(item.Receivers()...)
+	return err
 }
 
 func (list *RegionList) ScanRow(r *sql.Rows) error {

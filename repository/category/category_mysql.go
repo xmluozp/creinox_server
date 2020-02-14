@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
 	"github.com/xmluozp/creinox_server/utils"
 )
@@ -77,7 +78,7 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	}
 
 	id, errId := result.LastInsertId()
-	item.ID = int(id)
+	item.ID = nulls.NewInt(int(id))
 	if errId != nil {
 		return item, errId
 	}
@@ -106,7 +107,7 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	var item modelName
 
-	result, row, err := utils.DbQueryDelete(db, tableName, id)
+	result, row, err := utils.DbQueryDelete(db, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -125,4 +126,27 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	}
 
 	return item, err
+}
+
+// ----------------------------------
+func (b repositoryName) UpdateRow_currentCode(db *sql.DB, id int, code string) (int64, error) {
+
+	var item modelName
+
+	item.ID = nulls.NewInt(id)
+	item.CurrentCode = nulls.NewString(code)
+
+	result, err := utils.DbQueryUpdate(db, tableName, item)
+
+	if err != nil {
+		return 0, err
+	}
+
+	rowsUpdated, err := result.RowsAffected()
+
+	if err != nil {
+		return 0, err
+	}
+
+	return rowsUpdated, err
 }

@@ -33,10 +33,33 @@ func DbQueryRows(db *sql.DB,
 	var newQueryStringBegin string
 	var newQueryStringSearchTerms string
 
+	selectColumns := tableName + ".*"
+	selectTable := tableName
+
+	// ----------------------- 判断要不要join
+	// 循环类型里的field
+	rt := reflect.TypeOf(dataModel)
+	for i := 0; i < rt.NumField(); i++ {
+
+		// 判断field是不是ref
+		f := rt.Field(i)
+		_, isRef := rt.Field(i).Tag.Lookup("ref")
+
+		if isRef {
+			refTableName := strings.Split(f.Tag.Get("ref"), ",")[0]
+			refColumn := strings.Split(f.Tag.Get("ref"), ",")[1]
+
+			refTableNameUnique := refTableName + strconv.Itoa(i)
+
+			selectColumns += ", " + refTableNameUnique + ".*"
+			selectTable += fmt.Sprintf(" LEFT JOIN %s %s ON %s.%s = %s.%s", refTableName, refTableNameUnique, tableName, refColumn, refTableNameUnique, "id")
+		}
+	}
+
 	if query != "" {
 		newQueryStringBegin = query
 	} else {
-		newQueryStringBegin = "SELECT * FROM " + tableName + " WHERE 1=1"
+		newQueryStringBegin = "SELECT " + selectColumns + " FROM " + selectTable + " WHERE 1=1"
 	}
 
 	newQueryStringSearchTerms = ""
@@ -51,6 +74,8 @@ func DbQueryRows(db *sql.DB,
 
 		// 先看int
 		_, errInt := strconv.Atoi(v)
+		k := tableName + "." + k
+
 		if errInt == nil {
 			newQueryStringSearchTerms += " AND " + k + " = " + v
 			continue
@@ -75,7 +100,7 @@ func DbQueryRows(db *sql.DB,
 	}
 
 	if pagination.OrderBy != "" {
-		newQueryString += " ORDER BY " + pagination.OrderBy + " " + pagination.Order
+		newQueryString += " ORDER BY " + tableName + "." + pagination.OrderBy + " " + pagination.Order
 	} else {
 		newQueryString += " ORDER BY 1 DESC"
 	}
@@ -108,6 +133,45 @@ func DbQueryRows(db *sql.DB,
 	}
 
 	return rows, err
+}
+func DbQueryRow(db *sql.DB,
+	query string,
+	tableName string,
+	id int,
+	dataModel interface{}) *sql.Row {
+
+	var newQueryString string
+	var newQueryStringBegin string
+	var newQueryStringSearchTerms string
+
+	selectColumns := tableName + ".*"
+	selectTable := tableName
+	rt := reflect.TypeOf(dataModel)
+	for i := 0; i < rt.NumField(); i++ {
+
+		// 判断field是不是ref
+		f := rt.Field(i)
+		_, isRef := rt.Field(i).Tag.Lookup("ref")
+
+		if isRef {
+			refTableName := strings.Split(f.Tag.Get("ref"), ",")[0]
+			refColumn := strings.Split(f.Tag.Get("ref"), ",")[1]
+
+			refTableNameUnique := refTableName + strconv.Itoa(i)
+
+			selectColumns += ", " + refTableNameUnique + ".*"
+			selectTable += fmt.Sprintf(" LEFT JOIN %s %s ON %s.%s = %s.%s", refTableName, refTableNameUnique, tableName, refColumn, refTableNameUnique, "id")
+		}
+	}
+
+	if query != "" {
+		newQueryStringBegin = query
+	} else {
+		newQueryStringBegin = "SELECT " + selectColumns + " FROM " + selectTable + " WHERE " + tableName + ".id = ?"
+	}
+	row := db.QueryRow(newQueryStringBegin+newQueryStringSearchTerms+newQueryString, id)
+
+	return row
 }
 
 func GetPagination(r *http.Request) models.Pagination {
@@ -267,9 +331,11 @@ func DbQueryUpdate(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 }
 
 // called from repository
-func DbQueryDelete(db *sql.DB, tableName string, id int) (sql.Result, *sql.Row, error) {
+func DbQueryDelete(db *sql.DB, tableName string, id int, dataModel interface{}) (sql.Result, *sql.Row, error) {
 
-	rowDeleted := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
+	rowDeleted := DbQueryRow(db, "", tableName, id, dataModel)
+
+	// db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
 
 	result, err := db.Exec("DELETE FROM "+tableName+" WHERE id = ?", id)
 

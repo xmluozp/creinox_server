@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
 	"github.com/xmluozp/creinox_server/utils"
 )
@@ -61,7 +62,7 @@ func (b repositoryName) GetRows(
 func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
 
 	var item modelName
-	row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
+	row := utils.DbQueryRow(db, "", tableName, id, item)
 
 	err := item.ScanRow(row)
 
@@ -78,7 +79,7 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	}
 
 	id, errId := result.LastInsertId()
-	item.ID = int(id)
+	item.ID = nulls.NewInt(int(id))
 	if errId != nil {
 		return item, errId
 	}
@@ -107,7 +108,7 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	var item modelName
 
-	result, row, err := utils.DbQueryDelete(db, tableName, id)
+	result, row, err := utils.DbQueryDelete(db, tableName, id, item)
 
 	if err != nil {
 		return nil, err

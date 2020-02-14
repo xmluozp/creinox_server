@@ -7,8 +7,8 @@ import (
 )
 
 type Category struct {
-	ID          int          `col:"" json:"id"`
-	Name        nulls.String `col:"" json:"name" validate:"required" errm:"产品名必填"`
+	ID          nulls.Int    `col:"" json:"id"`
+	Name        nulls.String `col:"" json:"name" validate:"required" errm:"必填"`
 	Ename       nulls.String `col:"" json:"ename"`
 	Prefix      nulls.String `col:"" json:"prefix"`
 	CurrentCode nulls.String `col:"" json:"currentCode"`
@@ -18,7 +18,7 @@ type Category struct {
 	Path        nulls.String `col:"" json:"path"`
 	UpdateAt    nulls.Time   `col:"newtime" json:"updateAt"`
 	CreateAt    nulls.Time   `col:"default" json:"createAt"`
-	IsDelete    nulls.Bool   `col:"" json:"isDelete"`
+	IsDelete    nulls.Bool   `col:"default" json:"isDelete"`
 	Parent_id   nulls.Int    `col:"fk" json:"parent_id"`
 	Root_id     nulls.Int    `json:"root_id"` // to display tree
 }
@@ -31,8 +31,9 @@ type CategoryList struct {
 
 // learned from: https://stackoverflow.com/questions/53175792/how-to-make-scanning-db-rows-in-go-dry
 
-func (item *Category) ScanRow(r *sql.Row) error {
-	return r.Scan(
+func (item *Category) Receivers() (itemPtrs []interface{}) {
+
+	values := []interface{}{
 		&item.ID,
 		&item.Name,
 		&item.Ename,
@@ -45,24 +46,23 @@ func (item *Category) ScanRow(r *sql.Row) error {
 		&item.UpdateAt,
 		&item.CreateAt,
 		&item.IsDelete,
-		&item.Parent_id)
+		&item.Parent_id}
+
+	valuePtrs := make([]interface{}, len(values))
+
+	for i := range values {
+		valuePtrs[i] = values[i]
+	}
+
+	return valuePtrs
+}
+
+func (item *Category) ScanRow(r *sql.Row) error {
+	return r.Scan(item.Receivers()...)
 }
 
 func (item *Category) ScanRows(r *sql.Rows) error {
-	return r.Scan(
-		&item.ID,
-		&item.Name,
-		&item.Ename,
-		&item.Prefix,
-		&item.CurrentCode,
-		&item.TreeLock,
-		&item.Memo,
-		&item.Ememo,
-		&item.Path,
-		&item.UpdateAt,
-		&item.CreateAt,
-		&item.IsDelete,
-		&item.Parent_id)
+	return r.Scan(item.Receivers()...)
 }
 
 func (list *CategoryList) ScanRow(r *sql.Rows) error {

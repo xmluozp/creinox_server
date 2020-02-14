@@ -1,60 +1,70 @@
-package companyController
+package productController
 
 import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	_ "image/gif"
-	_ "image/jpeg"
 	"net/http"
-	"strconv"
-	"strings"
-
 	"reflect"
+	"strings"
 
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/auth"
-	folderController "github.com/xmluozp/creinox_server/controllers/folder"
+	categoryController "github.com/xmluozp/creinox_server/controllers/category"
 	imageController "github.com/xmluozp/creinox_server/controllers/imagedata"
 
 	"github.com/xmluozp/creinox_server/models"
-	repository "github.com/xmluozp/creinox_server/repository/company"
+	repository "github.com/xmluozp/creinox_server/repository/product"
 	"github.com/xmluozp/creinox_server/utils"
 )
 
 type Controller struct{}
-type modelName = models.Company
+type modelName = models.Product
 
-var authNames = []string{
-	"",
-	"companyinternal",
-	"companyfactory",
-	"companyoverseas",
-	"companydomestic",
-	"companyshipping"}
+var authName = "product"
 
 // =============================================== basic CRUD
 
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		searchTerms := utils.GetSearchTerms(r)
-		companyType, _ := strconv.Atoi(searchTerms["companyType"])
-
-		pass, _ := auth.CheckAuth(db, w, r, authNames[companyType])
+		pass, _ := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
 
 		var item modelName
 		repo := repository.Repository{}
+
 		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		utils.SendJson(w, status, returnValue, err)
+	}
+}
+
+func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		pass, _ := auth.CheckAuth(db, w, r, authName)
+		if !pass {
+			return
+		}
+
+		var item modelName
+		repo := repository.Repository{}
+
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo)
+		fmt.Println("返回的", returnValue.Rows)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
 
 func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		pass, _ := auth.CheckAuth(db, w, r, authName)
+		if !pass {
+			return
+		}
 
 		var item modelName
 		repo := repository.Repository{}
@@ -83,7 +93,19 @@ func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		itemFromRequest := returnItem.(models.Company)
+		itemFromRequest := returnItem.(modelName)
+
+		// 更新category里的最大编码
+		ca := categoryController.Controller{}
+		_, currentCode := utils.ParseFlight(itemFromRequest.Code.String)
+		ca.Update_currentCode(db, itemFromRequest.Category_id.Int, currentCode)
+
+		if err != nil {
+			var returnValue models.JsonRowsReturn
+			returnValue.Info = "编码更新错误" + err.Error()
+			utils.SendError(w, http.StatusInternalServerError, returnValue)
+			return
+		}
 
 		// 更新image数据库, 上传图片
 		err = updateImage(db, itemFromRequest, files, userId)
@@ -123,8 +145,6 @@ func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
 		// convert "reflected" item into company type
 		itemFromRequest := returnItem.(modelName)
 
-		fmt.Println("看看营业执照：", itemFromRequest.ImageLicense_id)
-
 		// 更新公司的两张图片. 如果没有就是删除
 		err = updateImage(db, itemFromRequest, files, userId)
 
@@ -157,21 +177,16 @@ func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 		repo := repository.Repository{}
 
 		status, returnValue, itemReturn, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		company := itemReturn.(modelName)
+		product := itemReturn.(modelName)
 
 		if err == nil {
 
-			// 删除营业执照和名片
+			// 删除产品图片
 			imageCtrl := imageController.Controller{}
-			imageCtrl.Delete(db, company.ImageLicense_id.Int, userId)
-			imageCtrl.Delete(db, company.ImageBizCard_id.Int, userId)
-
-			// 删除folder (folder下面images的删除在folder处理)
-			folderCtrl := folderController.Controller{}
-			err = folderCtrl.Delete(db, company.Gallary_folder_id.Int, userId)
+			err = imageCtrl.Delete(db, product.Image_id.Int, userId)
 
 			if err != nil {
-				returnValue.Info = "删除公司对应图库失败" + err.Error()
+				returnValue.Info = "删除产品对应图库失败" + err.Error()
 				utils.SendJson(w, http.StatusFailedDependency, returnValue, err)
 			}
 		}

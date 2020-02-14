@@ -51,9 +51,17 @@ type Credentials struct {
 // Check if current user has the authentication
 func CheckAuth(db *sql.DB, w http.ResponseWriter, r *http.Request, authTag string) (bool, int) {
 
+	//----------------------------------------/ only for Postman testing
+	tknstr := r.Header.Get("test")
+	if tknstr == "test" {
+		return true, 1
+	}
+
+	//----------------------------------------\ only for Postman testing
+
 	// get token from header
 	var returnValue models.JsonRowsReturn
-	tknstr := r.Header.Get("Authorization")
+	tknstr = r.Header.Get("Authorization")
 
 	// get userName and auth from token
 	userId, _, auth, err := GetUserNameFromToken(w, r, tknstr)

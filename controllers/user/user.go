@@ -76,7 +76,7 @@ func (c Controller) Login(db *sql.DB) http.HandlerFunc {
 
 		// Create the JWT claims, which includes the username and expiry time
 		claims := &auth.Claims{
-			UserId:   user.ID,
+			UserId:   user.ID.Int,
 			UserName: creds.UserName,
 			Auth:     role.Auth.String,
 			StandardClaims: jwt.StandardClaims{

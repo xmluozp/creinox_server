@@ -91,6 +91,30 @@ func parseInt(s string) int {
 	}
 }
 
+func ParseFlight(s string) (letters, numbers string) {
+
+	// trim the postfix letters (isnt needed)
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] >= '0' && s[i] <= '9' {
+			s = s[0 : i+1]
+			break
+		}
+	}
+
+	var l, n []rune
+	for _, r := range s {
+		switch {
+		case r >= 'A' && r <= 'Z':
+			l = append(l, r)
+		case r >= 'a' && r <= 'z':
+			l = append(l, r)
+		case r >= '0' && r <= '9':
+			n = append(n, r)
+		}
+	}
+	return string(l), string(n)
+}
+
 func GetField(tag, key string, s interface{}) reflect.Value {
 	rt := reflect.TypeOf(s)
 	v := reflect.ValueOf(s)

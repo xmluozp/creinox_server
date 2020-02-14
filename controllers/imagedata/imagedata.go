@@ -14,6 +14,7 @@ import (
 	"strconv"
 
 	"github.com/BurntSushi/graphics-go/graphics"
+	"github.com/Unknwon/goconfig"
 	"github.com/gobuffalo/nulls"
 	"github.com/gorilla/mux"
 	"github.com/xmluozp/creinox_server/auth"
@@ -26,7 +27,6 @@ type Controller struct{}
 type modelName = models.Image
 
 var authName = ""
-var UPLOAD_FOLDER = "uploads/"
 
 // =============================================== basic CRUD
 
@@ -92,7 +92,7 @@ func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// 这里是前端的文件夹管理用，特殊处理
+// 通用图片管理功能用。否则只有批量删除
 // func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 
 // 	return func(w http.ResponseWriter, r *http.Request) {
@@ -144,7 +144,6 @@ func (c Controller) DeleteItems(db *sql.DB) http.HandlerFunc {
 			returnValue.Info = fmt.Sprintf("删除%d张图片", len(idList))
 		}
 
-		fmt.Println("删完了信息有问题：", returnValue.Info, returnValue, err)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -201,10 +200,9 @@ func (c Controller) Show(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// TODO: 批量删除：比如公司下的文件夹管理会用到
-
 // ============================== internal
 
+// Get item by folder; Folder will be connected with company/product/other tables
 func (c Controller) ItemsByFolder(
 	db *sql.DB,
 	folderId int) ([]modelName, error) {
@@ -214,6 +212,8 @@ func (c Controller) ItemsByFolder(
 
 	return images, err
 }
+
+// Get item. Will be called by other controller
 func (c Controller) Item(db *sql.DB, id int) (image modelName, err error) {
 
 	repo := repository.Repository{}
@@ -222,7 +222,7 @@ func (c Controller) Item(db *sql.DB, id int) (image modelName, err error) {
 	return image, err
 }
 
-// input: old table, old column, old id, the file. output: new imagedata id
+// Upload withouth a front-end-expected json return. input: old table, old column, old id, the file. output: new imagedata id
 func (c Controller) Upload(
 	db *sql.DB,
 	oldImage_id int,
@@ -317,9 +317,10 @@ func (c Controller) Upload(
 	}
 
 	// 忽略错误。因为有可能数据库没图片
-	return newImagedataResult.ID, nil
+	return newImagedataResult.ID.Int, nil
 }
 
+// Delete withouth a front-end-expected json return
 func (c Controller) Delete(
 	db *sql.DB,
 	id int,
@@ -338,7 +339,15 @@ func (c Controller) Delete(
 
 	imageOld := deletedItem.(models.Image)
 
-	os.Remove(UPLOAD_FOLDER + imageOld.Path.String)
-	os.Remove(UPLOAD_FOLDER + imageOld.ThumbnailPath.String)
+	cfg, err := goconfig.LoadConfigFile("conf.ini")
+
+	if err != nil {
+		panic("错误，找不到conf.ini配置文件")
+	}
+
+	uploads, err := cfg.GetValue("site", "uploads")
+
+	os.Remove(uploads + "/" + imageOld.Path.String)
+	os.Remove(uploads + "/" + imageOld.ThumbnailPath.String)
 	return nil
 }
