@@ -23,9 +23,10 @@ func (b repositoryName) GetLoginRow(db *sql.DB, userName string) (modelName, err
 	var item modelName
 
 	// passed in is the encryped password
-	row := db.QueryRow("SELECT * FROM "+tableName+" WHERE userName = ? AND isActive = TRUE", userName)
+	row := db.QueryRow("SELECT * FROM "+tableName+" WHERE userName = ? AND isActive = 1", userName)
 
-	err := item.ScanRow(row)
+	err := row.Scan(item.Receivers()...)
+	// item.ScanRow(row)
 
 	return item, err
 }

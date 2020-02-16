@@ -46,9 +46,11 @@ func (c Controller) Login(db *sql.DB) http.HandlerFunc {
 		// Get the expected password from our in memory map
 		// expectedPassword, ok := users[creds.Username]
 
+		fmt.Println(creds.UserName)
 		// 传统登录验证，取出userid
 		user, err = repo.GetLoginRow(db, creds.UserName)
 		expectedPassword := user.Password.String
+		fmt.Println(expectedPassword)
 
 		if err != nil || auth.CheckPasswordHash(expectedPassword, creds.Password) {
 			fmt.Println("登录错误", err)
