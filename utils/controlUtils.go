@@ -136,7 +136,7 @@ func GetFunc_AddWithHTTPReturn(
 	// ====================================== 保存数据库
 	status, returnValue, row, err := addDateBase(db, item, repo, userId)
 
-	return http.StatusOK, returnValue, row, nil
+	return status, returnValue, row, err
 }
 
 func GetFunc_UpdateWithHTTPReturn(
@@ -162,7 +162,7 @@ func GetFunc_UpdateWithHTTPReturn(
 	//  ---------------------------------------  保存数据库
 	status, returnValue, err = updateDateBase(db, item, repo, userId)
 	//  ---------------------------------------
-	return status, returnValue, item, nil
+	return status, returnValue, item, err
 }
 
 // TODO: 批量删除
@@ -333,6 +333,7 @@ func updateDateBase(
 		return http.StatusInternalServerError, returnValue, errAdd
 	}
 	returnValue.Info = fmt.Sprintf("更新了%d条记录", rowsUpdated)
+	returnValue.Row = item
 
 	return http.StatusAccepted, returnValue, nil
 }
@@ -344,6 +345,8 @@ func addDateBase(
 	userId int) (int, models.JsonRowsReturn, interface{}, error) {
 
 	isPassedValidation, returnValue := ValidateInputs(item)
+
+	fmt.Println("表单验证", isPassedValidation, "returnValue", returnValue)
 
 	if !isPassedValidation {
 		err := errors.New("表单验证失败")

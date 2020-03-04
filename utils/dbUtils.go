@@ -18,12 +18,14 @@ import (
 )
 
 // ===================================== 生成搜索后取出rows
-func DbQueryRows(db *sql.DB,
+func DbQueryRows_Customized(db *sql.DB,
 	query string,
 	tableName string,
 	pagination *models.Pagination,
 	searchTerms map[string]string,
-	dataModel interface{}) (
+	dataModel interface{},
+	stringJoin string,
+	stringAfterWhere string) (
 	*sql.Rows,
 	error) {
 
@@ -33,8 +35,8 @@ func DbQueryRows(db *sql.DB,
 	var newQueryStringBegin string
 	var newQueryStringSearchTerms string
 
-	selectColumns := tableName + ".*"
-	selectTable := tableName
+	selectTable := tableName + " mainTable"
+	selectColumns := "mainTable.*"
 
 	// ----------------------- 判断要不要join
 	// 循环类型里的field
@@ -52,9 +54,13 @@ func DbQueryRows(db *sql.DB,
 			refTableNameUnique := refTableName + strconv.Itoa(i)
 
 			selectColumns += ", " + refTableNameUnique + ".*"
-			selectTable += fmt.Sprintf(" LEFT JOIN %s %s ON %s.%s = %s.%s", refTableName, refTableNameUnique, tableName, refColumn, refTableNameUnique, "id")
+			selectTable += fmt.Sprintf(" LEFT JOIN %s %s ON %s.%s = %s.%s", refTableName, refTableNameUnique, "mainTable", refColumn, refTableNameUnique, "id")
 		}
+
+		// 判断是不是ext，关联表查询用
 	}
+
+	selectTable += stringJoin
 
 	if query != "" {
 		newQueryStringBegin = query
@@ -71,36 +77,43 @@ func DbQueryRows(db *sql.DB,
 		// 日期是: 2020/01/14,2020/01/23 这种格式. 用,切开两个string都是日期就是
 		// https://programming.guide/go/format-parse-string-time-date-example.html
 		// 用dataModel辅助判断. 因为int和float32需要可以查范围
-
-		// 先看int
-		_, errInt := strconv.Atoi(v)
-		k := tableName + "." + k
-
-		if errInt == nil {
-			newQueryStringSearchTerms += " AND " + k + " = " + v
+		if v == "" {
 			continue
 		}
 
-		// 如果不是int, 试着切分。能切分的是range
-		ranges := strings.Split(v, ",")
+		_, field := GetField(k, "json", dataModel)
 
-		// 再看日期
-		if len(ranges) == 2 {
-			_, errT1 := time.Parse("2006/01/02", ranges[0])
-			_, errT2 := time.Parse("2006/01/02", ranges[1])
-			if errT1 == nil && errT2 == nil {
-				newQueryStringSearchTerms += " AND " + k + " >= DATE(" + ranges[0] + ") AND " + k + " <= DATE(" + ranges[1] + ")"
+		if field.Type.String() != "nulls.String" {
+
+			// 先看int:
+			_, errInt := strconv.Atoi(v)
+			k := "mainTable." + k
+
+			if errInt == nil {
+				newQueryStringSearchTerms += " AND " + k + " = " + v
 				continue
 			}
+
+			// 如果不是int, 试着切分。能切分的是range
+			ranges := strings.Split(v, ",")
+
+			// 再看日期
+			if len(ranges) == 2 {
+				_, errT1 := time.Parse("2006/01/02", ranges[0])
+				_, errT2 := time.Parse("2006/01/02", ranges[1])
+				if errT1 == nil && errT2 == nil {
+					newQueryStringSearchTerms += " AND " + k + " >= DATE(" + ranges[0] + ") AND " + k + " <= DATE(" + ranges[1] + ")"
+					continue
+				}
+			}
+		} else {
+			// 最后作为string去like
+			newQueryStringSearchTerms += " AND " + k + " LIKE '%" + v + "%'"
 		}
-
-		// 最后作为string去like
-		newQueryStringSearchTerms += " AND " + k + " LIKE '%" + v + "%'"
-
 	}
 
 	if pagination.OrderBy != "" {
-		newQueryString += " ORDER BY " + tableName + "." + pagination.OrderBy + " " + pagination.Order
+		newQueryString += " ORDER BY mainTable." + pagination.OrderBy + " " + pagination.Order
 	} else {
 		newQueryString += " ORDER BY 1 DESC"
 	}
@@ -110,10 +123,12 @@ func DbQueryRows(db *sql.DB,
 		newQueryString += fmt.Sprintf(" LIMIT %d, %d", pagination.Page*pagination.PerPage, pagination.PerPage)
 	}
 
+	newQueryStringSearchTerms += stringAfterWhere
+
 	// pagination: 基础查询加query加order和分页
 	rows, err := db.Query(newQueryStringBegin + newQueryStringSearchTerms + newQueryString)
 
-	scanErr := db.QueryRow("SELECT COUNT(*) FROM " + tableName + " WHERE 1=1 " + newQueryStringSearchTerms).Scan(&count)
+	scanErr := db.QueryRow("SELECT COUNT(*) FROM " + tableName + " mainTable WHERE 1=1 " + newQueryStringSearchTerms).Scan(&count)
 
 	if scanErr != nil {
 		fmt.Println("scan出错", scanErr.Error())
@@ -134,6 +149,20 @@ func DbQueryRows(db *sql.DB,
 
 	return rows, err
 }
+
+func DbQueryRows(db *sql.DB,
+	query string,
+	tableName string,
+	pagination *models.Pagination,
+	searchTerms map[string]string,
+	dataModel interface{}) (
+	*sql.Rows,
+	error) {
+
+	return DbQueryRows_Customized(db, query, tableName, pagination, searchTerms, dataModel, "", "")
+
+}
+
 func DbQueryRow(db *sql.DB,
 	query string,
 	tableName string,
@@ -144,8 +173,9 @@ func DbQueryRow(db *sql.DB,
 	var newQueryStringBegin string
 	var newQueryStringSearchTerms string
 
-	selectColumns := tableName + ".*"
-	selectTable := tableName
+	selectTable := tableName + " mainTable"
+	selectColumns := "mainTable.*"
+
 	rt := reflect.TypeOf(dataModel)
 	for i := 0; i < rt.NumField(); i++ {
 
@@ -160,14 +190,14 @@ func DbQueryRow(db *sql.DB,
 			refTableNameUnique := refTableName + strconv.Itoa(i)
 
 			selectColumns += ", " + refTableNameUnique + ".*"
-			selectTable += fmt.Sprintf(" LEFT JOIN %s %s ON %s.%s = %s.%s", refTableName, refTableNameUnique, tableName, refColumn, refTableNameUnique, "id")
+			selectTable += fmt.Sprintf(" LEFT JOIN %s %s ON %s.%s = %s.%s", refTableName, refTableNameUnique, "mainTable", refColumn, refTableNameUnique, "id")
 		}
 	}
 
 	if query != "" {
 		newQueryStringBegin = query
 	} else {
-		newQueryStringBegin = "SELECT " + selectColumns + " FROM " + selectTable + " WHERE " + tableName + ".id = ?"
+		newQueryStringBegin = "SELECT " + selectColumns + " FROM " + selectTable + " WHERE mainTable.id = ?"
 	}
 	row := db.QueryRow(newQueryStringBegin+newQueryStringSearchTerms+newQueryString, id)
 
@@ -224,7 +254,7 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 	// 第一个准备用来放string的
 	values = append(values, reflect.ValueOf(""))
 
-	for i := 1; i < v.NumField(); i++ {
+	for i := 0; i < v.NumField(); i++ {
 
 		col, isCol := t.Field(i).Tag.Lookup("col")
 		isValid := true
@@ -244,8 +274,10 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 
 	// 生成INSERT字符串
 	values[0] = reflect.ValueOf("INSERT INTO " + tableName + " (" + strings.Join(columns, ",") + ") VALUES(" + strings.Join(questionMarks, ",") + ");")
+
 	execDb := reflect.ValueOf(db).MethodByName("Exec")
 
+	fmt.Println("insert call:", values[0])
 	// 传入参数：字符串，字段valueof。。。
 	out := execDb.Call(values)
 

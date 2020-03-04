@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-playground/validator"
+	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
 )
 
@@ -43,6 +45,8 @@ func ValidateInputs(obj interface{}) (bool, models.JsonRowsReturn) {
 	// https://github.com/go-playground/validator
 	validate = validator.New()
 
+	validate.RegisterCustomTypeFunc(ValidateValuer, nulls.String{}, nulls.Int{})
+
 	errValidation := validate.Struct(obj)
 
 	if errValidation != nil {
@@ -67,6 +71,24 @@ func ValidateInputs(obj interface{}) (bool, models.JsonRowsReturn) {
 	}
 
 	return errValidation == nil, returnValue
+}
+
+// ValidateValuer implements validator.CustomTypeFunc
+func ValidateValuer(field reflect.Value) interface{} {
+
+	if valuer, ok := field.Interface().(driver.Valuer); ok {
+
+		val, err := valuer.Value()
+
+		if err == nil {
+			return val
+		}
+		// handle the error how you want
+
+		// fmt.Println("自定义validator", field, val)
+	}
+
+	return nil
 }
 
 func ParseError(err reflect.Value) error {
@@ -115,7 +137,7 @@ func ParseFlight(s string) (letters, numbers string) {
 	return string(l), string(n)
 }
 
-func GetField(tag, key string, s interface{}) reflect.Value {
+func GetField(tag, key string, s interface{}) (reflect.Value, reflect.StructField) {
 	rt := reflect.TypeOf(s)
 	v := reflect.ValueOf(s)
 	if rt.Kind() != reflect.Struct {
@@ -126,10 +148,10 @@ func GetField(tag, key string, s interface{}) reflect.Value {
 		tagv := strings.Split(f.Tag.Get(key), ",")[0] // use split to ignore tag "options" like omitempty, etc.
 
 		if tagv == tag {
-			return v.Field(i)
+			return v.Field(i), f
 		}
 	}
-	return reflect.Value{}
+	return reflect.Value{}, reflect.StructField{}
 }
 
 func GetFieldName(tag, key string, s interface{}) (fieldname string) {
@@ -160,7 +182,8 @@ func GetFieldValue(tag, key string, s interface{}) (value interface{}) {
 	// 		return v.Field(i).Interface()
 	// 	}
 	// }
-	returnValue := GetField(tag, key, s)
+
+	returnValue, _ := GetField(tag, key, s)
 
 	// returnValue.Interface()
 	// fmt.Println("getfield value", returnValue.Interface())

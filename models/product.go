@@ -40,7 +40,7 @@ type Product struct {
 	CompanyFactoryId  nulls.Int    `json:"companyFactory.id"`
 	IsCreateCommodity nulls.Bool   `json:"isCreateCommodity"`
 
-	ImageItem Image `ref:"image,image_id" json:"image_id.row"`
+	ImageItem Image `ref:"image,image_id" json:"image_id.row" validate:"-"`
 }
 type ProductList struct {
 	Items []*Product

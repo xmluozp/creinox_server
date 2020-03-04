@@ -6,7 +6,7 @@ import (
 	"github.com/gobuffalo/nulls"
 )
 
-type Productpurchase struct {
+type ProductPurchase struct {
 	ID            nulls.Int     `col:"" json:"id"`
 	ActiveAt      nulls.Time    `col:"" json:"activeAt"`
 	ExpireAt      nulls.Time    `col:"" json:"expireAt"`
@@ -32,19 +32,27 @@ type Productpurchase struct {
 	UpdateAt      nulls.Time    `col:"newtime" json:"updateAt"`
 	Product_id    nulls.Int     `col:"fk" json:"product_id" validate:"required" errm:"必填"`
 	Company_id    nulls.Int     `col:"fk" json:"company_id" validate:"required" errm:"必填"`
-	Currency_id   nulls.Int     `col:"fk" json:"currency_id"`
+	Currency_id   nulls.Int     `col:"fk" json:"currency_id" validate:"required" errm:"必填"`
 	Pack_id       nulls.Int     `col:"fk" json:"pack_id"`
 	UnitType_id   nulls.Int     `col:"fk" json:"unitType_id"`
 	Polishing_id  nulls.Int     `col:"fk" json:"polishing_id"`
 	Texture_id    nulls.Int     `col:"fk" json:"texture_id"`
 	UpdateUser_id nulls.Int     `col:"fk" json:"updateUser_id"`
+
+	// 显示在列表里
+
+	CompanyItem   Company    `ref:"company,company_id" json:"company_id.row" validate:"-"`
+	CurrencyItem  CommonItem `ref:"common_item,currency_id" json:"currency_id.row" validate:"-"`
+	PolishingItem CommonItem `ref:"common_item,polishing_id" json:"polishing_id.row" validate:"-"`
+	TextureItem   CommonItem `ref:"common_item,texture_id" json:"texture_id.row" validate:"-"`
+	PackItem      CommonItem `ref:"common_item,pack_id" json:"pack_id.row" validate:"-"`
 }
 
-type ProductpurchaseList struct {
-	Items []*Productpurchase
+type ProductPurchaseList struct {
+	Items []*ProductPurchase
 }
 
-func (item *Productpurchase) Receivers() (itemPtrs []interface{}) {
+func (item *ProductPurchase) Receivers() (itemPtrs []interface{}) {
 
 	values := []interface{}{
 		&item.ID,
@@ -88,21 +96,62 @@ func (item *Productpurchase) Receivers() (itemPtrs []interface{}) {
 	return valuePtrs
 }
 
-func (item *Productpurchase) ScanRow(r *sql.Row) error {
-	err := r.Scan(item.Receivers()...)
+func (item *ProductPurchase) ScanRow(r *sql.Row) error {
+
+	var columns []interface{}
+
+	fkCompany := Company{}
+	fkCurrency := CommonItem{}
+	fkPolishing := CommonItem{}
+	fkTexture := CommonItem{}
+	fkPack := CommonItem{}
+
+	columns = append(item.Receivers(), fkCompany.Receivers()...)
+	columns = append(columns, fkCurrency.Receivers()...)
+	columns = append(columns, fkPolishing.Receivers()...)
+	columns = append(columns, fkTexture.Receivers()...)
+	columns = append(columns, fkPack.Receivers()...)
+
+	err := r.Scan(columns...)
+
+	item.CompanyItem = fkCompany
+	item.CurrencyItem = fkCurrency
+	item.PolishingItem = fkPolishing
+	item.TextureItem = fkTexture
+	item.PackItem = fkPack
 
 	return err
 }
 
-func (item *Productpurchase) ScanRows(r *sql.Rows) error {
-	err := r.Scan(item.Receivers()...)
+func (item *ProductPurchase) ScanRows(r *sql.Rows) error {
+	var columns []interface{}
+
+	fkCompany := Company{}
+	fkCurrency := CommonItem{}
+	fkPolishing := CommonItem{}
+	fkTexture := CommonItem{}
+	fkPack := CommonItem{}
+
+	columns = append(item.Receivers(), fkCompany.Receivers()...)
+	columns = append(columns, fkCurrency.Receivers()...)
+	columns = append(columns, fkPolishing.Receivers()...)
+	columns = append(columns, fkTexture.Receivers()...)
+	columns = append(columns, fkPack.Receivers()...)
+
+	err := r.Scan(columns...)
+
+	item.CompanyItem = fkCompany
+	item.CurrencyItem = fkCurrency
+	item.PolishingItem = fkPolishing
+	item.TextureItem = fkTexture
+	item.PackItem = fkPack
 
 	return err
 }
 
-func (list *ProductpurchaseList) ScanRow(r *sql.Rows) error {
+func (list *ProductPurchaseList) ScanRow(r *sql.Rows) error {
 
-	item := new(Productpurchase) // ---------- item
+	item := new(ProductPurchase) // ---------- item
 
 	if err := item.ScanRows(r); err != nil {
 		return err

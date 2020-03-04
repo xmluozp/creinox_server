@@ -164,6 +164,8 @@ func (c Controller) AddItems(db *sql.DB) http.HandlerFunc {
 		params := mux.Vars(r)
 		folder_id, err := strconv.Atoi(params["folder_id"])
 
+		// 原数据库的公司是没有folder的
+
 		if err != nil {
 			fmt.Println("test: folder_id get error", err)
 			return

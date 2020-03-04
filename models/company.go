@@ -42,10 +42,10 @@ type Company struct {
 	Region_id             nulls.Int    `col:"" json:"region_id"`
 	Retriever_id_userName nulls.String `json:"retriever_id.userName"`
 
-	ImageLicense Image `ref:"image,imageLicense_id" json:"imageLicense_id.row"`
-	ImageBizCard Image `ref:"image,imageBizCard_id" json:"imageBizCard_id.row"`
+	ImageLicense Image `ref:"image,imageLicense_id" json:"imageLicense_id.row" validate:"-"`
+	ImageBizCard Image `ref:"image,imageBizCard_id" json:"imageBizCard_id.row" validate:"-"`
 
-	RetrieverItem User `ref:"user,retriever_id" json:"retriever_id.row"`
+	RetrieverItem User `ref:"user,retriever_id" json:"retriever_id.row" validate:"-"`
 }
 
 type CompanyList struct {

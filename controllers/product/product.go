@@ -3,14 +3,16 @@ package productController
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/gobuffalo/nulls"
+	"github.com/gorilla/mux"
 	"github.com/xmluozp/creinox_server/auth"
 	categoryController "github.com/xmluozp/creinox_server/controllers/category"
+	commodityController "github.com/xmluozp/creinox_server/controllers/commodity"
 	imageController "github.com/xmluozp/creinox_server/controllers/imagedata"
 
 	"github.com/xmluozp/creinox_server/models"
@@ -53,7 +55,22 @@ func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
 		repo := repository.Repository{}
 
 		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo)
-		fmt.Println("返回的", returnValue.Rows)
+		utils.SendJson(w, status, returnValue, err)
+	}
+}
+
+func (c Controller) GetItems_ByCommodity(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		pass, _ := auth.CheckAuth(db, w, r, authName)
+		if !pass {
+			return
+		}
+
+		var item modelName
+		repo := repository.Repository{}
+
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_ByCommodity", repo)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -113,6 +130,17 @@ func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
 		if err != nil {
 			var returnValue models.JsonRowsReturn
 			returnValue.Info = "文件上传错误" + err.Error()
+			utils.SendError(w, http.StatusInternalServerError, returnValue)
+			return
+		}
+
+		// 假如设置为商品，就更新商品表
+		commodityCtrl := commodityController.Controller{}
+		err = commodityCtrl.Add_ByProduct(db, itemFromRequest.ID.Int, userId)
+
+		if err != nil {
+			var returnValue models.JsonRowsReturn
+			returnValue.Info = "设置为商品时出错" + err.Error()
 			utils.SendError(w, http.StatusInternalServerError, returnValue)
 			return
 		}
@@ -195,7 +223,86 @@ func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+// ================= components
+func (c Controller) GetComponents(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		pass, _ := auth.CheckAuth(db, w, r, authName)
+		if !pass {
+			return
+		}
+
+		var item modelName
+		repo := repository.Repository{}
+
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_Component", repo)
+
+		utils.SendJson(w, status, returnValue, err)
+	}
+}
+
+func (c Controller) Assemble(db *sql.DB) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		pass, userId := auth.CheckAuth(db, w, r, authName)
+		if !pass {
+			return
+		}
+
+		repo := repository.Repository{}
+
+		// -------------- customized
+		var returnValue models.JsonRowsReturn
+		params := mux.Vars(r)
+
+		parent_id, _ := strconv.Atoi(params["parent_id"])
+		child_id, _ := strconv.Atoi(params["child_id"])
+
+		err := repo.Assemble(db, parent_id, child_id, userId)
+
+		if err != nil {
+			returnValue.Info = err.Error()
+			utils.SendJson(w, http.StatusBadRequest, returnValue, err)
+			return
+		}
+
+		utils.SendJson(w, http.StatusOK, returnValue, err)
+	}
+}
+
+func (c Controller) Disassemble(db *sql.DB) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		pass, userId := auth.CheckAuth(db, w, r, authName)
+		if !pass {
+			return
+		}
+
+		repo := repository.Repository{}
+
+		// -------------- customized
+		var returnValue models.JsonRowsReturn
+		params := mux.Vars(r)
+
+		parent_id, _ := strconv.Atoi(params["parent_id"])
+		child_id, _ := strconv.Atoi(params["child_id"])
+
+		err := repo.Disassemble(db, parent_id, child_id, userId)
+
+		if err != nil {
+			returnValue.Info = err.Error()
+			utils.SendJson(w, http.StatusBadRequest, returnValue, err)
+			return
+		}
+
+		utils.SendJson(w, http.StatusOK, returnValue, err)
+	}
+}
+
 // 以下这段代码找不到方法generalization，只好复制粘贴到各自的controllers里。但代码都是一样的：把业务表里附带的image update到image表、上传到文件夹、更新业务表对应fk
+// =====image
 func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int) error {
 
 	repo := repository.Repository{}

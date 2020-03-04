@@ -18,8 +18,8 @@ type BankAccount struct {
 	Currency_id nulls.Int    `col:"fk" json:"currency_id"`
 	Company_id  nulls.Int    `col:"fk" json:"company_id"`
 	//========fk
-	CurrencyItem CommonItem `ref:"common_item,currency_id" json:"currency_id.row"`
-	CompanyItem  Company    `ref:"company,company_id" json:"company_id.row"`
+	CurrencyItem CommonItem `ref:"common_item,currency_id" json:"currency_id.row" validate:"-"`
+	CompanyItem  Company    `ref:"company,company_id" json:"company_id.row" validate:"-"`
 }
 
 type BankAccountList struct {
