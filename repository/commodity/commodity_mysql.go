@@ -14,7 +14,11 @@ type modelName = models.Commodity
 type repositoryName = Repository
 
 var tableName = "commodity"
-var tableMeta = "(SELECT core1.*, core2.product_id as product_id, core3.image_id as image_id FROM commodity core1 LEFT JOIN commodity_product core2 ON core1.id = core2.commodity_id LEFT JOIN product core3 ON core3.id = core2.product_id  WHERE core2.isMeta = 1)"
+
+// var tableMeta = "(SELECT core1.*, core2.product_id as product_id, core3.image_id as image_id FROM commodity core1 LEFT JOIN commodity_product core2 ON core1.id = core2.commodity_id LEFT JOIN product core3 ON core3.id = core2.product_id  WHERE core2.isMeta = 1)"
+
+// 不判断meta，不然删了产品，导致关联删掉了以后，就成了幽灵记录
+var tableMeta = "(SELECT core1.*, core2.product_id as product_id, core3.image_id as image_id FROM commodity core1 LEFT JOIN commodity_product core2 ON core1.id = core2.commodity_id LEFT JOIN product core3 ON core3.id = core2.product_id)"
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(

@@ -3,22 +3,24 @@ package models
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/Unknwon/goconfig"
 	"github.com/gobuffalo/nulls"
 )
 
 type Image struct {
-	ID                  nulls.Int    `col:"" json:"id"`
-	Name                nulls.String `col:"" json:"name" validate:"required" errm:"必填"`
-	Height              nulls.Int    `col:"" json:"height"` // 权限可以后期改
-	Width               nulls.Int    `col:"" json:"width"`
-	Sort                nulls.Int    `col:"" json:"sort"`
-	Path                nulls.String `col:"" json:"path"`
-	ThumbnailPath       nulls.String `col:"" json:"thumbnailPath"`
-	Ext                 nulls.String `col:"" json:"ext"`
-	CreateAt            nulls.String `col:"default" json:"createAt"`
-	Gallary_folder_id   nulls.Int    `col:"" json:"gallary_folder_id"`
-	Gallary_folder_memo nulls.Nulls  `json:"gallary_folder_id.memo"`
+	ID                nulls.Int    `col:"" json:"id"`
+	Name              nulls.String `col:"" json:"name" validate:"required" errm:"必填"`
+	Height            nulls.Int    `col:"" json:"height"` // 权限可以后期改
+	Width             nulls.Int    `col:"" json:"width"`
+	Sort              nulls.Int    `col:"" json:"sort"`
+	Path              nulls.String `col:"" json:"path"`
+	ThumbnailPath     nulls.String `col:"" json:"thumbnailPath"`
+	Ext               nulls.String `col:"" json:"ext"`
+	CreateAt          nulls.String `col:"default" json:"createAt"`
+	Gallary_folder_id nulls.Int    `col:"" json:"gallary_folder_id"`
+
+	Gallary_folder_memo nulls.String `json:"gallary_folder_id.memo"`
 }
 
 type ImageList struct {
@@ -52,14 +54,14 @@ func (item *Image) Receivers() (itemPtrs []interface{}) {
 
 func (item *Image) ScanRow(r *sql.Row) error {
 
-	err := r.Scan(item.Receivers()...)
+	err := r.Scan(append(item.Receivers(), &item.Gallary_folder_memo)...)
 
 	return err
 }
 
 func (item *Image) ScanRows(r *sql.Rows) error {
 
-	err := r.Scan(item.Receivers()...)
+	err := r.Scan(append(item.Receivers(), &item.Gallary_folder_memo)...)
 
 	return err
 }

@@ -23,7 +23,8 @@ func (b repositoryName) GetRows(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination,
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
 	// 拦截 search
 	root_id := searchTerms["root_id"]
@@ -58,7 +59,7 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
+func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
 
 	var item modelName
 	row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
@@ -129,7 +130,7 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 }
 
 // ----------------------------------
-func (b repositoryName) UpdateRow_currentCode(db *sql.DB, id int, code string) (int64, error) {
+func (b repositoryName) UpdateRow_currentCode(db *sql.DB, id int, code string, userId int) (int64, error) {
 
 	var item modelName
 

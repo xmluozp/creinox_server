@@ -2,6 +2,7 @@ package imagedataRepository
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
@@ -13,6 +14,7 @@ type modelName = models.Image
 type repositoryName = Repository
 
 var tableName = "image"
+var viewStr = fmt.Sprintf("(SELECT m1.*, m2.memo FROM %s m1 LEFT JOIN folder m2 ON m1.gallary_folder_id = m2.id)", tableName)
 
 // =============================================== basic CRUD
 
@@ -24,7 +26,7 @@ func (b repositoryName) GetRows(
 	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
 
 	// 需要用join SELECT a.runoob_id, a.runoob_author, b.runoob_count FROM runoob_tbl a INNER JOIN tcount_tbl b ON a.runoob_author = b.runoob_author;
-	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(db, "", viewStr, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -48,7 +50,7 @@ func (b repositoryName) GetRows(
 func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
 
 	var item modelName
-	row := utils.DbQueryRow(db, "", tableName, id, item)
+	row := utils.DbQueryRow(db, "", viewStr, id, item)
 
 	err := item.ScanRow(row)
 	return item.Getter(), err
@@ -93,13 +95,17 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	var item modelName
 
-	result, row, err := utils.DbQueryDelete(db, tableName, id, item)
+	// customized
+	rowDeleted := utils.DbQueryRow(db, "", viewStr, id, item)
+	// --- customized end
+
+	result, _, err := utils.DbQueryDelete(db, tableName, id, item)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = item.ScanRow(row)
+	err = item.ScanRow(rowDeleted)
 
 	if err != nil {
 		return nil, err
@@ -119,7 +125,7 @@ func (b repositoryName) GetRowsByFolder(
 	folderId int) (items []modelName, err error) {
 
 	// 需要用join SELECT a.runoob_id, a.runoob_author, b.runoob_count FROM runoob_tbl a INNER JOIN tcount_tbl b ON a.runoob_author = b.runoob_author;
-	rows, err := db.Query("SELECT * FROM "+tableName+" WHERE gallary_folder_id=?", folderId)
+	rows, err := db.Query("SELECT * FROM "+viewStr+" WHERE gallary_folder_id=?", folderId)
 
 	if err != nil {
 		return items, err

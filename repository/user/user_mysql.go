@@ -126,7 +126,13 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 		item.Password = nulls.NewString(hashedPass)
 		result, err = utils.DbQueryUpdate(db, tableName, item)
 	} else {
-		result, err = db.Exec("UPDATE user SET fullName = ?, memo = ?, isActive = ?, role_id=? WHERE id=?", &item.FullName, &item.Memo, &item.IsActive, &item.Role_id, &item.ID)
+		// 防止最高管理员把自己禁用或者降级
+		if item.ID.Int == userId {
+			result, err = db.Exec("UPDATE user SET fullName = ?, memo = ? WHERE id=?", &item.FullName, &item.Memo, &item.ID)
+
+		} else {
+			result, err = db.Exec("UPDATE user SET fullName = ?, memo = ?, isActive = ?, role_id=? WHERE id=?", &item.FullName, &item.Memo, &item.IsActive, &item.Role_id, &item.ID)
+		}
 	}
 
 	// result, err := db.Exec("UPDATE role SET name=?, rank = ?, auth=? WHERE id=?", &item.Name, &item.Rank, &item.Auth, &item.ID)

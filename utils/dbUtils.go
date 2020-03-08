@@ -102,13 +102,13 @@ func DbQueryRows_Customized(db *sql.DB,
 				_, errT1 := time.Parse("2006/01/02", ranges[0])
 				_, errT2 := time.Parse("2006/01/02", ranges[1])
 				if errT1 == nil && errT2 == nil {
-					newQueryStringSearchTerms += " AND " + k + " >= DATE(" + ranges[0] + ") AND " + k + " <= DATE(" + ranges[1] + ")"
+					newQueryStringSearchTerms += " AND mainTable." + k + " >= DATE(" + ranges[0] + ") AND mainTable." + k + " <= DATE(" + ranges[1] + ")"
 					continue
 				}
 			}
 		} else {
 			// 最后作为string去like
-			newQueryStringSearchTerms += " AND " + k + " LIKE '%" + v + "%'"
+			newQueryStringSearchTerms += " AND mainTable." + k + " LIKE '%" + v + "%'"
 		}
 	}
 
@@ -210,9 +210,15 @@ func GetPagination(r *http.Request) models.Pagination {
 	// ============ pagination (
 	var pagination models.Pagination
 
+	// 防止无pagination导致数据全取
+	perPagestr := params.Get("perPage")
+	if perPagestr == "" {
+		perPagestr = "50"
+	}
+
 	pagination.Page = parseInt(params.Get("page"))
 	pagination.RowCount = parseInt(params.Get("rowCount"))
-	pagination.PerPage = parseInt(params.Get("perPage"))
+	pagination.PerPage = parseInt(perPagestr)
 	pagination.TotalCount = parseInt(params.Get("totalCount"))
 	pagination.TotalPage = parseInt(params.Get("totalPage"))
 	pagination.Order = params.Get("order")
@@ -370,6 +376,8 @@ func DbQueryDelete(db *sql.DB, tableName string, id int, dataModel interface{}) 
 	// db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
 
 	result, err := db.Exec("DELETE FROM "+tableName+" WHERE id = ?", id)
+
+	fmt.Println("删除 ", "DELETE FROM "+tableName+" WHERE id = ?", id)
 
 	if err != nil {
 

@@ -134,16 +134,18 @@ func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		// 假如设置为商品，就更新商品表
-		commodityCtrl := commodityController.Controller{}
-		err = commodityCtrl.Add_ByProduct(db, itemFromRequest.ID.Int, userId)
+		if itemFromRequest.IsCreateCommodity.Bool {
+			commodityCtrl := commodityController.Controller{}
+			err = commodityCtrl.Add_ByProduct(db, itemFromRequest.ID.Int, userId)
 
-		if err != nil {
-			var returnValue models.JsonRowsReturn
-			returnValue.Info = "设置为商品时出错" + err.Error()
-			utils.SendError(w, http.StatusInternalServerError, returnValue)
-			return
+			if err != nil {
+				var returnValue models.JsonRowsReturn
+				returnValue.Info = "设置为商品时出错" + err.Error()
+				utils.SendError(w, http.StatusInternalServerError, returnValue)
+				return
+			}
 		}
+		// 假如设置为商品，就更新商品表
 
 		utils.SendJson(w, status, returnValue, err)
 	}

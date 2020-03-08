@@ -26,9 +26,16 @@ func (b repositoryName) GetRows(
 	// ---customized:
 	factory_id := searchTerms["companyFactory.id"]
 	delete(searchTerms, "companyFactory.id")
-	var whereString string
+	whereString := ""
 	if factory_id != "" {
-		whereString = fmt.Sprintf(" AND mainTable.id IN (SELECT product_id FROM product_purchase WHERE company_id = %s)", factory_id)
+		whereString += fmt.Sprintf(" AND mainTable.id IN (SELECT product_id FROM product_purchase WHERE company_id = %s)", factory_id)
+	}
+
+	category_id := searchTerms["category_id"]
+	delete(searchTerms, "category_id")
+
+	if category_id != "" {
+		whereString += fmt.Sprintf(" AND mainTable.category_id IN (SELECT id FROM category WHERE path LIKE '%%,%s' OR id = %s)", category_id, category_id)
 	}
 
 	rows, err := utils.DbQueryRows_Customized(db, "", tableName, &pagination, searchTerms, item, "", whereString)
