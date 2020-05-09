@@ -21,7 +21,7 @@ var authName = "user"
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
@@ -29,7 +29,7 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -37,14 +37,14 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
 
 		var item modelName
 		repo := repository.Repository{}
-		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }

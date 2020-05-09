@@ -30,16 +30,16 @@ func (b repositoryName) GetRows(
 	root_id := searchTerms["root_id"]
 	delete(searchTerms, "root_id")
 
-	var sqlString string
+	var subsql string
 
 	root_id_int, err := strconv.Atoi(root_id)
 
 	if err == nil && root_id_int > 0 {
-		sqlString = fmt.Sprintf("SELECT * FROM %s WHERE path LIKE CONCAT((SELECT path FROM %s WHERE id = %d), ',' ,  %d , '%%')", tableName, tableName, root_id_int, root_id_int)
+		subsql = fmt.Sprintf("SELECT * FROM %s WHERE path LIKE CONCAT((SELECT path FROM %s WHERE id = %d), ',' ,  %d , '%%')", tableName, tableName, root_id_int, root_id_int)
 	} else {
-		sqlString = ""
+		subsql = ""
 	}
-	rows, err := utils.DbQueryRows(db, sqlString, tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(db, subsql, tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err

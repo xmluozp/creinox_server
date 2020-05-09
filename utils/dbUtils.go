@@ -71,6 +71,11 @@ func DbQueryRows_Customized(db *sql.DB,
 	newQueryStringSearchTerms = ""
 
 	// searchTerms
+	fmt.Println("searchTerms of dbUtils", searchTerms)
+
+	// 用param传参数用
+	var keywords []interface{}
+
 	for k, v := range searchTerms {
 
 		// TODO: string，int，date三种类型. 根据v的判断
@@ -83,9 +88,15 @@ func DbQueryRows_Customized(db *sql.DB,
 
 		_, field := GetField(k, "json", dataModel)
 
+		if field.Type == nil {
+			continue
+		}
+
 		if field.Type.String() != "nulls.String" {
 
-			// 先看int:
+			// 看bool: 前端用1和0代替true和false就可以了
+
+			// 看int:
 			_, errInt := strconv.Atoi(v)
 			k := "mainTable." + k
 
@@ -108,7 +119,8 @@ func DbQueryRows_Customized(db *sql.DB,
 			}
 		} else {
 			// 最后作为string去like
-			newQueryStringSearchTerms += " AND mainTable." + k + " LIKE '%" + v + "%'"
+			newQueryStringSearchTerms += " AND mainTable." + k + " LIKE ?"
+			keywords = append(keywords, "%"+v+"%")
 		}
 	}
 
@@ -125,10 +137,11 @@ func DbQueryRows_Customized(db *sql.DB,
 
 	newQueryStringSearchTerms += stringAfterWhere
 
-	// pagination: 基础查询加query加order和分页
-	rows, err := db.Query(newQueryStringBegin + newQueryStringSearchTerms + newQueryString)
+	fmt.Println("keywords", keywords)
+	//  ===================================== pagination: 基础查询加query加order和分页
+	rows, err := db.Query(newQueryStringBegin+newQueryStringSearchTerms+newQueryString, keywords...)
 
-	scanErr := db.QueryRow("SELECT COUNT(*) FROM " + tableName + " mainTable WHERE 1=1 " + newQueryStringSearchTerms).Scan(&count)
+	scanErr := db.QueryRow("SELECT COUNT(*) FROM "+tableName+" mainTable WHERE 1=1 "+newQueryStringSearchTerms, keywords...).Scan(&count)
 
 	if scanErr != nil {
 		fmt.Println("scan出错", scanErr.Error())
@@ -141,7 +154,9 @@ func DbQueryRows_Customized(db *sql.DB,
 
 	pagination.RowCount = rowCount
 
-	fmt.Println("测试看sql语句：", newQueryStringBegin+newQueryStringSearchTerms+newQueryString)
+	fmt.Println("------------------")
+	fmt.Println("查询运行的sql语句：", newQueryStringBegin+newQueryStringSearchTerms+newQueryString)
+	fmt.Println("------------------")
 
 	if err != nil {
 		err = errors.New(err.Error() + ". Sql: " + newQueryStringBegin + newQueryStringSearchTerms + newQueryString)
@@ -194,12 +209,21 @@ func DbQueryRow(db *sql.DB,
 		}
 	}
 
+	var row *sql.Row
+
 	if query != "" {
 		newQueryStringBegin = query
 	} else {
 		newQueryStringBegin = "SELECT " + selectColumns + " FROM " + selectTable + " WHERE mainTable.id = ?"
 	}
-	row := db.QueryRow(newQueryStringBegin+newQueryStringSearchTerms+newQueryString, id)
+
+	fmt.Println("搜索单条数据", newQueryStringBegin)
+
+	if id > 0 {
+		row = db.QueryRow(newQueryStringBegin+newQueryStringSearchTerms+newQueryString, id)
+	} else {
+		row = db.QueryRow(newQueryStringBegin + newQueryStringSearchTerms + newQueryString)
+	}
 
 	return row
 }
@@ -273,7 +297,8 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 		if isValid && isCol && col != "default" && t.Field(i).Name != "ID" {
 			values = append(values, v.Field(i))
 			tagName := strings.Split(t.Field(i).Tag.Get("json"), ",")[0] // use split to ignore tag "options" like omitempty, etc.
-			columns = append(columns, tagName)                           // 等同于数据库里的column name
+			tagName = fmt.Sprintf("`%s`", tagName)
+			columns = append(columns, tagName) // 等同于数据库里的column name
 			questionMarks = append(questionMarks, "?")
 		}
 	}
@@ -283,7 +308,7 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 
 	execDb := reflect.ValueOf(db).MethodByName("Exec")
 
-	fmt.Println("insert call:", values[0])
+	fmt.Println("SQL:insert", values[0])
 	// 传入参数：字符串，字段valueof。。。
 	out := execDb.Call(values)
 
@@ -307,19 +332,30 @@ func DbQueryUpdate(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 	// 第一个准备用来放string的
 	values = append(values, reflect.ValueOf(""))
 
+	// 匹配每个字段：前台的json对后台的model
 	for i := 1; i < v.NumField(); i++ {
-		col, isCol := t.Field(i).Tag.Lookup("col")
-		isValid := true
 
-		// 忽略不出现在json里的（通过nulls的valid来判断: 也就是说本系统不允许上传null）
-		if v.Field(i).FieldByName("Valid").IsValid() { // if its a "nulls"
-			isValid = v.Field(i).FieldByName("Valid").Interface().(bool)
+		// 1. 确认model里是不是col, 如果不是col，说明数据库里没有，不允许上传
+		// 本系统有很多字段只为了显示用，是在后端生成的，数据库里没有
+		col, isCol := t.Field(i).Tag.Lookup("col")
+
+		if !isCol {
+			continue
 		}
 
-		if isValid && isCol && t.Field(i).Name != "ID" {
+		// 2. 确认前台的json在model有没有匹配的
+		// 通过nulls的valid来判断, 如果是个null就跳过，而不是插入null. : 也就是说本系统没办法上传null
+		isValid := v.Field(i).FieldByName("Valid").IsValid() &&
+			v.Field(i).FieldByName("Valid").Interface().(bool)
+
+		if !isValid {
+			continue
+		}
+
+		if isValid && t.Field(i).Name != "ID" {
 
 			tagName := strings.Split(t.Field(i).Tag.Get("json"), ",")[0] // use split to ignore tag "options" like omitempty, etc.
-
+			tagName = fmt.Sprintf("`%s`", tagName)
 			// 假如fk字段是 -1，就设置成null（为了补救上面那个不分青红皂白删掉null的）
 
 			fmt.Println("dbUtils_update", t.Field(i).Name, v.Field(i), v.Field(i).FieldByName("Valid").IsValid())

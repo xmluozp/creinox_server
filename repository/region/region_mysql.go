@@ -23,23 +23,24 @@ func (b repositoryName) GetRows(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination,
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
 	// 拦截 search
 	root_id := searchTerms["root_id"]
 	delete(searchTerms, "root_id")
 
-	var sqlString string
+	var subsql string
 
 	root_id_int, err := strconv.Atoi(root_id)
 
 	// SELECT * FROM region WHERE path LIKE CONCAT((SELECT path FROM region WHERE id = 1), ',',1, '%') ORDER BY path ASC
 	if err == nil && root_id_int > 0 {
-		sqlString = fmt.Sprintf("SELECT * FROM %s WHERE path LIKE CONCAT((SELECT path FROM %s WHERE id = %d), ',' ,  %d , '%%')", tableName, tableName, root_id_int, root_id_int)
+		subsql = fmt.Sprintf("SELECT * FROM %s WHERE path LIKE CONCAT((SELECT path FROM %s WHERE id = %d), ',' ,  %d , '%%')", tableName, tableName, root_id_int, root_id_int)
 	} else {
-		sqlString = ""
+		subsql = ""
 	}
-	rows, err := utils.DbQueryRows(db, sqlString, tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(db, subsql, tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -59,7 +60,7 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
+func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
 
 	var item modelName
 	row := utils.DbQueryRow(db, "", tableName, id, item)

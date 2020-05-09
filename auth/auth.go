@@ -32,7 +32,9 @@ var allAuthList = []string{
 	"category",
 	"productpurchase",
 	"commodity",
-}
+	"port",
+	"sellcontract",
+	"buycontract"}
 
 // Create a struct that will be encoded to a JWT.
 // We add jwt.StandardClaims as an embedded type, to provide fields like expiry time
@@ -122,6 +124,17 @@ func GetUserNameFromToken(w http.ResponseWriter, r *http.Request, tknStr string)
 
 	// 取到用户名
 	return claims.UserId, claims.UserName, claims.Auth, nil
+}
+
+func GetRankFromUser(db *sql.DB, userId int) int {
+
+	rank := -1
+
+	result := db.QueryRow("SELECT a.rank FROM role a LEFT JOIN user b ON a.id = b.role_id WHERE b.id = ?", userId)
+
+	result.Scan((&rank))
+
+	return rank
 }
 
 func HashPassword(password string) (string, error) {

@@ -2,6 +2,7 @@ package folderRepository
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
@@ -21,7 +22,8 @@ func (b repositoryName) GetRows(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
 	// rows这里是一个cursor.
 	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
@@ -45,7 +47,7 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
+func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
 	var item modelName
 	row := utils.DbQueryRow(db, "", tableName, id, item)
 
@@ -113,4 +115,31 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	}
 
 	return item, err
+}
+
+func (b repositoryName) AddRow_withRef(db *sql.DB, item modelName, userId int) (modelName, error) {
+
+	// result, errInsert := db.Exec("INSERT INTO role (name, rank, auth) VALUES(?, ?, ?);", item.Name, item.Rank, item.Auth)
+
+	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+
+	if errInsert != nil {
+		return item, errInsert
+	}
+
+	id, errId := result.LastInsertId()
+	item.ID = nulls.NewInt(int(id))
+	if errId != nil {
+		return item, errId
+	}
+	// 更新源
+
+	sqlstr := fmt.Sprintf("UPDATE %s SET %s=? WHERE id=?", item.TableName.String, item.ColumnName.String)
+	_, err := db.Exec(sqlstr, item.ID.Int, item.RefId.Int)
+
+	if err != nil {
+		return item, err
+	}
+
+	return item, errId
 }

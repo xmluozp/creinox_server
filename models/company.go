@@ -7,33 +7,41 @@ import (
 )
 
 type Company struct {
-	ID                    nulls.Int    `col:"" json:"id"`
-	CompanyType           nulls.Int    `col:"" json:"companyType" validate:"required" errm:"公司类型不可为空"`
-	Code                  nulls.String `col:"" json:"code"` // 权限可以后期改
-	Name                  nulls.String `col:"" json:"name" validate:"required" errm:"公司名必填"`
-	EName                 nulls.String `col:"" json:"ename"`
-	ShortName             nulls.String `col:"" json:"shortname"`
-	EShortName            nulls.String `col:"" json:"eshortname"`
-	Address               nulls.String `col:"" json:"address"`
-	Postcode              nulls.String `col:"" json:"postcode"`
-	Phone1                nulls.String `col:"" json:"phone1"`
-	Phone2                nulls.String `col:"" json:"phone2"`
-	Phone3                nulls.String `col:"" json:"phone3"`
-	Fax1                  nulls.String `col:"" json:"fax1"`
-	Fax2                  nulls.String `col:"" json:"fax2"`
-	Email1                nulls.String `col:"" json:"email1"`
-	Email2                nulls.String `col:"" json:"email2"`
-	Website               nulls.String `col:"" json:"website"`
-	Memo                  nulls.String `col:"" json:"memo"`
-	IsActive              nulls.Bool   `col:"" json:"isActive"`
-	RetrieveTime          nulls.Time   `col:"" json:"retrieveTime"`
-	UpdateAt              nulls.Time   `col:"newtime" json:"updateAt"`
-	CreateAt              nulls.Time   `col:"default" json:"createAt"`
-	Gsfj                  nulls.String `col:"" json:"gsfj"`
-	Fjdz                  nulls.String `col:"" json:"fjdz"`
-	Fjyb                  nulls.String `col:"" json:"fjyb"`
-	TaxCode               nulls.String `col:"" json:"taxcode"`
-	IsDelete              nulls.Bool   `col:"" json:"isDelete"`
+	ID           nulls.Int    `col:"" json:"id"`
+	CompanyType  nulls.Int    `col:"" json:"companyType" validate:"required" errm:"公司类型不可为空"`
+	Code         nulls.String `col:"" json:"code"` // 权限可以后期改
+	Name         nulls.String `col:"" json:"name" validate:"required" errm:"公司名必填"`
+	EName        nulls.String `col:"" json:"ename"`
+	ShortName    nulls.String `col:"" json:"shortname"`
+	EShortName   nulls.String `col:"" json:"eshortname"`
+	Address      nulls.String `col:"" json:"address"`
+	EAddress     nulls.String `col:"" json:"eaddress"`
+	Postcode     nulls.String `col:"" json:"postcode"`
+	Phone1       nulls.String `col:"" json:"phone1"`
+	Phone2       nulls.String `col:"" json:"phone2"`
+	Phone3       nulls.String `col:"" json:"phone3"`
+	Fax1         nulls.String `col:"" json:"fax1"`
+	Fax2         nulls.String `col:"" json:"fax2"`
+	Email1       nulls.String `col:"" json:"email1"`
+	Email2       nulls.String `col:"" json:"email2"`
+	Website      nulls.String `col:"" json:"website"`
+	Memo         nulls.String `col:"" json:"memo"`
+	IsActive     nulls.Bool   `col:"" json:"isActive"`
+	RetrieveTime nulls.Time   `col:"" json:"retrieveTime"`
+	UpdateAt     nulls.Time   `col:"newtime" json:"updateAt"`
+	CreateAt     nulls.Time   `col:"default" json:"createAt"`
+	Gsfj         nulls.String `col:"" json:"gsfj"`
+	Fjdz         nulls.String `col:"" json:"fjdz"`
+	Fjyb         nulls.String `col:"" json:"fjyb"`
+	TaxCode      nulls.String `col:"" json:"taxcode"`
+	IsDelete     nulls.Bool   `col:"" json:"isDelete"`
+
+	// 内部公司专用字段-----
+	Zsl nulls.Float32 `col:"" json:"zsl"` //增税率
+	Hl  nulls.Float32 `col:"" json:"hl"`  //汇率
+	Tsl nulls.Float32 `col:"" json:"tsl"` // 退税率
+	// 内部公司专用字段-----
+
 	Retriever_id          nulls.Int    `col:"fk" json:"retriever_id"`
 	UpdateUser_id         nulls.Int    `col:"fk" json:"updateUser_id"`
 	Gallary_folder_id     nulls.Int    `col:"" json:"gallary_folder_id"` // no fk constraint here
@@ -87,7 +95,11 @@ func (item *Company) Receivers() (itemPtrs []interface{}) {
 		&item.Gallary_folder_id,
 		&item.ImageLicense_id,
 		&item.ImageBizCard_id,
-		&item.Region_id}
+		&item.Region_id,
+		&item.EAddress,
+		&item.Zsl,
+		&item.Hl,
+		&item.Tsl}
 
 	valuePtrs := make([]interface{}, len(values))
 

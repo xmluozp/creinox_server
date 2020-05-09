@@ -14,7 +14,7 @@ type modelName = models.Image
 type repositoryName = Repository
 
 var tableName = "image"
-var viewStr = fmt.Sprintf("(SELECT m1.*, m2.memo FROM %s m1 LEFT JOIN folder m2 ON m1.gallary_folder_id = m2.id)", tableName)
+var subsql = fmt.Sprintf("(SELECT m1.*, m2.memo FROM %s m1 LEFT JOIN folder m2 ON m1.gallary_folder_id = m2.id)", tableName)
 
 // =============================================== basic CRUD
 
@@ -23,10 +23,15 @@ func (b repositoryName) GetRows(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
-	// 需要用join SELECT a.runoob_id, a.runoob_author, b.runoob_count FROM runoob_tbl a INNER JOIN tcount_tbl b ON a.runoob_author = b.runoob_author;
-	rows, err := utils.DbQueryRows(db, "", viewStr, &pagination, searchTerms, item)
+	// 图片部分限制最多显示100张
+	if pagination.PerPage < 0 {
+		pagination.PerPage = 100
+	}
+
+	rows, err := utils.DbQueryRows(db, "", subsql, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -47,10 +52,10 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
+func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
 
 	var item modelName
-	row := utils.DbQueryRow(db, "", viewStr, id, item)
+	row := utils.DbQueryRow(db, "", subsql, id, item)
 
 	err := item.ScanRow(row)
 	return item.Getter(), err
@@ -96,7 +101,7 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	var item modelName
 
 	// customized
-	rowDeleted := utils.DbQueryRow(db, "", viewStr, id, item)
+	rowDeleted := utils.DbQueryRow(db, "", subsql, id, item)
 	// --- customized end
 
 	result, _, err := utils.DbQueryDelete(db, tableName, id, item)
@@ -122,10 +127,13 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 func (b repositoryName) GetRowsByFolder(
 	db *sql.DB,
-	folderId int) (items []modelName, err error) {
+	folderId int,
+	userId int) (items []modelName, err error) {
+
+	fmt.Println("folder?", folderId)
 
 	// 需要用join SELECT a.runoob_id, a.runoob_author, b.runoob_count FROM runoob_tbl a INNER JOIN tcount_tbl b ON a.runoob_author = b.runoob_author;
-	rows, err := db.Query("SELECT * FROM "+viewStr+" WHERE gallary_folder_id=?", folderId)
+	rows, err := db.Query("SELECT maintable.* FROM "+subsql+" maintable WHERE maintable.gallary_folder_id=?", folderId)
 
 	if err != nil {
 		return items, err

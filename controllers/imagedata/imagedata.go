@@ -19,6 +19,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/xmluozp/creinox_server/auth"
 	"github.com/xmluozp/creinox_server/models"
+	repositoryFolder "github.com/xmluozp/creinox_server/repository/folder"
 	repository "github.com/xmluozp/creinox_server/repository/imagedata"
 	"github.com/xmluozp/creinox_server/utils"
 )
@@ -33,7 +34,7 @@ var authName = ""
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
@@ -41,7 +42,7 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -49,14 +50,14 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
 
 		var item modelName
 		repo := repository.Repository{}
-		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -158,7 +159,10 @@ func (c Controller) AddItems(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		var item modelName
+		// 取图片列表。假如没有folder，前端会传folder_structure，这里顺便也取出来
+		var item models.Folder
+		status, returnValue, folderItem, files, err := utils.DecodeFormData(r, reflect.TypeOf(item))
+
 		// ---------------
 		// 取出提交的files和folder_id
 		params := mux.Vars(r)
@@ -167,15 +171,25 @@ func (c Controller) AddItems(db *sql.DB) http.HandlerFunc {
 		// 原数据库的公司是没有folder的
 
 		if err != nil {
-			fmt.Println("test: folder_id get error", err)
+			utils.SendJson(w, status, returnValue, err)
 			return
 		}
 
-		status, returnValue, _, files, err := utils.DecodeFormData(r, reflect.TypeOf(item))
+		// folder id -1说明需要生成folder
+		if folder_id == -1 {
 
-		if err != nil {
-			utils.SendJson(w, status, returnValue, err)
-			return
+			folderRepo := repositoryFolder.Repository{}
+
+			newFolder, err := folderRepo.AddRow_withRef(db, folderItem.(models.Folder), userId)
+
+			folder_id = newFolder.ID.Int
+
+			if err != nil {
+
+				fmt.Println("folder生成出错", err)
+				utils.SendJson(w, status, returnValue, err)
+				return
+			}
 		}
 
 		// 循环存入images
@@ -184,6 +198,10 @@ func (c Controller) AddItems(db *sql.DB) http.HandlerFunc {
 		}
 
 		returnValue.Info = fmt.Sprintf("上传了%d张图片", len(files))
+
+		// 把folder的id回传给前端（因为假如folder不存在，有可能新建folder）
+		returnValue.Row = models.Folder{ID: nulls.NewInt(folder_id)}
+
 		// ---------------
 		utils.SendJson(w, status, returnValue, err)
 	}
@@ -207,10 +225,11 @@ func (c Controller) Show(db *sql.DB) http.HandlerFunc {
 // Get item by folder; Folder will be connected with company/product/other tables
 func (c Controller) ItemsByFolder(
 	db *sql.DB,
-	folderId int) ([]modelName, error) {
+	folderId int,
+	userId int) ([]modelName, error) {
 
 	repo := repository.Repository{}
-	images, err := repo.GetRowsByFolder(db, folderId)
+	images, err := repo.GetRowsByFolder(db, folderId, userId)
 
 	return images, err
 }
@@ -219,7 +238,7 @@ func (c Controller) ItemsByFolder(
 func (c Controller) Item(db *sql.DB, id int) (image modelName, err error) {
 
 	repo := repository.Repository{}
-	image, err = repo.GetRow(db, id)
+	image, err = repo.GetRow(db, id, 0)
 
 	return image, err
 }

@@ -20,11 +20,12 @@ func (b repositoryName) GetRows_DropDown(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
 	searchTerms["isActive"] = "1"
 
-	return b.GetRows(db, item, items, pagination, searchTerms)
+	return b.GetRows(db, item, items, pagination, searchTerms, userId)
 }
 
 func (b repositoryName) GetRows(
@@ -32,7 +33,8 @@ func (b repositoryName) GetRows(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
 	// rows这里是一个cursor.
 	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
@@ -56,7 +58,7 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
+func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
 	var item modelName
 	row := utils.DbQueryRow(db, "", tableName, id, item)
 

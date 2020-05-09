@@ -23,7 +23,8 @@ func (b repositoryName) GetRows(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
 	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
 
@@ -50,7 +51,7 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
+func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
 
 	var item modelName
 	// row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)

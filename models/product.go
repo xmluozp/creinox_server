@@ -41,6 +41,8 @@ type Product struct {
 	IsCreateCommodity nulls.Bool   `json:"isCreateCommodity"`
 
 	ImageItem Image `ref:"image,image_id" json:"image_id.row" validate:"-"`
+
+	View_code_name nulls.String `col:"" json:"view_code_name"`
 }
 type ProductList struct {
 	Items []*Product
@@ -83,6 +85,14 @@ func (item *Product) Receivers() (itemPtrs []interface{}) {
 	}
 
 	return valuePtrs
+}
+
+func (item *Product) ReceiversView() (itemPtrs []interface{}) {
+
+	// 20200406: 下拉列表用的view, 多了一列[code] name 的格式。之所以用view是因为模糊搜索的时候需要用到
+	columns := append(item.Receivers(), &item.View_code_name)
+
+	return columns
 }
 
 func (item *Product) ScanRow(r *sql.Row) error {

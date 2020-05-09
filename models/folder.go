@@ -9,10 +9,14 @@ import (
 type Folder struct {
 	ID         nulls.Int    `col:"" json:"id"`
 	Memo       nulls.String `col:"" json:"memo"`
-	FolderType nulls.Int    `col:"" json:"FolderType"` // 权限可以后期改
-	ViewSource nulls.String `col:"" json:"ViewSource"`
+	FolderType nulls.Int    `col:"" json:"folderType"` // 权限可以后期改
+	ViewSource nulls.String `col:"" json:"viewSource"`
 	RefSource  nulls.String `col:"" json:"refSource"`
-	RefId      nulls.Int    `col:"" json:"RefId"`
+	RefId      nulls.Int    `col:"" json:"refId"`
+
+	// 生成folder的时候用来返插入源表格的
+	TableName  nulls.String `json:"tableName"`
+	ColumnName nulls.String `json:"columnName"`
 }
 
 type FolderList struct {

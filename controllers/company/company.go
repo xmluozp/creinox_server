@@ -41,14 +41,14 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 		searchTerms := utils.GetSearchTerms(r)
 		companyType, _ := strconv.Atoi(searchTerms["companyType"])
 
-		pass, _ := auth.CheckAuth(db, w, r, authNames[companyType])
+		pass, userId := auth.CheckAuth(db, w, r, authNames[companyType])
 		if !pass {
 			return
 		}
 
 		var item modelName
 		repo := repository.Repository{}
-		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -56,9 +56,15 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		// 数据权限没做
+		pass, userId := auth.CheckAuth(db, w, r, "")
+		if !pass {
+			return
+		}
+
 		var item modelName
 		repo := repository.Repository{}
-		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -136,7 +142,7 @@ func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
 		}
 
 		// 取最新row返回
-		updatedItem, err := repo.GetRow(db, itemFromRequest.ID.Int)
+		updatedItem, err := repo.GetRow(db, itemFromRequest.ID.Int, userId)
 		returnValue.Row = updatedItem
 
 		// send success message to front-end
@@ -186,7 +192,7 @@ func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int
 	repo := repository.Repository{}
 
 	// update
-	updatedItem, _ := repo.GetRow(db, item.ID.Int)
+	updatedItem, _ := repo.GetRow(db, item.ID.Int, 0)
 	newImageIds := make(map[string]int)
 
 	// upload image(here will be twice: license, biscard), return new image id -------------------------------------
@@ -208,7 +214,8 @@ func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int
 		}
 
 		var err error
-		newImageId, err := imageCtrl.Upload(db, oldImage_id, key, fileBytes, -1, userId)
+		fileName := fmt.Sprintf("company.image_id.%d", item.ID.Int)
+		newImageId, err := imageCtrl.Upload(db, oldImage_id, fileName, fileBytes, -1, userId)
 
 		if newImageId != 0 {
 			newImageIds[columnName] = newImageId

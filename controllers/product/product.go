@@ -3,6 +3,7 @@ package productController
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -30,7 +31,7 @@ var authName = "product"
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
@@ -38,7 +39,7 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -46,7 +47,7 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
@@ -54,7 +55,23 @@ func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo)
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo, userId)
+		utils.SendJson(w, status, returnValue, err)
+	}
+}
+
+func (c Controller) GetItems_DropDown_sellContract(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		pass, userId := auth.CheckAuth(db, w, r, authName)
+		if !pass {
+			return
+		}
+
+		var item modelName
+		repo := repository.Repository{}
+
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown_sellContract", repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -62,7 +79,7 @@ func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
 func (c Controller) GetItems_ByCommodity(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
@@ -70,7 +87,7 @@ func (c Controller) GetItems_ByCommodity(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_ByCommodity", repo)
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_ByCommodity", repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -78,14 +95,14 @@ func (c Controller) GetItems_ByCommodity(db *sql.DB) http.HandlerFunc {
 func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
 
 		var item modelName
 		repo := repository.Repository{}
-		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -115,7 +132,7 @@ func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
 		// 更新category里的最大编码
 		ca := categoryController.Controller{}
 		_, currentCode := utils.ParseFlight(itemFromRequest.Code.String)
-		ca.Update_currentCode(db, itemFromRequest.Category_id.Int, currentCode)
+		ca.Update_currentCode(db, itemFromRequest.Category_id.Int, currentCode, userId)
 
 		if err != nil {
 			var returnValue models.JsonRowsReturn
@@ -186,7 +203,7 @@ func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
 		}
 
 		// 取最新row返回
-		updatedItem, err := repo.GetRow(db, itemFromRequest.ID.Int)
+		updatedItem, err := repo.GetRow(db, itemFromRequest.ID.Int, userId)
 		returnValue.Row = updatedItem
 
 		// send success message to front-end
@@ -229,7 +246,7 @@ func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 func (c Controller) GetComponents(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
@@ -237,7 +254,7 @@ func (c Controller) GetComponents(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_Component", repo)
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_Component", repo, userId)
 
 		utils.SendJson(w, status, returnValue, err)
 	}
@@ -310,7 +327,7 @@ func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int
 	repo := repository.Repository{}
 
 	// update
-	updatedItem, _ := repo.GetRow(db, item.ID.Int)
+	updatedItem, _ := repo.GetRow(db, item.ID.Int, userId)
 	newImageIds := make(map[string]int)
 
 	// upload image(here will be twice: license, biscard), return new image id -------------------------------------
@@ -332,7 +349,8 @@ func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int
 		}
 
 		var err error
-		newImageId, err := imageCtrl.Upload(db, oldImage_id, key, fileBytes, -1, userId)
+		fileName := fmt.Sprintf("product.image_id.%d", item.ID.Int)
+		newImageId, err := imageCtrl.Upload(db, oldImage_id, fileName, fileBytes, -1, userId)
 
 		if newImageId != 0 {
 			newImageIds[columnName] = newImageId

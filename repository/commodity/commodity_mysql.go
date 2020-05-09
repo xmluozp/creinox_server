@@ -26,7 +26,8 @@ func (b repositoryName) GetRows(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
 	// rows这里是一个cursor.
 	rows, err := utils.DbQueryRows(db, "", tableMeta, &pagination, searchTerms, item)
@@ -50,7 +51,7 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
+func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
 	var item modelName
 
 	row := utils.DbQueryRow(db, "", tableMeta, id, item)
@@ -60,7 +61,7 @@ func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
 	return item, err
 }
 
-func (b repositoryName) GetRow_ByProduct(db *sql.DB, id int) (modelName, error) {
+func (b repositoryName) GetRow_ByProduct(db *sql.DB, id int, userId int) (modelName, error) {
 	var item modelName
 
 	rowCommodityProduct := db.QueryRow("SELECT commodity_id FROM commodity_product WHERE product_id = ? AND isMeta = 1", id)
@@ -189,7 +190,8 @@ func (b repositoryName) GetRows_ByProduct(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
 	// 拦截 search.
 	product_id := searchTerms["product_id"]

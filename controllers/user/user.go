@@ -61,7 +61,7 @@ func (c Controller) Login(db *sql.DB) http.HandlerFunc {
 		}
 
 		// 如果登录成功 取角色：
-		role, err := roleRepo.GetRow(db, user.Role_id.Int)
+		role, err := roleRepo.GetRow(db, user.Role_id.Int, 0)
 
 		if err != nil {
 			// 找不到用户或者密码对不上
@@ -120,7 +120,9 @@ func (c Controller) Login(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
+		user.RoleItem.Auth = nulls.NewString(role.Auth.String)
 		user.Password = nulls.NewString("")
+
 		// returnValue.Row = rowsUpdated
 
 		// w.Header().Set("Content-Type", "application/json")
@@ -141,14 +143,14 @@ func GetIP(r *http.Request) string {
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
 
 		var item modelName
 		repo := repository.Repository{}
-		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -156,14 +158,14 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
 
 		var item modelName
 		repo := repository.Repository{}
-		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }

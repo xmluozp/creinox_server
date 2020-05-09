@@ -2,8 +2,10 @@ package roleRepository
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/gobuffalo/nulls"
+	"github.com/xmluozp/creinox_server/auth"
 	"github.com/xmluozp/creinox_server/models"
 	"github.com/xmluozp/creinox_server/utils"
 )
@@ -24,8 +26,18 @@ func (b repositoryName) GetRows(
 	searchTerms map[string]string,
 	userId int) ([]modelName, models.Pagination, error) {
 
+	var subsql string
+	rank := auth.GetRankFromUser(db, userId)
+
+	// 系统管理员可以看到所有的
+	if rank > 0 {
+		subsql = fmt.Sprintf("(SELECT * FROM role WHERE `rank` > %d)", rank)
+	} else {
+		subsql = tableName
+	}
+
 	// rows这里是一个cursor.
-	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(db, "", subsql, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err

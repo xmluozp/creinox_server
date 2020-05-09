@@ -14,6 +14,7 @@ type modelName = models.Product
 type repositoryName = Repository
 
 var tableName = "product"
+var viewName = "view_product"
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
@@ -21,7 +22,8 @@ func (b repositoryName) GetRows(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
 	// ---customized:
 	factory_id := searchTerms["companyFactory.id"]
@@ -58,7 +60,7 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
+func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
 	var item modelName
 
 	row := utils.DbQueryRow(db, "", tableName, id, item)
@@ -136,7 +138,8 @@ func (b repositoryName) GetRows_DropDown(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
 	var sqlString string
 
@@ -145,15 +148,15 @@ func (b repositoryName) GetRows_DropDown(
 	isIncludeMeta := searchTerms["isIncludeMeta"]
 	delete(searchTerms, "isIncludeMeta")
 
-	if isIncludeMeta == "true" {
+	if isIncludeMeta == "1" {
 		// sqlString = fmt.Sprintf("SELECT * FROM %s WHERE path LIKE CONCAT((SELECT path FROM %s WHERE id = %d), ',' ,  %d , '%%')", tableName, tableName, root_id_int, root_id_int)
-		sqlString = fmt.Sprintf("SELECT mainTable.* FROM %s mainTable WHERE 1 = 1", tableName)
+		sqlString = fmt.Sprintf("SELECT mainTable.* FROM %s mainTable WHERE 1 = 1", viewName)
 
 	} else {
-		sqlString = fmt.Sprintf("SELECT mainTable.* FROM %s mainTable WHERE mainTable.id NOT IN (SELECT b.product_id FROM commodity_product b WHERE b.isMeta = 1)", tableName)
+		sqlString = fmt.Sprintf("SELECT mainTable.* FROM %s mainTable WHERE mainTable.id NOT IN (SELECT b.product_id FROM commodity_product b WHERE b.isMeta = 1)", viewName)
 	}
 
-	rows, err := utils.DbQueryRows(db, sqlString, tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(db, sqlString, viewName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -162,7 +165,50 @@ func (b repositoryName) GetRows_DropDown(
 	defer rows.Close() // 以下代码执行完了，关闭连接
 
 	for rows.Next() {
-		err = rows.Scan(item.Receivers()...)
+		err = rows.Scan(item.ReceiversView()...)
+		if err != nil {
+			fmt.Println("product scan出错", err.Error())
+		}
+		items = append(items, item)
+	}
+
+	if err != nil {
+		return []modelName{}, pagination, err
+	}
+
+	return items, pagination, nil
+}
+
+// 根据销售合同取产品
+func (b repositoryName) GetRows_DropDown_sellContract(
+	db *sql.DB,
+	item modelName,
+	items []modelName,
+	pagination models.Pagination, // 需要返回总页数
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
+
+	// 拦截 search.
+	// isIncludeMeta: 包含meta
+	sell_contract_id := searchTerms["sell_contract_id"]
+	delete(searchTerms, "buy_contract_id")
+
+	sqlString := fmt.Sprintf("SELECT mainTable.* FROM sell_subitem a LEFT JOIN commodity b ON a.commodity_id = b.id LEFT JOIN commodity_product c ON b.id = c.commodity_id LEFT JOIN %s mainTable ON c.product_id = mainTable.id WHERE a.sell_contract_id = %s",
+		viewName,
+		sell_contract_id)
+
+	rows, err := utils.DbQueryRows(db, sqlString, viewName, &pagination, searchTerms, item)
+
+	if err != nil {
+		return []modelName{}, pagination, err
+	}
+
+	defer rows.Close() // 以下代码执行完了，关闭连接
+
+	// ReceiversView
+	for rows.Next() {
+		fmt.Println(item.ReceiversView())
+		err = rows.Scan(item.ReceiversView()...)
 		if err != nil {
 			fmt.Println("product scan出错", err.Error())
 		}
@@ -181,7 +227,8 @@ func (b repositoryName) GetRows_Component(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
 	// 拦截 search.
 	parent_id := searchTerms["parent_id"]
@@ -222,7 +269,8 @@ func (b repositoryName) GetRows_ByCommodity(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
 	// 拦截 search.
 	commodity_id := searchTerms["commodity_id"]

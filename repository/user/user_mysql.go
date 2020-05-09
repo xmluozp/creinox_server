@@ -2,6 +2,7 @@ package userRepository
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -56,10 +57,15 @@ func (b repositoryName) GetRows(
 	item modelName,
 	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
-	searchTerms map[string]string) ([]modelName, models.Pagination, error) {
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
-	// rows这里是一个cursor.
-	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
+	rank := auth.GetRankFromUser(db, userId)
+
+	// 搜索roles比自己小的
+	subsql := fmt.Sprintf("(SELECT a.* FROM user a LEFT JOIN role b ON b.id = a.role_id WHERE b.rank > %d OR b.rank IS NULL OR a.id = %d)", rank, userId)
+
+	rows, err := utils.DbQueryRows(db, "", subsql, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -83,7 +89,7 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
+func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
 	var item modelName
 	row := utils.DbQueryRow(db, "", tableName, id, item)
 
@@ -97,6 +103,20 @@ func (b repositoryName) GetRow(db *sql.DB, id int) (modelName, error) {
 
 func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
 
+	// 判断用户名是否唯一
+
+	count := 0
+	scanErr := db.QueryRow("SELECT COUNT(*) FROM " + tableName + " WHERE userName = '" + item.UserName.String + "'").Scan(&count)
+
+	if scanErr != nil {
+		return item, scanErr
+	}
+
+	if count > 0 {
+		return item, errors.New(" 用户名已存在")
+	}
+
+	//
 	hashedPass, _ := auth.HashPassword(item.Password.String)
 	item.Password = nulls.NewString(hashedPass)
 
@@ -118,6 +138,20 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
 
+	// 判断用户名是否唯一
+
+	count := 0
+	scanErr := db.QueryRow("SELECT COUNT(*) FROM " + tableName + " WHERE userName = '" + item.UserName.String + "'").Scan(&count)
+
+	if scanErr != nil {
+		return 0, scanErr
+	}
+
+	if count > 0 {
+		return 0, errors.New(" 用户名已存在")
+	}
+
+	//
 	var result sql.Result
 	var err error
 
@@ -155,6 +189,10 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
 	var item modelName
+
+	if id == userId {
+		return nil, errors.New("You can not delete yourself")
+	}
 
 	result, row, err := utils.DbQueryDelete(db, tableName, id, item)
 

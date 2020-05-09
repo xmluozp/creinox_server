@@ -21,7 +21,8 @@ func GetFunc_FetchListHTTPReturn(
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
 	methodName string, // repo方法名
-	repo interface{}) (status int, returnValue models.JsonRowsReturn, err error) {
+	repo interface{},
+	userId int) (status int, returnValue models.JsonRowsReturn, err error) {
 
 	items := reflect.Zero(reflect.SliceOf(modelType)).Interface()
 	item := reflect.New(modelType).Elem().Interface()
@@ -30,6 +31,7 @@ func GetFunc_FetchListHTTPReturn(
 
 	pagination := GetPagination(r)
 	searchTerms := GetSearchTerms(r)
+	fmt.Println("搜索条件", searchTerms)
 
 	gerRows := reflect.ValueOf(repo).MethodByName(methodName)
 	args := []reflect.Value{
@@ -37,7 +39,8 @@ func GetFunc_FetchListHTTPReturn(
 		reflect.ValueOf(item),
 		reflect.ValueOf(items),
 		reflect.ValueOf(pagination),
-		reflect.ValueOf(searchTerms)}
+		reflect.ValueOf(searchTerms),
+		reflect.ValueOf(userId)}
 
 	// 运行数据库语句: db, model, array of model, pagination, query
 	out := gerRows.Call(args)
@@ -68,9 +71,10 @@ func GetFunc_RowsWithHTTPReturn(
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
-	repo interface{}) (status int, returnValue models.JsonRowsReturn, err error) {
+	repo interface{},
+	userId int) (status int, returnValue models.JsonRowsReturn, err error) {
 
-	return GetFunc_FetchListHTTPReturn(db, w, r, modelType, "GetRows", repo)
+	return GetFunc_FetchListHTTPReturn(db, w, r, modelType, "GetRows", repo, userId)
 }
 
 func GetFunc_RowWithHTTPReturn(
@@ -78,17 +82,30 @@ func GetFunc_RowWithHTTPReturn(
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
-	repo interface{}) (status int, returnValue models.JsonRowsReturn, err error) {
+	repo interface{},
+	userId int) (status int, returnValue models.JsonRowsReturn, err error) {
 
+	return GetFunc_FetchRowHTTPReturn(db, w, r, modelType, "GetRow", repo, userId)
+}
+
+func GetFunc_FetchRowHTTPReturn(
+	db *sql.DB,
+	w http.ResponseWriter,
+	r *http.Request,
+	modelType reflect.Type, // 数据模型
+	methodName string, // repo方法名
+	repo interface{},
+	userId int) (status int, returnValue models.JsonRowsReturn, err error) {
 	// 接参数
 	params := mux.Vars(r)
 
 	id, _ := strconv.Atoi(params["id"])
 
-	getRow := reflect.ValueOf(repo).MethodByName("GetRow")
+	getRow := reflect.ValueOf(repo).MethodByName(methodName)
 	args := []reflect.Value{
 		reflect.ValueOf(db),
-		reflect.ValueOf(id)}
+		reflect.ValueOf(id),
+		reflect.ValueOf(userId)}
 	out := getRow.Call(args)
 
 	row := out[0].Interface()
@@ -110,6 +127,7 @@ func GetFunc_RowWithHTTPReturn(
 	returnValue.Row = row
 
 	return http.StatusOK, returnValue, nil
+
 }
 
 // Here returns function to shows message to the front. In case we want to pop a message afterall instead of pop it on halfway
@@ -118,6 +136,7 @@ func GetFunc_AddWithHTTPReturn(
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
+
 	repo interface{},
 	userId int) (status int, returnValue models.JsonRowsReturn, returnItem interface{}, err error) {
 
@@ -404,7 +423,6 @@ func DecodeFormData(
 		}
 
 		data, _ := ioutil.ReadAll(part)
-		// fmt.Println(part.FormName(), part.FileName())
 
 		if part.FileName() != "" {
 
@@ -421,8 +439,6 @@ func DecodeFormData(
 			}
 		}
 	}
-
-	fmt.Println("jsonString", jsonString)
 
 	item := reflect.ValueOf(itemPtr).Elem().Interface()
 

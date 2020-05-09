@@ -65,6 +65,28 @@ func (item *Commodity) Receivers() (itemPtrs []interface{}) {
 	return valuePtrs
 }
 
+func (item *Commodity) ReceiversOriginal() (itemPtrs []interface{}) {
+
+	values := []interface{}{
+		&item.ID,
+		&item.Code,
+		&item.Name,
+		&item.UpdateAt,
+		&item.CreateAt,
+		&item.Memo,
+		&item.IsDelete,
+		&item.Category_id,
+		&item.UpdateUser_id}
+
+	valuePtrs := make([]interface{}, len(values))
+
+	for i := range values {
+		valuePtrs[i] = values[i]
+	}
+
+	return valuePtrs
+}
+
 func (item *Commodity) ScanRow(r *sql.Row) error {
 	var columns []interface{}
 

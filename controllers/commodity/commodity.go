@@ -25,7 +25,7 @@ var authName = "commodity"
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
@@ -33,7 +33,7 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo)
+		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -41,7 +41,7 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
@@ -49,7 +49,7 @@ func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo)
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
@@ -57,7 +57,7 @@ func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
 func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
@@ -73,9 +73,9 @@ func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
 		repo := repository.Repository{}
 
 		if commodity_id != 0 {
-			item, err = repo.GetRow(db, commodity_id)
+			item, err = repo.GetRow(db, commodity_id, userId)
 		} else {
-			item, err = repo.GetRow_ByProduct(db, product_id)
+			item, err = repo.GetRow_ByProduct(db, product_id, userId)
 		}
 
 		if err != nil {
@@ -178,7 +178,7 @@ func (c Controller) Add_ByProduct(db *sql.DB, product_id int, userId int) error 
 func (c Controller) GetItems_ByProduct(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, _ := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(db, w, r, authName)
 		if !pass {
 			return
 		}
@@ -186,7 +186,7 @@ func (c Controller) GetItems_ByProduct(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_ByProduct", repo)
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_ByProduct", repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
