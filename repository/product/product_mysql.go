@@ -92,7 +92,7 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
-	result, err := utils.DbQueryUpdate(db, tableName, item)
+	result, _, err := utils.DbQueryUpdate(db, tableName, tableName, item)
 
 	if err != nil {
 		return 0, err
@@ -111,7 +111,7 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	var item modelName
 
-	result, row, err := utils.DbQueryDelete(db, tableName, id, item)
+	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -189,14 +189,61 @@ func (b repositoryName) GetRows_DropDown_sellContract(
 	userId int) ([]modelName, models.Pagination, error) {
 
 	// 拦截 search.
-	// isIncludeMeta: 包含meta
 	sell_contract_id := searchTerms["sell_contract_id"]
-	delete(searchTerms, "buy_contract_id")
+	delete(searchTerms, "sell_contract_id")
+
+	if sell_contract_id == "" { // 如果为空，就让它搜不到
+		sell_contract_id = "-1"
+	}
 
 	sqlString := fmt.Sprintf("SELECT mainTable.* FROM sell_subitem a LEFT JOIN commodity b ON a.commodity_id = b.id LEFT JOIN commodity_product c ON b.id = c.commodity_id LEFT JOIN %s mainTable ON c.product_id = mainTable.id WHERE a.sell_contract_id = %s",
 		viewName,
 		sell_contract_id)
 
+	rows, err := utils.DbQueryRows(db, sqlString, viewName, &pagination, searchTerms, item)
+
+	if err != nil {
+		return []modelName{}, pagination, err
+	}
+
+	defer rows.Close() // 以下代码执行完了，关闭连接
+
+	// ReceiversView
+	for rows.Next() {
+		fmt.Println(item.ReceiversView())
+		err = rows.Scan(item.ReceiversView()...)
+		if err != nil {
+			fmt.Println("product scan出错", err.Error())
+		}
+		items = append(items, item)
+	}
+
+	if err != nil {
+		return []modelName{}, pagination, err
+	}
+
+	return items, pagination, nil
+}
+
+// 根据合同的子合同，去搜索子合同对应的商品，然后关联到下属产品
+func (b repositoryName) GetRows_DropDown_sellSubitem(
+	db *sql.DB,
+	item modelName,
+	items []modelName,
+	pagination models.Pagination,
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
+
+	sell_subitem_id := searchTerms["sell_subitem_id"]
+	delete(searchTerms, "sell_subitem_id")
+
+	if sell_subitem_id == "" { // 如果为空，就让它搜不到
+		sell_subitem_id = "-1"
+	}
+
+	sqlString := fmt.Sprintf("SELECT mainTable.* FROM sell_subitem a LEFT JOIN commodity b ON a.commodity_id = b.id LEFT JOIN commodity_product c ON b.id = c.commodity_id LEFT JOIN %s mainTable ON c.product_id = mainTable.id WHERE a.id = %s",
+		viewName,
+		sell_subitem_id)
 	rows, err := utils.DbQueryRows(db, sqlString, viewName, &pagination, searchTerms, item)
 
 	if err != nil {

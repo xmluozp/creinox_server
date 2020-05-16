@@ -118,9 +118,26 @@ func DbQueryRows_Customized(db *sql.DB,
 				}
 			}
 		} else {
-			// 最后作为string去like
-			newQueryStringSearchTerms += " AND mainTable." + k + " LIKE ?"
-			keywords = append(keywords, "%"+v+"%")
+
+			// 看是不是内定的keywords模糊搜索, 如果是的话就生成一串or，贴在keywords后面
+			blurkeywordsStr, isBlurKeyword := field.Tag.Lookup("keywords")
+
+			if isBlurKeyword {
+				newQueryStringSearchTerms += " AND (1 = 0"
+				blurkeywords := strings.Split(blurkeywordsStr, "|")
+
+				for _, colName := range blurkeywords {
+					newQueryStringSearchTerms += " OR mainTable." + colName + " LIKE ?"
+					keywords = append(keywords, "%"+v+"%")
+				}
+
+				newQueryStringSearchTerms += ")"
+
+			} else {
+				// 最后作为string去like
+				newQueryStringSearchTerms += " AND mainTable." + k + " LIKE ?"
+				keywords = append(keywords, "%"+v+"%")
+			}
 		}
 	}
 
@@ -284,17 +301,24 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 	// 第一个准备用来放string的
 	values = append(values, reflect.ValueOf(""))
 
+	// 循环寻找model里面的列名
 	for i := 0; i < v.NumField(); i++ {
 
 		col, isCol := t.Field(i).Tag.Lookup("col")
-		isValid := true
 
-		// 忽略不出现在json里的（通过nulls的valid来判断: 也就是说本系统不允许上传null）
-		if v.Field(i).FieldByName("Valid").IsValid() { // if its a "nulls"
-			isValid = v.Field(i).FieldByName("Valid").Interface().(bool)
+		if !isCol {
+			continue
 		}
 
-		if isValid && isCol && col != "default" && t.Field(i).Name != "ID" {
+		// 忽略不出现在json里的（通过nulls的valid来判断: 也就是说本系统不允许上传null）
+		isValid := v.Field(i).FieldByName("Valid").IsValid() &&
+			v.Field(i).FieldByName("Valid").Interface().(bool)
+
+		if !isValid {
+			continue
+		}
+
+		if isCol && col != "default" && t.Field(i).Name != "ID" {
 			values = append(values, v.Field(i))
 			tagName := strings.Split(t.Field(i).Tag.Get("json"), ",")[0] // use split to ignore tag "options" like omitempty, etc.
 			tagName = fmt.Sprintf("`%s`", tagName)
@@ -319,7 +343,7 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 }
 
 // col属性是 newtime 的，update的时候取系统时间
-func DbQueryUpdate(db *sql.DB, tableName string, item interface{}) (sql.Result, error) {
+func DbQueryUpdate(db *sql.DB, tableName string, queryTable string, item interface{}) (sql.Result, *sql.Row, error) {
 
 	// 获取item的值和类型
 	v := reflect.ValueOf(item)
@@ -352,7 +376,7 @@ func DbQueryUpdate(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 			continue
 		}
 
-		if isValid && t.Field(i).Name != "ID" {
+		if t.Field(i).Name != "ID" {
 
 			tagName := strings.Split(t.Field(i).Tag.Get("json"), ",")[0] // use split to ignore tag "options" like omitempty, etc.
 			tagName = fmt.Sprintf("`%s`", tagName)
@@ -401,19 +425,24 @@ func DbQueryUpdate(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 	result, _ := out[0].Interface().(sql.Result)
 	err := ParseError(out[1])
 
-	return result, err
+	// 取出id搜索记录
+	id := v.FieldByName("ID").Interface().(nulls.Int).Int
+
+	rowUploaded := DbQueryRow(db, "", queryTable, id, item)
+
+	return result, rowUploaded, err
 }
 
 // called from repository
-func DbQueryDelete(db *sql.DB, tableName string, id int, dataModel interface{}) (sql.Result, *sql.Row, error) {
+func DbQueryDelete(db *sql.DB, deleteName string, queryTable string, id int, dataModel interface{}) (sql.Result, *sql.Row, error) {
 
-	rowDeleted := DbQueryRow(db, "", tableName, id, dataModel)
+	rowDeleted := DbQueryRow(db, "", queryTable, id, dataModel)
 
 	// db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
 
-	result, err := db.Exec("DELETE FROM "+tableName+" WHERE id = ?", id)
+	result, err := db.Exec("DELETE FROM "+deleteName+" WHERE id = ?", id)
 
-	fmt.Println("删除 ", "DELETE FROM "+tableName+" WHERE id = ?", id)
+	fmt.Println("删除 ", "DELETE FROM "+deleteName+" WHERE id = ?", id)
 
 	if err != nil {
 

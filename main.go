@@ -12,6 +12,7 @@ import (
 	"github.com/xmluozp/creinox_server/driver"
 	"github.com/xmluozp/creinox_server/routes"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/subosito/gotenv"
 )
@@ -47,9 +48,21 @@ func main() {
 
 	// router.Use(static.Serve("/", static.LocalFile("./views", true)))
 
+	// router是指针，探进去被修改
 	routes.Routing(router, db)
 
 	fmt.Println("Server is running at port ", port)
 	//第一个是端口，第二个是响应端口用的function。这里是router
-	log.Fatal(http.ListenAndServe(":"+port, router))
+
+	// handler := cors.Default().Handler(router) //解决cors用
+
+	headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+	methods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"})
+	origins := handlers.AllowedOrigins([]string{"*"}) // domain
+
+	log.Fatal(http.ListenAndServe(":"+port, handlers.CORS(headers, methods, origins)(router)))
+
+	// log.Fatal(http.ListenAndServe(":"+port, router))
+
+	// log.Fatal(http.ListenAndServe(":"+port, handler))
 }

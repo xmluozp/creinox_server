@@ -42,6 +42,9 @@ type Company struct {
 	Tsl nulls.Float32 `col:"" json:"tsl"` // 退税率
 	// 内部公司专用字段-----
 
+	// 搜索用
+	KeyWord nulls.String `json:"keyword" keywords:"code|name|ename|shortname|eshortname"`
+
 	Retriever_id          nulls.Int    `col:"fk" json:"retriever_id"`
 	UpdateUser_id         nulls.Int    `col:"fk" json:"updateUser_id"`
 	Gallary_folder_id     nulls.Int    `col:"" json:"gallary_folder_id"` // no fk constraint here

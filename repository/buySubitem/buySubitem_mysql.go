@@ -64,18 +64,31 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	}
 
 	id, errId := result.LastInsertId()
+
 	item.ID = nulls.NewInt(int(id))
+
 	if errId != nil {
 		return item, errId
 	}
 
+	// 更新相应订单的总金额
+	err := b.UpdateTotalPrice(db, item.ID.Int, userId)
+	if err != nil {
+		return item, err
+	}
 	return item, errId
 }
 
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
 
-	// item.UpdateUser_id = nulls.NewInt(userId)
-	result, err := utils.DbQueryUpdate(db, tableName, item)
+	// 更新相应订单的总金额
+	err := b.UpdateTotalPrice(db, item.ID.Int, userId)
+
+	if err != nil {
+		return 0, err
+	}
+
+	result, _, err := utils.DbQueryUpdate(db, tableName, tableName, item)
 
 	if err != nil {
 		return 0, err
@@ -94,7 +107,14 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	var item modelName
 
-	result, row, err := utils.DbQueryDelete(db, tableName, id, item)
+	// 更新相应订单的总金额(放前面因为删除了就没有了)
+	err := b.UpdateTotalPrice(db, id, userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -116,3 +136,22 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 }
 
 // =============================================== customized
+// 每次item变动，都更新父合同里面的总价
+func (b repositoryName) UpdateTotalPrice(db *sql.DB, id int, userId int) error {
+
+	//tableName_order
+	var totalPrice float32
+	var order_form_id int
+
+	// 取出price和order form id
+	row := db.QueryRow("SELECT a.order_form_id, b.view_totalPrice FROM buy_contract a LEFT JOIN (SELECT buy_contract_id, SUM(unitPrice * amount) AS view_totalPrice FROM buy_subitem GROUP BY buy_contract_id) b ON a.id = b.buy_contract_id LEFT JOIN buy_subitem c ON c.buy_contract_id = a.id  WHERE c.id=?", id)
+
+	err := row.Scan(&order_form_id, &totalPrice)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec("UPDATE order_form SET totalPrice=? WHERE id=?", &totalPrice, &order_form_id)
+	return err
+}

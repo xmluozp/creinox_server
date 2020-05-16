@@ -41,7 +41,7 @@ type SellSubitem struct {
 
 	// 显示在列表里
 	Commodity    Commodity    `ref:"commodity,commodity_id" json:"commodity_id.row" validate:"-"`
-	SellContract SellContract `ref:"sell_contract,sell_contract_id" json:"sell_contract_id.row" validate:"-"`
+	SellContract SellContract `ref:"combine_sell_contract,sell_contract_id" json:"sell_contract_id.row" validate:"-"` //这里是取combine
 	UnitTypeItem CommonItem   `ref:"common_item,unitType_id" json:"unitType_id.row" validate:"-"`
 }
 

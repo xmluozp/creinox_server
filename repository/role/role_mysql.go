@@ -97,7 +97,7 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
 
-	result, err := utils.DbQueryUpdate(db, tableName, item)
+	result, _, err := utils.DbQueryUpdate(db, tableName, tableName, item)
 
 	if err != nil {
 		return 0, err
@@ -116,7 +116,7 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	var item modelName
 
-	result, row, err := utils.DbQueryDelete(db, tableName, id, item)
+	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err

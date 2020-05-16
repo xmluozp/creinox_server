@@ -119,7 +119,7 @@ func (b repositoryName) AddRow(db *sql.DB, itemRec interface{}, userId int) (mod
 	folder.RefSource = nulls.NewString("company.gallary_folder_id")
 	folder.RefId = item.ID
 
-	result, errFolderUpdate := utils.DbQueryUpdate(db, "folder", folder)
+	result, _, errFolderUpdate := utils.DbQueryUpdate(db, "folder", "folder", folder)
 
 	if errFolderUpdate != nil {
 		return item, errFolderUpdate
@@ -134,7 +134,7 @@ func (b repositoryName) UpdateRow(db *sql.DB, itemRec interface{}, userId int) (
 	item := itemRec.(modelName)
 
 	item.UpdateUser_id = nulls.NewInt(userId)
-	result, err := utils.DbQueryUpdate(db, tableName, item)
+	result, _, err := utils.DbQueryUpdate(db, tableName, tableName, item)
 
 	// fmt.Println("database updateRow", item)
 
@@ -154,7 +154,7 @@ func (b repositoryName) UpdateRow(db *sql.DB, itemRec interface{}, userId int) (
 func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
 	var item modelName
-	result, row, err := utils.DbQueryDelete(db, tableName, id, item)
+	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
 	err = item.ScanRow(row)
 
 	fmt.Println("scaned 扫描以后", item)

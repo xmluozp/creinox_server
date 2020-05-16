@@ -178,6 +178,7 @@ func Routing(router *mux.Router, db *sql.DB) {
 
 	router.HandleFunc("/api/product_dropDown", productController.GetItems_DropDown(db)).Methods("GET")
 	router.HandleFunc("/api/product_dropDown_sellContract", productController.GetItems_DropDown_sellContract(db)).Methods("GET")
+	router.HandleFunc("/api/product_dropDown_sellSubitem", productController.GetItems_DropDown_sellSubitem(db)).Methods("GET")
 
 	router.HandleFunc("/api/product_component", productController.GetComponents(db)).Methods("GET")
 	router.HandleFunc("/api/product_component/{parent_id}/{child_id}", productController.Assemble(db)).Methods("POST")

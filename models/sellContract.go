@@ -18,8 +18,8 @@ type SellContract struct {
 	IsInBaches  nulls.Bool `col:"" json:"isInBaches"`
 	IsTransport nulls.Bool `col:"" json:"isTransport"`
 
-	ShippingPrice nulls.Float32 `col:"" json:"shippingPrice"`
-	ComissionType nulls.Int     `col:"fk" json:"comissionType"`
+	ShippingPrice  nulls.Float32 `col:"" json:"shippingPrice"`
+	CommissionType nulls.Int     `col:"fk" json:"commissionType"`
 
 	Tt_shipmentDue      nulls.String `col:"" json:"tt_shipmentDue"`
 	Tt_insurance        nulls.String `col:"" json:"tt_insurance"`
@@ -27,9 +27,6 @@ type SellContract struct {
 
 	UpdateUser_id nulls.Int `col:"fk" json:"updateUser_id"`
 	Follower_id   nulls.Int `col:"fk" json:"follower_id"`
-
-	Seller_company_id nulls.Int `col:"fk" json:"seller_company_id" validate:"required" errm:"必填"`
-	Buyer_company_id  nulls.Int `col:"fk" json:"buyer_company_id" validate:"required" errm:"必填"`
 
 	ShippingType_id      nulls.Int `col:"fk" json:"shippingType_id"`
 	PricingTerm_id       nulls.Int `col:"fk" json:"pricingTerm_id"`
@@ -41,11 +38,22 @@ type SellContract struct {
 	Currency_id          nulls.Int `col:"fk" json:"currency_id"`
 	Shipping_currency_id nulls.Int `col:"fk" json:"shipping_currency_id"`
 
-	// 显示在列表里
-	UserFollower User    `ref:"user,follower_id" json:"follower_id.row" validate:"-"`
-	CompanyBuyer Company `ref:"company,buyer_company_id" json:"buyer_company_id.row" validate:"-"`
+	Order_form_id nulls.Int `col:"fk" json:"order_form_id"`
 
-	View_totalPrice nulls.Float32 `json:"view_totalPrice"`
+	// order里取
+	Type              nulls.Int     `json:"type"`
+	TotalPrice        nulls.Float32 `json:"totalPrice"`
+	PaidPrice         nulls.Float32 `json:"paidPrice"`
+	Seller_company_id nulls.Int     `json:"seller_company_id"`
+	Buyer_company_id  nulls.Int     `json:"buyer_company_id"`
+	IsDone            nulls.Bool    `json:"isDone"`
+	Order_memo        nulls.String  `json:"order_memo"`
+
+	// 显示在列表里
+	UserFollower User `ref:"user,follower_id" json:"follower_id.row" validate:"-"`
+
+	CompanyBuyer  Company `ref:"company,buyer_company_id" json:"buyer_company_id.row" validate:"-"`
+	CompanySeller Company `ref:"company,seller_company_id" json:"seller_company_id.row" validate:"-"`
 
 	// collapse的对应合同列表
 	BuyContractList []BuyContract `json:"buyContract_list"`
@@ -69,15 +77,14 @@ func (item *SellContract) Receivers() (itemPtrs []interface{}) {
 		&item.IsInBaches,
 		&item.IsTransport,
 		&item.ShippingPrice,
-		&item.ComissionType,
+		&item.CommissionType,
 		&item.Tt_shipmentDue,
 		&item.Tt_insurance,
 		&item.Tt_paymentCondition,
 		&item.UpdateAt,
+		&item.Order_form_id,
 		&item.UpdateUser_id,
 		&item.Follower_id,
-		&item.Seller_company_id,
-		&item.Buyer_company_id,
 		&item.ShippingType_id,
 		&item.PricingTerm_id,
 		&item.PaymentType_id,
@@ -86,7 +93,14 @@ func (item *SellContract) Receivers() (itemPtrs []interface{}) {
 		&item.Departure_port_id,
 		&item.Destination_port_id,
 		&item.Currency_id,
-		&item.Shipping_currency_id}
+		&item.Shipping_currency_id,
+		&item.Type,
+		&item.TotalPrice,
+		&item.PaidPrice,
+		&item.Seller_company_id,
+		&item.Buyer_company_id,
+		&item.IsDone,
+		&item.Order_memo}
 
 	valuePtrs := make([]interface{}, len(values))
 
@@ -103,14 +117,18 @@ func (item *SellContract) ScanRow(r *sql.Row) error {
 
 	fkUserFollower := User{}
 	fkCompanyBuyer := Company{}
+	fkCompanySeller := Company{}
 
-	columns = append(item.Receivers(), fkUserFollower.Receivers()...)
+	columns = item.Receivers()
+	columns = append(columns, fkUserFollower.Receivers()...)
 	columns = append(columns, fkCompanyBuyer.Receivers()...)
+	columns = append(columns, fkCompanySeller.Receivers()...)
 
 	err := r.Scan(columns...)
 
 	item.UserFollower = fkUserFollower
 	item.CompanyBuyer = fkCompanyBuyer
+	item.CompanySeller = fkCompanySeller
 
 	return err
 }
@@ -121,9 +139,12 @@ func (item *SellContract) ScanRows(r *sql.Rows) error {
 
 	fkUserFollower := User{}
 	fkCompanyBuyer := Company{}
+	fkCompanySeller := Company{}
 
-	columns = append(item.Receivers(), fkUserFollower.Receivers()...)
+	columns = item.Receivers()
+	columns = append(columns, fkUserFollower.Receivers()...)
 	columns = append(columns, fkCompanyBuyer.Receivers()...)
+	columns = append(columns, fkCompanySeller.Receivers()...)
 
 	err := r.Scan(columns...)
 
@@ -133,6 +154,7 @@ func (item *SellContract) ScanRows(r *sql.Rows) error {
 
 	item.UserFollower = fkUserFollower
 	item.CompanyBuyer = fkCompanyBuyer
+	item.CompanySeller = fkCompanySeller
 
 	return err
 }
@@ -143,11 +165,12 @@ func (item *SellContract) ScanRowsView(r *sql.Rows) error {
 
 	fkUserFollower := User{}
 	fkCompanyBuyer := Company{}
+	fkCompanySeller := Company{}
 
-	columns = append(item.Receivers(), &item.View_totalPrice)
+	columns = item.Receivers()
 	columns = append(columns, fkUserFollower.Receivers()...)
-
 	columns = append(columns, fkCompanyBuyer.Receivers()...)
+	columns = append(columns, fkCompanySeller.Receivers()...)
 
 	err := r.Scan(columns...)
 
@@ -157,6 +180,7 @@ func (item *SellContract) ScanRowsView(r *sql.Rows) error {
 
 	item.UserFollower = fkUserFollower
 	item.CompanyBuyer = fkCompanyBuyer
+	item.CompanySeller = fkCompanySeller
 
 	return err
 }
@@ -167,11 +191,12 @@ func (item *SellContract) ScanRowView(r *sql.Row) error {
 
 	fkUserFollower := User{}
 	fkCompanyBuyer := Company{}
+	fkCompanySeller := Company{}
 
-	columns = append(item.Receivers(), &item.View_totalPrice)
+	columns = item.Receivers()
 	columns = append(columns, fkUserFollower.Receivers()...)
-
 	columns = append(columns, fkCompanyBuyer.Receivers()...)
+	columns = append(columns, fkCompanySeller.Receivers()...)
 
 	err := r.Scan(columns...)
 
@@ -181,6 +206,7 @@ func (item *SellContract) ScanRowView(r *sql.Row) error {
 
 	item.UserFollower = fkUserFollower
 	item.CompanyBuyer = fkCompanyBuyer
+	item.CompanySeller = fkCompanySeller
 
 	return err
 }

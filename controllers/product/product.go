@@ -76,6 +76,22 @@ func (c Controller) GetItems_DropDown_sellContract(db *sql.DB) http.HandlerFunc 
 	}
 }
 
+func (c Controller) GetItems_DropDown_sellSubitem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		pass, userId := auth.CheckAuth(db, w, r, authName)
+		if !pass {
+			return
+		}
+
+		var item modelName
+		repo := repository.Repository{}
+
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown_sellSubitem", repo, userId)
+		utils.SendJson(w, status, returnValue, err)
+	}
+}
+
 func (c Controller) GetItems_ByCommodity(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 

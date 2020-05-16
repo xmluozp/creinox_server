@@ -158,7 +158,7 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	if item.Password.String != "" {
 		hashedPass, _ := auth.HashPassword(item.Password.String)
 		item.Password = nulls.NewString(hashedPass)
-		result, err = utils.DbQueryUpdate(db, tableName, item)
+		result, _, err = utils.DbQueryUpdate(db, tableName, tableName, item)
 	} else {
 		// 防止最高管理员把自己禁用或者降级
 		if item.ID.Int == userId {
@@ -194,7 +194,7 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 		return nil, errors.New("You can not delete yourself")
 	}
 
-	result, row, err := utils.DbQueryDelete(db, tableName, id, item)
+	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err

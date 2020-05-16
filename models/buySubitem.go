@@ -42,8 +42,9 @@ type BuySubitem struct {
 
 	// 显示在列表里
 	Product      Product     `ref:"product,product_id" json:"product_id.row" validate:"-"`
-	BuyContract  BuyContract `ref:"buy_contract,buy_contract_id" json:"buy_contract_id.row" validate:"-"`
+	BuyContract  BuyContract `ref:"combine_buy_contract,buy_contract_id" json:"buy_contract_id.row" validate:"-"`
 	UnitTypeItem CommonItem  `ref:"common_item,unitType_id" json:"unitType_id.row" validate:"-"`
+	SellSubitem  SellSubitem `ref:"sell_subitem,sell_subitem_id" json:"sell_subitem_id.row" validate:"-"`
 }
 
 type BuySubitemList struct {
@@ -102,16 +103,19 @@ func (item *BuySubitem) ScanRow(r *sql.Row) error {
 	fkProduct := Product{}
 	fkBuyContract := BuyContract{}
 	fkUnitTypeItem := CommonItem{}
+	fkSellSubitem := SellSubitem{}
 
 	columns = append(item.Receivers(), fkProduct.Receivers()...)
 	columns = append(columns, fkBuyContract.Receivers()...)
 	columns = append(columns, fkUnitTypeItem.Receivers()...)
+	columns = append(columns, fkSellSubitem.Receivers()...)
 
 	err := r.Scan(columns...)
 
 	item.Product = fkProduct
 	item.BuyContract = fkBuyContract
 	item.UnitTypeItem = fkUnitTypeItem
+	item.SellSubitem = fkSellSubitem
 
 	fmt.Println("scan item:", item)
 
@@ -124,16 +128,19 @@ func (item *BuySubitem) ScanRows(r *sql.Rows) error {
 	fkProduct := Product{}
 	fkBuyContract := BuyContract{}
 	fkUnitTypeItem := CommonItem{}
+	fkSellSubitem := SellSubitem{}
 
 	columns = append(item.Receivers(), fkProduct.Receivers()...)
 	columns = append(columns, fkBuyContract.Receivers()...)
 	columns = append(columns, fkUnitTypeItem.Receivers()...)
+	columns = append(columns, fkSellSubitem.Receivers()...)
 
 	err := r.Scan(columns...)
 
 	item.Product = fkProduct
 	item.BuyContract = fkBuyContract
 	item.UnitTypeItem = fkUnitTypeItem
+	item.SellSubitem = fkSellSubitem
 
 	return err
 }

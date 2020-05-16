@@ -14,6 +14,10 @@ type modelName = models.BuyContract
 type repositoryName = Repository
 
 var tableName = "buy_contract"
+
+// 合同和order合体的view，显示用
+var combineName = "combine_buy_contract"
+var tableName_order = "order_form"
 var viewName = "view_buy_contract"
 
 // =============================================== basic CRUD
@@ -26,7 +30,7 @@ func (b repositoryName) GetRows(
 	userId int) ([]modelName, models.Pagination, error) {
 
 	// rows这里是一个cursor.
-	rows, err := utils.DbQueryRows(db, "", viewName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(db, "", combineName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -49,7 +53,7 @@ func (b repositoryName) GetRows(
 
 func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
 	var item modelName
-	row := utils.DbQueryRow(db, "", viewName, id, item)
+	row := utils.DbQueryRow(db, "", combineName, id, item)
 
 	err := item.ScanRowView(row)
 
@@ -59,6 +63,26 @@ func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error
 func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
+
+	// 抽出必要的字段，插入orderform，取出新生成的id
+	orderitem := models.OrderForm{}
+	orderitem.Type = nulls.NewInt(int(2)) // 采购合同type是2
+	orderitem.TotalPrice = item.TotalPrice
+	orderitem.PaidPrice = item.PaidPrice
+	orderitem.Seller_company_id = item.Seller_company_id
+	orderitem.Buyer_company_id = item.Buyer_company_id
+	orderitem.IsDone = item.IsDone
+	orderitem.Order_memo = item.Order_memo
+
+	orderresult, errInsert := utils.DbQueryInsert(db, tableName_order, orderitem)
+
+	if errInsert != nil {
+		return item, errInsert
+	}
+	orderid, errId := orderresult.LastInsertId()
+	item.Order_form_id = nulls.NewInt(int(orderid))
+	// -------------------
+
 	result, errInsert := utils.DbQueryInsert(db, tableName, item)
 
 	if errInsert != nil {
@@ -77,7 +101,11 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
-	result, err := utils.DbQueryUpdate(db, tableName, item)
+
+	result, updatedRow, err := utils.DbQueryUpdate(db, tableName, combineName, item)
+
+	var olditem modelName
+	olditem.ScanRow(updatedRow)
 
 	if err != nil {
 		return 0, err
@@ -89,6 +117,23 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 		return 0, err
 	}
 
+	// 升级完顺便升级orderform
+	orderitem := models.OrderForm{}
+	orderitem.ID = olditem.Order_form_id
+	orderitem.TotalPrice = item.TotalPrice
+	orderitem.PaidPrice = item.PaidPrice
+	orderitem.Seller_company_id = item.Seller_company_id
+	orderitem.Buyer_company_id = item.Buyer_company_id
+	orderitem.IsDone = item.IsDone
+	orderitem.Order_memo = item.Order_memo
+
+	result, _, err = utils.DbQueryUpdate(db, tableName_order, tableName_order, orderitem)
+
+	if err != nil {
+		return 0, err
+	}
+	// -------------------
+
 	return rowsUpdated, err
 }
 
@@ -96,7 +141,7 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	var item modelName
 
-	result, row, err := utils.DbQueryDelete(db, tableName, id, item)
+	result, row, err := utils.DbQueryDelete(db, tableName, combineName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -114,6 +159,11 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 		return nil, err
 	}
 
+	// 删掉对应的order
+	var orderitem models.OrderForm
+	result, row, err = utils.DbQueryDelete(db, tableName_order, tableName_order, item.Order_form_id.Int, orderitem)
+	// -------
+
 	return item, err
 }
 
@@ -121,15 +171,17 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 func (b repositoryName) GetRow_GetLast(db *sql.DB, id int, userId int) (modelName, error) {
 
-	sqlstr := "SELECT * FROM " + tableName + " ORDER BY updateAt DESC LIMIT 1"
+	sqlstr := "SELECT * FROM " + combineName + " ORDER BY updateAt DESC LIMIT 1"
 
 	var item modelName
-	row := utils.DbQueryRow(db, sqlstr, viewName, 0, item)
+	row := utils.DbQueryRow(db, sqlstr, combineName, 0, item)
 
 	err := row.Scan(item.Receivers()...)
 
 	return item, err
 }
+
+// 用来在销售合同界面，显示下属的采购合同列表
 func (b repositoryName) GetRows_fromSellContract(
 	db *sql.DB,
 	sell_contract_id int,
