@@ -31,7 +31,8 @@ func main() {
 	if err != nil {
 		panic("错误，找不到conf.ini配置文件")
 	}
-	port, err := cfg.GetValue("site", "port")
+	_PORT, err := cfg.GetValue("site", "port")
+	_CLIENTURL, err := cfg.GetValue("site", "client")
 
 	db = driver.ConnectDB()
 
@@ -51,18 +52,16 @@ func main() {
 	// router是指针，探进去被修改
 	routes.Routing(router, db)
 
-	fmt.Println("Server is running at port ", port)
+	fmt.Println("Server is running at port ", _PORT)
 	//第一个是端口，第二个是响应端口用的function。这里是router
 
-	// handler := cors.Default().Handler(router) //解决cors用
-
+	//解决cors用
 	headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	methods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"})
-	origins := handlers.AllowedOrigins([]string{"*"}) // domain
+	// origins := handlers.AllowedOrigins([]string{"*"}) // domain
+	origins := handlers.AllowedOrigins([]string{_CLIENTURL}) // domain
 
-	log.Fatal(http.ListenAndServe(":"+port, handlers.CORS(headers, methods, origins)(router)))
-
-	// log.Fatal(http.ListenAndServe(":"+port, router))
+	log.Fatal(http.ListenAndServe(":"+_PORT, handlers.CORS(headers, methods, origins)(router)))
 
 	// log.Fatal(http.ListenAndServe(":"+port, handler))
 }
