@@ -81,7 +81,8 @@ func (item *Image) Getter() Image {
 	uploadFolder := fmt.Sprintf("%s:%d/%s/", rootUrl, port, uploads)
 
 	if item.ThumbnailPath.Valid {
-		item.ThumbnailPath = nulls.NewString(uploads + "/" + item.ThumbnailPath.String)
+		// item.ThumbnailPath = nulls.NewString(uploads + "/" + item.ThumbnailPath.String) // 20200518 因为cors从服务端解决所以去掉这个
+		item.ThumbnailPath = nulls.NewString(uploadFolder + item.ThumbnailPath.String)
 	}
 
 	if item.Path.Valid {
@@ -89,6 +90,27 @@ func (item *Image) Getter() Image {
 	}
 
 	return *item
+}
+
+func (item *Image) AddPath(path string) string {
+
+	if path == "" {
+		return path
+	}
+
+	cfg, err := goconfig.LoadConfigFile("conf.ini")
+
+	if err != nil {
+		panic("错误，找不到conf.ini配置文件")
+	}
+
+	rootUrl, err := cfg.GetValue("site", "root")
+	port, err := cfg.Int("site", "port")
+	uploads, err := cfg.GetValue("site", "uploads")
+
+	uploadFolder := fmt.Sprintf("%s:%d/%s/", rootUrl, port, uploads)
+
+	return uploadFolder + path
 }
 
 func (list *ImageList) ScanRow(r *sql.Rows) error {

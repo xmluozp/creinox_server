@@ -37,21 +37,23 @@ func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
 
 // ============================== internal
 
-// 删除folder把对应的image删掉
-func (c Controller) Delete(db *sql.DB, id int, userId int) error {
+// 删除folder把对应的image删掉。id 是 folder_id
+func (c Controller) Delete(db *sql.DB, folder_id int, userId int) error {
 
 	imageCtrl := imageController.Controller{}
+
 	repo := repository.Repository{}
+	_, err := repo.DeleteRow(db, folder_id, userId)
 
-	folder, err := repo.GetRow(db, id, userId)
+	// folder, err := repo.GetRow(db, folder_id, userId)
 
-	if err != nil {
-		fmt.Println("删除folder时取folder失败")
-		utils.Log(err)
-		return err
-	}
+	// if err != nil {
+	// 	fmt.Println("删除folder时取folder失败")
+	// 	utils.Log(err)
+	// 	return err
+	// }
 
-	images, err := imageCtrl.ItemsByFolder(db, folder.ID.Int, userId)
+	images, err := imageCtrl.ItemsByFolder(db, folder_id, userId)
 
 	if err != nil {
 		fmt.Println("删除folder时取下属images失败")
@@ -59,7 +61,7 @@ func (c Controller) Delete(db *sql.DB, id int, userId int) error {
 		return err
 	}
 
-	fmt.Println("images", images)
+	// fmt.Println("images", images)
 
 	for key := range images {
 		err = imageCtrl.Delete(db, images[key].ID.Int, userId)
@@ -69,8 +71,6 @@ func (c Controller) Delete(db *sql.DB, id int, userId int) error {
 			return err
 		}
 	}
-
-	fmt.Println("images", db, id, userId)
 
 	return err
 }

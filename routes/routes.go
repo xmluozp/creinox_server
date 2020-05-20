@@ -18,6 +18,8 @@ import (
 	buyContractController "github.com/xmluozp/creinox_server/controllers/buyContract"
 	buySubitemController "github.com/xmluozp/creinox_server/controllers/buySubitem"
 
+	mouldContractController "github.com/xmluozp/creinox_server/controllers/mouldContract"
+
 	testController "github.com/xmluozp/creinox_server/controllers/test"
 	textTemplateController "github.com/xmluozp/creinox_server/controllers/textTemplate"
 
@@ -167,6 +169,16 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/buysubitem", buySubitemController.AddItem(db)).Methods("POST")
 	router.HandleFunc("/api/buysubitem", buySubitemController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/buysubitem/{id}", buySubitemController.DeleteItem(db)).Methods("DELETE")
+
+	// ------------ buy contract
+	mouldContractController := mouldContractController.Controller{}
+	router.HandleFunc("/api/mouldcontract", mouldContractController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/mouldcontract/{id}", mouldContractController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/mouldcontract", mouldContractController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/mouldcontract", mouldContractController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/mouldcontract/{id}", mouldContractController.DeleteItem(db)).Methods("DELETE")
+	// customized
+	router.HandleFunc("/api/mouldcontract_getlast", mouldContractController.GetLast(db)).Methods("GET")
 
 	// ------------ product
 	productController := productController.Controller{}
