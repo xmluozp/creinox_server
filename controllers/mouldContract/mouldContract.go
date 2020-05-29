@@ -1,10 +1,21 @@
 package mouldContractController
 
 import (
+	"bytes"
 	"database/sql"
+	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"reflect"
+	"strconv"
 
+	xlst "github.com/ivahaev/go-xlsx-templater"
+
+	"github.com/gorilla/mux"
 	"github.com/xmluozp/creinox_server/auth"
 	folderController "github.com/xmluozp/creinox_server/controllers/folder"
 	"github.com/xmluozp/creinox_server/models"
@@ -109,6 +120,117 @@ func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 		}
 
 		utils.SendJson(w, status, returnValue, err)
+	}
+}
+
+func (c Controller) Print(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		// pass, userId := auth.CheckAuth(db, w, r, authName)
+		// if !pass {
+		// 	return
+		// }
+		params := mux.Vars(r)
+		id, _ := strconv.Atoi(params["id"])
+		templateFolder, _ := params["templateFolder"]
+		template, _ := params["template"]
+
+		repo := repository.Repository{}
+
+		fmt.Println("打印开始")
+
+		_cache := "cache" + utils.RandomString(8)
+		os.Mkdir(_cache, os.ModePerm)
+		// 打印用数据=========================/
+		item, _ := repo.GetRow(db, id, 0)
+		fmt.Println(item.Code)
+
+		// 把打印用数据弄到xsl ===============/
+		_path := "." + "/templates/" + templateFolder + "/" + template
+		ext := filepath.Ext(_path)
+
+		// 判断扩展名如果不对就终止
+		if ext != ".xlsx" {
+			w.Write([]byte("template has to be: xlsx or xls"))
+			return
+		}
+
+		// TODO: 现在是直接传file回去，改成传回处理过的文件。hardcoding处理
+		// 生成打印文件
+		ctx := map[string]interface{}{
+			"name": "Github User"}
+		ctx["code"] = "okokokok"
+
+		// doc := xlst.New()
+
+		xlsfile, _ := os.Open(_path)
+		defer xlsfile.Close()
+		xlsbuff, _ := ioutil.ReadAll(xlsfile)
+
+		doc, err := xlst.NewFromBinary(xlsbuff)
+
+		// 这个和上面那个readbinary应该一样的
+		doc.ReadTemplate(_path)
+
+		if err != nil {
+			fmt.Println("read xls from template error,", err)
+		}
+
+		err = doc.Render(ctx)
+
+		if err != nil {
+			fmt.Println("error when render", err)
+		}
+
+		doc.Save(_cache + "/temporary.xlsx")
+
+		fullpath, _ := filepath.Abs(_cache + "/temporary.xlsx")
+
+		fmt.Println("fullpath:", fullpath)
+
+		var fireparams []string
+
+		fireparams = []string{"/c", "soffice", "--headless", "--invisible", "--convert-to", "pdf", "--outdir", _cache + "/pdf/", fullpath}
+		interactiveToexec("cmd", fireparams)
+
+		resultPath := _cache + "/pdf/temporary.pdf"
+
+		// http.ServeFile(w, r, "./cache/pdf/test.pdf")
+		// err := os.RemoveAll("./cache")
+
+		file, _ := os.Open(resultPath)
+		defer file.Close()
+		buff, _ := ioutil.ReadAll(file)
+
+		w.Write(buff)
+
+		file.Close()
+		err = os.RemoveAll(_cache)
+		if err != nil {
+			fmt.Println("error from remove cache", err)
+		}
+	}
+}
+
+// dataByte, _ := ioutil.ReadFile("html/pdf.html")
+// dataStr := string(dataByte)
+// pdfUrl := "pdf_asset/" + path.Base(filePath)
+// dataStr = strings.Replace(dataStr, "{{url}}", pdfUrl, -1)
+// dataByte = []byte(dataStr)
+// return dataByte
+
+func interactiveToexec(commandName string, params []string) (string, bool) {
+	cmd := exec.Command(commandName, params...)
+	buf, err := cmd.Output()
+	log.Println(cmd.Args)
+	w := bytes.NewBuffer(nil)
+	cmd.Stderr = w
+	log.Printf("%s\n", w)
+	if err != nil {
+		log.Println("Error: <", err, "> when exec command read out buffer")
+		return "", false
+	} else {
+		return string(buf), true
 	}
 }
 

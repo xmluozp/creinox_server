@@ -30,6 +30,8 @@ import (
 	roleController "github.com/xmluozp/creinox_server/controllers/role"
 	rostercontactController "github.com/xmluozp/creinox_server/controllers/rosterContact"
 	userController "github.com/xmluozp/creinox_server/controllers/user"
+
+	printController "github.com/xmluozp/creinox_server/controllers/printdata"
 )
 
 func Routing(router *mux.Router, db *sql.DB) {
@@ -64,6 +66,10 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/texttemplate/{id}", textTemplateController.DeleteItem(db)).Methods("DELETE")
 
 	router.HandleFunc("/api/texttemplate_all", textTemplateController.GetItems_Template(db)).Methods("GET")
+
+	// ------------ print
+	printController := printController.Controller{}
+	router.HandleFunc("/api/printFolder/{templateFolder}", printController.GetItems(db)).Methods("GET")
 
 	// ------------ commonitem
 	commonitemController := commonitemController.Controller{}
@@ -177,6 +183,8 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/mouldcontract", mouldContractController.AddItem(db)).Methods("POST")
 	router.HandleFunc("/api/mouldcontract", mouldContractController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/mouldcontract/{id}", mouldContractController.DeleteItem(db)).Methods("DELETE")
+	router.HandleFunc("/api/mouldcontract_print/{id}/{templateFolder}/{template}", mouldContractController.Print(db)).Methods("GET")
+
 	// customized
 	router.HandleFunc("/api/mouldcontract_getlast", mouldContractController.GetLast(db)).Methods("GET")
 

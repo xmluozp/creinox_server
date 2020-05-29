@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -193,6 +194,21 @@ func GetFieldValue(tag, key string, s interface{}) (value interface{}) {
 	} else {
 		return nil
 	}
+}
+
+func RandomString(length int) string {
+
+	rand.Seed(time.Now().UnixNano())
+	chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ" +
+		"abcdefghijklmnopqrstuvwxyzåäö" +
+		"0123456789")
+	var b strings.Builder
+	for i := 0; i < length; i++ {
+		b.WriteRune(chars[rand.Intn(len(chars))])
+	}
+	str := b.String()
+
+	return str
 }
 
 func Log(err error, a ...interface{}) {
