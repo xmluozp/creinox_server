@@ -1,1 +1,4 @@
 uploads
+templates/_backTemplates
+.env
+conf.ini
