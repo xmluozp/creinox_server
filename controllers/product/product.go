@@ -272,6 +272,10 @@ func (c Controller) GetComponents(db *sql.DB) http.HandlerFunc {
 
 		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_Component", repo, userId)
 
+		fmt.Println("*************")
+		fmt.Println(w, status, returnValue, err)
+		fmt.Println("*************")
+
 		utils.SendJson(w, status, returnValue, err)
 	}
 }

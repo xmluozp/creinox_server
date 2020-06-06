@@ -158,13 +158,15 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/sellsubitem", sellSubitemController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/sellsubitem/{id}", sellSubitemController.DeleteItem(db)).Methods("DELETE")
 
-	// ------------ sell contract
+	// ------------ buy contract
 	buyContractController := buyContractController.Controller{}
 	router.HandleFunc("/api/buycontract", buyContractController.GetItems(db)).Methods("GET")
 	router.HandleFunc("/api/buycontract/{id}", buyContractController.GetItem(db)).Methods("GET")
 	router.HandleFunc("/api/buycontract", buyContractController.AddItem(db)).Methods("POST")
 	router.HandleFunc("/api/buycontract", buyContractController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/buycontract/{id}", buyContractController.DeleteItem(db)).Methods("DELETE")
+	router.HandleFunc("/api/buycontract_print/{id}/{templateFolder}/{template}", buyContractController.Print(db)).Methods("GET")
+
 	// customized
 	router.HandleFunc("/api/buycontract_getlast", buyContractController.GetLast(db)).Methods("GET")
 
@@ -176,7 +178,7 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/buysubitem", buySubitemController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/buysubitem/{id}", buySubitemController.DeleteItem(db)).Methods("DELETE")
 
-	// ------------ buy contract
+	// ------------ mould contract
 	mouldContractController := mouldContractController.Controller{}
 	router.HandleFunc("/api/mouldcontract", mouldContractController.GetItems(db)).Methods("GET")
 	router.HandleFunc("/api/mouldcontract/{id}", mouldContractController.GetItem(db)).Methods("GET")

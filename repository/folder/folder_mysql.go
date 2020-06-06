@@ -143,3 +143,8 @@ func (b repositoryName) AddRow_withRef(db *sql.DB, item modelName, userId int) (
 
 	return item, errId
 }
+
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
+
+	return b.GetRow(db, id, userId)
+}

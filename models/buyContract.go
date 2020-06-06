@@ -48,6 +48,9 @@ type BuyContract struct {
 	UserFollower  User         `ref:"user,follower_id" json:"follower_id.row" validate:"-"`
 	CompanyBuyer  Company      `ref:"company,buyer_company_id" json:"buyer_company_id.row" validate:"-"`
 	CompanySeller Company      `ref:"company,seller_company_id" json:"seller_company_id.row" validate:"-"`
+
+	// collapse的对应子合同列表（放的是产品）
+	BuySubitem []BuySubitem `json:"subitem_list"`
 }
 
 type BuyContractList struct {

@@ -129,3 +129,8 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	return item, err
 }
+
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
+
+	return b.GetRow(db, id, userId)
+}

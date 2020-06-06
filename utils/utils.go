@@ -196,6 +196,44 @@ func GetFieldValue(tag, key string, s interface{}) (value interface{}) {
 	}
 }
 
+// 迭代清除map里面所有空值
+func ClearNil(m map[string]interface{}) map[string]interface{} {
+	for columnName := range m {
+
+		switch field := m[columnName].(type) {
+		case map[string]interface{}:
+
+			m[columnName] = ClearNil(field)
+			if len(field) == 0 {
+				delete(m, columnName)
+			}
+
+		case []map[string]interface{}:
+
+			for i := 0; i < len(field); i++ {
+				field[i] = ClearNil(field[i])
+			}
+			m[columnName] = field
+
+			if len(field) == 0 {
+				delete(m, columnName)
+			}
+
+		case string:
+
+			if len(field) == 0 {
+				delete(m, columnName)
+			}
+
+		case nil:
+			delete(m, columnName)
+		default:
+		}
+	}
+
+	return m
+}
+
 func RandomString(length int) string {
 
 	rand.Seed(time.Now().UnixNano())

@@ -3,6 +3,7 @@ module github.com/xmluozp/creinox_server
 go 1.13
 
 require (
+	github.com/360EntSecGroup-Skylar/excelize v1.4.1
 	github.com/BurntSushi/graphics-go v0.0.0-20160129215708-b43f31a4a966
 	github.com/Unknwon/goconfig v0.0.0-20191126170842-860a72fb44fd
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -22,6 +23,7 @@ require (
 	github.com/rs/cors v1.7.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/subosito/gotenv v1.2.0
+	github.com/tealeg/xlsx v1.0.5
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
 	google.golang.org/appengine v1.6.5 // indirect
 )

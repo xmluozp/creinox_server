@@ -151,3 +151,7 @@ func (b repositoryName) UpdateRow_currentCode(db *sql.DB, id int, code string, u
 
 	return rowsUpdated, err
 }
+
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
+	return b.GetRow(db, id, userId)
+}

@@ -143,6 +143,10 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
+	return b.GetRow(db, id, userId)
+}
+
 //==================== customized
 func (b repositoryName) AddRow_WithProduct(db *sql.DB, commodity_product models.Commodity_product, userId int) (modelName, error) {
 

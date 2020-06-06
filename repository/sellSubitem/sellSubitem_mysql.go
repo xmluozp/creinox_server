@@ -136,6 +136,11 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
+
+	return b.GetRow(db, id, userId)
+}
+
 // =============================================== customized
 // 每次item变动，都更新父合同里面的总价
 func (b repositoryName) UpdateTotalPrice(db *sql.DB, id int, userId int) error {
