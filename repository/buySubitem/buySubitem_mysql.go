@@ -2,6 +2,7 @@ package buySubitemRepository
 
 import (
 	"database/sql"
+	"strconv"
 
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
@@ -88,7 +89,8 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 		return 0, err
 	}
 
-	result, _, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	item.ScanRow(row)
 
 	if err != nil {
 		return 0, err
@@ -135,11 +137,48 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
-	return b.GetRow(db, id, userId)
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+
+	item, err := b.GetRow(db, id, userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ds, err := utils.GetPrintSourceFromInterface(item)
+
+	return ds, err
 }
 
 // =============================================== customized
+
+// 用做列表显示的collapse、以及打印的时候取子订单用
+func (b repositoryName) GetRows_fromBuyContract(
+	db *sql.DB,
+	buy_contract_id int,
+	userId int) ([]modelName, models.Pagination, error) {
+
+	var item modelName
+	var items []modelName
+	var pagination models.Pagination
+	searchTerms := make(map[string]string)
+
+	// 不分页
+	pagination.PerPage = -1
+
+	buy_contract_id_str := strconv.Itoa(buy_contract_id)
+	searchTerms["buy_contract_id"] = buy_contract_id_str
+
+	returnitems, pagination, err := b.GetRows(db, item, items, pagination, searchTerms, userId)
+
+	for i := 0; i < len(returnitems); i++ {
+		returnitems[i].BuyContract = models.BuyContract{}
+	}
+
+	// 这个应该是取出所有
+	return returnitems, pagination, err
+}
+
 // 每次item变动，都更新父合同里面的总价
 func (b repositoryName) UpdateTotalPrice(db *sql.DB, id int, userId int) error {
 

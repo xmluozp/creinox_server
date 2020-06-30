@@ -154,11 +154,14 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	//
 	var result sql.Result
 	var err error
+	var row *sql.Row
 
 	if item.Password.String != "" {
 		hashedPass, _ := auth.HashPassword(item.Password.String)
 		item.Password = nulls.NewString(hashedPass)
-		result, _, err = utils.DbQueryUpdate(db, tableName, tableName, item)
+		result, row, err = utils.DbQueryUpdate(db, tableName, tableName, item)
+		item.ScanRow(row)
+
 	} else {
 		// 防止最高管理员把自己禁用或者降级
 		if item.ID.Int == userId {
@@ -215,7 +218,49 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRowsForLogin(
+	db *sql.DB,
+	item modelName,
+	items []modelName,
+	pagination models.Pagination, // 需要返回总页数
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
-	return b.GetRow(db, id, userId)
+	rows, err := db.Query("SELECT id, userName, fullName FROM user WHERE isActive = 1")
+
+	if err != nil {
+		return []modelName{}, pagination, err
+	}
+
+	defer rows.Close() // 以下代码执行完了，关闭连接
+
+	for rows.Next() {
+
+		err = rows.Scan(&item.ID, &item.UserName, &item.FullName)
+
+		items = append(items, item)
+
+		if err != nil {
+			fmt.Println("rows:", rows, err)
+		}
+	}
+
+	if err != nil {
+		return []modelName{}, pagination, err
+	}
+
+	return items, pagination, nil
+
+}
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+
+	item, err := b.GetRow(db, id, userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ds, err := utils.GetPrintSourceFromInterface(item)
+
+	return ds, err
 }

@@ -88,7 +88,8 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
 
-	result, _, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	item.ScanRow(row)
 
 	if err != nil {
 		return 0, err
@@ -128,7 +129,15 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
 
-	return b.GetRow(db, id, userId)
+	item, err := b.GetRow(db, id, userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ds, err := utils.GetPrintSourceFromInterface(item)
+
+	return ds, err
 }

@@ -89,7 +89,8 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 		return 0, err
 	}
 
-	result, _, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	item.ScanRow(row)
 
 	if err != nil {
 		return 0, err
@@ -136,9 +137,17 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
 
-	return b.GetRow(db, id, userId)
+	item, err := b.GetRow(db, id, userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ds, err := utils.GetPrintSourceFromInterface(item)
+
+	return ds, err
 }
 
 // =============================================== customized
@@ -172,8 +181,9 @@ func (b repositoryName) GetRows_fromSellContract(
 	var pagination models.Pagination
 	searchTerms := make(map[string]string)
 
+	// 不分页
 	pagination.PerPage = -1
-	// sell_contract_id_str := strconv.Itoa(sell_contract_id)
+
 	sell_contract_id_str := strconv.Itoa(sell_contract_id)
 	searchTerms["sell_contract_id"] = sell_contract_id_str
 

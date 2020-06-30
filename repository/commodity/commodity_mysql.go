@@ -101,7 +101,8 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
-	result, _, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	item.ScanRow(row)
 
 	if err != nil {
 		return 0, err
@@ -122,7 +123,8 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	// result, row, err := utils.DbQueryDelete(db, tableName, id, item)
 	// 这里特殊，返回一个空的item。因为commodity的image_id字段是在关联的product表里，这里delete的地方取不到，而且外部用不到这个item
-	result, _, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
+	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
+	item.ScanRow(row)
 
 	if err != nil {
 		return nil, err
@@ -143,8 +145,17 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
-	return b.GetRow(db, id, userId)
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+
+	item, err := b.GetRow(db, id, userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ds, err := utils.GetPrintSourceFromInterface(item)
+
+	return ds, err
 }
 
 //==================== customized
@@ -232,7 +243,8 @@ func (b repositoryName) Assemble(db *sql.DB, commodity_id int, product_id int, u
 	var item modelName
 	item.UpdateUser_id = nulls.NewInt(userId)
 	item.ID = nulls.NewInt(commodity_id)
-	_, _, err = utils.DbQueryUpdate(db, tableName, tableName, item)
+	_, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	item.ScanRow(row)
 
 	return err
 
@@ -245,7 +257,7 @@ func (b repositoryName) Disassemble(db *sql.DB, commodity_id int, product_id int
 	var item modelName
 	item.UpdateUser_id = nulls.NewInt(userId)
 	item.ID = nulls.NewInt(commodity_id)
-	_, _, err = utils.DbQueryUpdate(db, tableName, tableName, item)
-
+	_, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	item.ScanRow(row)
 	return err
 }

@@ -33,7 +33,9 @@ func ConnectDB() *sql.DB {
 
 	// db, err := sql.Open("mysql", "creinox:123456@/creinox?parseTime=true&loc=Local")
 	db, err := sql.Open("mysql", connectString)
-
+	db.SetMaxOpenConns(2000)
+	db.SetMaxIdleConns(1000)
+	// db.SetConnMaxLifetime(time.Second * 10)
 	logFatal(err)
 
 	err = db.Ping()

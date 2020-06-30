@@ -344,7 +344,7 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 
 // col属性是 newtime 的，update的时候取系统时间
 func DbQueryUpdate(db *sql.DB, tableName string, queryTable string, item interface{}) (sql.Result, *sql.Row, error) {
-
+	fmt.Println("连接数", db.Stats())
 	// 获取item的值和类型
 	v := reflect.ValueOf(item)
 	t := reflect.TypeOf(item)

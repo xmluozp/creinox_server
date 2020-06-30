@@ -27,7 +27,10 @@ func (b repositoryName) GetRows(
 
 	// ---customized:
 	factory_id := searchTerms["companyFactory.id"]
+
+	// 20200607: 不知道为啥要删掉，删掉了se就无法返回前端了。前端下一页就会出问题。目前方案在前端生成一个新的searchTerm用作返回
 	delete(searchTerms, "companyFactory.id")
+
 	whereString := ""
 	if factory_id != "" {
 		whereString += fmt.Sprintf(" AND mainTable.id IN (SELECT product_id FROM product_purchase WHERE company_id = %s)", factory_id)
@@ -92,7 +95,8 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
-	result, _, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	item.ScanRow(row)
 
 	if err != nil {
 		return 0, err
@@ -132,8 +136,17 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
-	return b.GetRow(db, id, userId)
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+
+	item, err := b.GetRow(db, id, userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ds, err := utils.GetPrintSourceFromInterface(item)
+
+	return ds, err
 }
 
 //---------------- customized

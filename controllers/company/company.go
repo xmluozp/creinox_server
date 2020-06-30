@@ -186,6 +186,35 @@ func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func (c Controller) Print(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		pass, userId := auth.CheckAuth(db, w, r, "")
+		if !pass {
+			return
+		}
+
+		// 从param里取出id，模板所在目录，打印格式（做在utils里面是为了方便日后修改）
+		id, _path, printFormat := utils.FetchPrintPathAndId(r)
+
+		// 生成打印数据(取map出来而不是item，是为了方便篡改)
+		repo := repository.Repository{}
+		dataSource, err := repo.GetPrintSource(db, id, userId)
+
+		if err != nil {
+			w.Write([]byte("error on generating source data," + err.Error()))
+		}
+
+		// 直接打印到writer(因为打印完毕需要删除cache，所以要在删除之前使用writer)
+		err = utils.PrintFromTemplate(w, dataSource, _path, printFormat, userId)
+
+		if err != nil {
+			w.Write([]byte("error on printing," + err.Error()))
+			return
+		}
+	}
+}
+
 // 以下这段代码找不到方法generalization，只好复制粘贴到各自的controllers里。但代码都是一样的：把业务表里附带的image update到image表、上传到文件夹、更新业务表对应fk
 func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int) error {
 

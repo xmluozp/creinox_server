@@ -8,6 +8,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strconv"
 
@@ -31,6 +33,10 @@ func GetFunc_FetchListHTTPReturn(
 
 	pagination := GetPagination(r)
 	searchTerms := GetSearchTerms(r)
+
+	// 因为map是指针，所以searchTerms会被内页的方法篡改，这里复制一份，作为干净的searchTerm返回用
+	searchTerms_returnValue := copyMap(searchTerms)
+
 	fmt.Println("搜索条件", searchTerms)
 
 	gerRows := reflect.ValueOf(repo).MethodByName(methodName)
@@ -59,9 +65,8 @@ func GetFunc_FetchListHTTPReturn(
 
 	// 准备返回值
 	returnValue.Pagination = paginationOut
-	returnValue.SearchTerms = searchTerms
+	returnValue.SearchTerms = searchTerms_returnValue
 	returnValue.Rows = rows
-
 	return http.StatusOK, returnValue, nil
 
 }
@@ -443,6 +448,69 @@ func DecodeFormData(
 	item := reflect.ValueOf(itemPtr).Elem().Interface()
 
 	return http.StatusOK, returnValue, item, files, err
+}
+
+func FetchPrintPathAndId(r *http.Request) (int, string, string) {
+
+	params := mux.Vars(r)
+	id, _ := strconv.Atoi(params["id"])
+	templateFolder, _ := params["templateFolder"]
+	template, _ := params["template"]
+	printFormat, _ := params["printFormat"]
+	_path := "." + "/templates/" + templateFolder + "/" + template
+	return id, _path, printFormat
+}
+
+// 从模板和数据源生成打印文件。插入回 writer里
+func PrintFromTemplate(
+	w http.ResponseWriter,
+	m map[string]interface{},
+	_path string,
+	printFormat string,
+	userId int) (err error) {
+
+	_cache := "cache" + RandomString(8)
+
+	os.Mkdir(_cache, os.ModePerm)
+	defer os.RemoveAll(_cache)
+
+	ext := filepath.Ext(_path)
+
+	// 判断扩展名如果不对就终止
+	if ext != ".xlsx" {
+		return ErrorFromString("template has to be: .xlsx file")
+	}
+
+	// 生成打印文件
+	xls := XlsxTemplate{}
+
+	resultPath := _cache + "/temporary.xlsx"
+	xls.PrintOut(_path, resultPath, m)
+
+	// --------------------------------------------------------- 转成pdf TODO: 加个判断，看是要pdf还是excel
+	if printFormat == "pdf" {
+		fullpath, _ := filepath.Abs(resultPath)
+
+		var fireparams []string
+
+		fireparams = []string{"/c", "soffice", "--headless", "--invisible", "--convert-to", "pdf", "--outdir", _cache + "/pdf/", fullpath}
+		interactiveToexec("cmd", fireparams)
+
+		// resultPath 针对pdf改成是pdf文件
+		resultPath = _cache + "/pdf/temporary.pdf"
+
+		// http.ServeFile(w, r, "./cache/pdf/test.pdf")
+		// err := os.RemoveAll("./cache")
+	}
+	// --------------------------------------------------------- 转成pdf
+
+	file, _ := os.Open(resultPath)
+	defer file.Close()
+	buff, _ := ioutil.ReadAll(file)
+
+	w.Write(buff)
+
+	return err
 }
 
 // deleteRole================================================================================

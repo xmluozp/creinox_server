@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/xmluozp/creinox_server/auth"
@@ -32,10 +33,11 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 		params := mux.Vars(r)
 		templateFolder, _ := params["templateFolder"]
 
-		// 根据文件夹名称取模板
+		// 根据文件夹名称取模板 (首字母要大写，不然读不到)
 		type template struct {
-			Name string
-			Path string
+			Name     string
+			Path     string
+			FileName string
 		}
 
 		returnRows := []template{}
@@ -44,14 +46,15 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 		root := "templates/" + templateFolder
 		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 
-			if info != nil && !info.IsDir() {
+			if info != nil && !info.IsDir() && filepath.Ext(path) == ".xlsx" {
 				tmp := template{
-					Name: info.Name(),
-					Path: templateFolder}
+					Name:     strings.TrimSuffix(info.Name(), filepath.Ext(path)),
+					Path:     templateFolder,
+					FileName: info.Name()}
 				returnRows = append(returnRows, tmp)
-			}
 
-			fmt.Println("找到文件", info)
+				fmt.Println("找到文件", info)
+			}
 
 			return err
 		})

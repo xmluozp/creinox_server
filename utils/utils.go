@@ -1,12 +1,17 @@
 package utils
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
+	"os/exec"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -92,6 +97,7 @@ func ValidateValuer(field reflect.Value) interface{} {
 	return nil
 }
 
+// 一些reflect返回的时候，类型是interface{}，但error有可能是nil，interface不能是nil，所以需要转一下
 func ParseError(err reflect.Value) error {
 
 	myErr, ok := err.Interface().(error)
@@ -101,6 +107,11 @@ func ParseError(err reflect.Value) error {
 	}
 
 	return myErr
+}
+
+func ErrorFromString(message string) error {
+
+	return errors.New(message)
 }
 
 func parseInt(s string) int {
@@ -136,6 +147,69 @@ func ParseFlight(s string) (letters, numbers string) {
 		}
 	}
 	return string(l), string(n)
+}
+
+// 阿拉伯数字转人民币大写
+// from: https://www.jianshu.com/p/f6367c747798
+func FormatConvertNumToCny(num float32) string {
+
+	num64 := float64(num)
+
+	strnum := strconv.FormatFloat(num64*100, 'f', 0, 64)
+	sliceUnit := []string{"仟", "佰", "拾", "亿", "仟", "佰", "拾", "万", "仟", "佰", "拾", "元", "角", "分"}
+	// log.Println(sliceUnit[:len(sliceUnit)-2])
+	s := sliceUnit[len(sliceUnit)-len(strnum) : len(sliceUnit)]
+	upperDigitUnit := map[string]string{"0": "零", "1": "壹", "2": "贰", "3": "叁", "4": "肆", "5": "伍", "6": "陆", "7": "柒", "8": "捌", "9": "玖"}
+	str := ""
+	for k, v := range strnum[:] {
+		str = str + upperDigitUnit[string(v)] + s[k]
+	}
+	reg, err := regexp.Compile(`零角零分$`)
+	str = reg.ReplaceAllString(str, "整")
+
+	reg, err = regexp.Compile(`零角`)
+	str = reg.ReplaceAllString(str, "零")
+
+	reg, err = regexp.Compile(`零分$`)
+	str = reg.ReplaceAllString(str, "整")
+
+	reg, err = regexp.Compile(`零[仟佰拾]`)
+	str = reg.ReplaceAllString(str, "零")
+
+	reg, err = regexp.Compile(`零{2,}`)
+	str = reg.ReplaceAllString(str, "零")
+
+	reg, err = regexp.Compile(`零亿`)
+	str = reg.ReplaceAllString(str, "亿")
+
+	reg, err = regexp.Compile(`零万`)
+	str = reg.ReplaceAllString(str, "万")
+
+	reg, err = regexp.Compile(`零*元`)
+	str = reg.ReplaceAllString(str, "元")
+
+	reg, err = regexp.Compile(`亿零{0, 3}万`)
+	str = reg.ReplaceAllString(str, "^元")
+
+	reg, err = regexp.Compile(`零元`)
+	str = reg.ReplaceAllString(str, "零")
+	if err != nil {
+		log.Fatal(err)
+	}
+	return str
+}
+
+func copyMap(originalMap map[string]string) map[string]string {
+
+	// Create the target map
+	targetMap := make(map[string]string)
+
+	// Copy from the original map to the target map
+	for key, value := range originalMap {
+		targetMap[key] = value
+	}
+
+	return targetMap
 }
 
 func GetField(tag, key string, s interface{}) (reflect.Value, reflect.StructField) {
@@ -196,10 +270,36 @@ func GetFieldValue(tag, key string, s interface{}) (value interface{}) {
 	}
 }
 
+func GetPrintSourceFromInterface(item interface{}) (map[string]interface{}, error) {
+
+	byteArray, err := json.Marshal(item)
+	var m map[string]interface{}
+	err = json.Unmarshal(byteArray, &m)
+	m = ClearNil(m)
+
+	return m, err
+}
+
+func ModifyDataSourceList(ds map[string]interface{},
+	key string,
+	subitemKey string,
+	callback func(map[string]interface{}) string) map[string]interface{} {
+
+	if list, ok := ds[key].([]interface{}); ok {
+		for i := 0; i < len(list); i++ {
+			if subitem, ok := list[i].(map[string]interface{}); ok {
+				subitem[subitemKey] = callback(subitem)
+			}
+		}
+		ds[key] = list
+	}
+
+	return ds
+}
+
 // 迭代清除map里面所有空值
 func ClearNil(m map[string]interface{}) map[string]interface{} {
 	for columnName := range m {
-
 		switch field := m[columnName].(type) {
 		case map[string]interface{}:
 
@@ -208,11 +308,15 @@ func ClearNil(m map[string]interface{}) map[string]interface{} {
 				delete(m, columnName)
 			}
 
-		case []map[string]interface{}:
+		case []interface{}:
 
+			// 清除列表需要迭代每一项
 			for i := 0; i < len(field); i++ {
-				field[i] = ClearNil(field[i])
+				if f, ok := field[i].(map[string]interface{}); ok {
+					field[i] = ClearNil(f)
+				}
 			}
+			// 清除完覆盖回去
 			m[columnName] = field
 
 			if len(field) == 0 {
@@ -225,8 +329,12 @@ func ClearNil(m map[string]interface{}) map[string]interface{} {
 				delete(m, columnName)
 			}
 
+		case nulls.Nulls:
+			delete(m, columnName)
+
 		case nil:
 			delete(m, columnName)
+
 		default:
 		}
 	}
@@ -247,6 +355,27 @@ func RandomString(length int) string {
 	str := b.String()
 
 	return str
+}
+
+// 运行命令行来进行pdf转换
+func interactiveToexec(commandName string, params []string) (string, bool) {
+	cmd := exec.Command(commandName, params...)
+	buf, err := cmd.Output()
+	log.Println(cmd.Args)
+	w := bytes.NewBuffer(nil)
+	cmd.Stderr = w
+	log.Printf("%s\n", w)
+	if err != nil {
+		log.Println("Error: <", err, "> when exec command read out buffer")
+		return "", false
+	} else {
+		return string(buf), true
+	}
+}
+
+func FormatDate(t time.Time) string {
+
+	return t.Format("2006年01月02")
 }
 
 func Log(err error, a ...interface{}) {

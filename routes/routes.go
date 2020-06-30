@@ -57,6 +57,8 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/user/{id}", userController.DeleteItem(db)).Methods("DELETE")
 	router.HandleFunc("/api/user/login", userController.Login(db)).Methods("POST")
 
+	router.HandleFunc("/api/userList", userController.GetItemsForLogin(db)).Methods("GET")
+
 	// ------------ text template
 	textTemplateController := textTemplateController.Controller{}
 	router.HandleFunc("/api/texttemplate", textTemplateController.GetItems(db)).Methods("GET")
@@ -147,6 +149,8 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/sellcontract", sellContractController.AddItem(db)).Methods("POST")
 	router.HandleFunc("/api/sellcontract", sellContractController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/sellcontract/{id}", sellContractController.DeleteItem(db)).Methods("DELETE")
+	router.HandleFunc("/api/sellcontract_print/{id}/{templateFolder}/{template}/{printFormat}", sellContractController.Print(db)).Methods("GET")
+
 	// customized
 	router.HandleFunc("/api/sellcontract_getlast", sellContractController.GetLast(db)).Methods("GET")
 
@@ -165,7 +169,7 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/buycontract", buyContractController.AddItem(db)).Methods("POST")
 	router.HandleFunc("/api/buycontract", buyContractController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/buycontract/{id}", buyContractController.DeleteItem(db)).Methods("DELETE")
-	router.HandleFunc("/api/buycontract_print/{id}/{templateFolder}/{template}", buyContractController.Print(db)).Methods("GET")
+	router.HandleFunc("/api/buycontract_print/{id}/{templateFolder}/{template}/{printFormat}", buyContractController.Print(db)).Methods("GET")
 
 	// customized
 	router.HandleFunc("/api/buycontract_getlast", buyContractController.GetLast(db)).Methods("GET")
@@ -185,7 +189,7 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/mouldcontract", mouldContractController.AddItem(db)).Methods("POST")
 	router.HandleFunc("/api/mouldcontract", mouldContractController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/mouldcontract/{id}", mouldContractController.DeleteItem(db)).Methods("DELETE")
-	router.HandleFunc("/api/mouldcontract_print/{id}/{templateFolder}/{template}", mouldContractController.Print(db)).Methods("GET")
+	router.HandleFunc("/api/mouldcontract_print/{id}/{templateFolder}/{template}/{printFormat}", mouldContractController.Print(db)).Methods("GET")
 
 	// customized
 	router.HandleFunc("/api/mouldcontract_getlast", mouldContractController.GetLast(db)).Methods("GET")

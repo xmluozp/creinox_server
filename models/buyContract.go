@@ -48,9 +48,10 @@ type BuyContract struct {
 	UserFollower  User         `ref:"user,follower_id" json:"follower_id.row" validate:"-"`
 	CompanyBuyer  Company      `ref:"company,buyer_company_id" json:"buyer_company_id.row" validate:"-"`
 	CompanySeller Company      `ref:"company,seller_company_id" json:"seller_company_id.row" validate:"-"`
+	Region        Region       `ref:"region,region_id" json:"region_id.row" validate:"-"`
 
 	// collapse的对应子合同列表（放的是产品）
-	BuySubitem []BuySubitem `json:"subitem_list"`
+	BuySubitem []BuySubitem `json:"buy_subitem_list"`
 }
 
 type BuyContractList struct {
@@ -107,12 +108,14 @@ func (item *BuyContract) ScanRow(r *sql.Row) error {
 	fkUserFollower := User{}
 	fkCompanyBuyer := Company{}
 	fkCompanySeller := Company{}
+	fkRegion := Region{}
 
 	columns = item.Receivers()
 	columns = append(columns, fkSellContract.Receivers()...)
 	columns = append(columns, fkUserFollower.Receivers()...)
 	columns = append(columns, fkCompanyBuyer.Receivers()...)
 	columns = append(columns, fkCompanySeller.Receivers()...)
+	columns = append(columns, fkRegion.Receivers()...)
 
 	err := r.Scan(columns...)
 
@@ -120,6 +123,7 @@ func (item *BuyContract) ScanRow(r *sql.Row) error {
 	item.UserFollower = fkUserFollower
 	item.CompanyBuyer = fkCompanyBuyer
 	item.CompanySeller = fkCompanySeller
+	item.Region = fkRegion
 
 	return err
 }
@@ -132,23 +136,26 @@ func (item *BuyContract) ScanRows(r *sql.Rows) error {
 	fkUserFollower := User{}
 	fkCompanyBuyer := Company{}
 	fkCompanySeller := Company{}
+	fkRegion := Region{}
 
 	columns = item.Receivers()
 	columns = append(columns, fkSellContract.Receivers()...)
 	columns = append(columns, fkUserFollower.Receivers()...)
 	columns = append(columns, fkCompanyBuyer.Receivers()...)
 	columns = append(columns, fkCompanySeller.Receivers()...)
+	columns = append(columns, fkRegion.Receivers()...)
 
 	err := r.Scan(columns...)
 
 	if err != nil {
-		fmt.Println("读取多条子订单出错", err.Error)
+		fmt.Println("读取多条view出错", err.Error)
 	}
 
 	item.SellContract = fkSellContract
 	item.UserFollower = fkUserFollower
 	item.CompanyBuyer = fkCompanyBuyer
 	item.CompanySeller = fkCompanySeller
+	item.Region = fkRegion
 
 	return err
 }
@@ -161,12 +168,14 @@ func (item *BuyContract) ScanRowsView(r *sql.Rows) error {
 	fkUserFollower := User{}
 	fkCompanyBuyer := Company{}
 	fkCompanySeller := Company{}
+	fkRegion := Region{}
 
 	columns = item.Receivers()
 	columns = append(columns, fkSellContract.Receivers()...)
 	columns = append(columns, fkUserFollower.Receivers()...)
 	columns = append(columns, fkCompanyBuyer.Receivers()...)
 	columns = append(columns, fkCompanySeller.Receivers()...)
+	columns = append(columns, fkRegion.Receivers()...)
 
 	err := r.Scan(columns...)
 
@@ -178,6 +187,7 @@ func (item *BuyContract) ScanRowsView(r *sql.Rows) error {
 	item.UserFollower = fkUserFollower
 	item.CompanyBuyer = fkCompanyBuyer
 	item.CompanySeller = fkCompanySeller
+	item.Region = fkRegion
 
 	return err
 }
@@ -190,23 +200,22 @@ func (item *BuyContract) ScanRowView(r *sql.Row) error {
 	fkUserFollower := User{}
 	fkCompanyBuyer := Company{}
 	fkCompanySeller := Company{}
+	fkRegion := Region{}
 
 	columns = item.Receivers()
 	columns = append(columns, fkSellContract.Receivers()...)
 	columns = append(columns, fkUserFollower.Receivers()...)
 	columns = append(columns, fkCompanyBuyer.Receivers()...)
 	columns = append(columns, fkCompanySeller.Receivers()...)
+	columns = append(columns, fkRegion.Receivers()...)
 
 	err := r.Scan(columns...)
-
-	if err != nil {
-		fmt.Println("读取多条view出错", err.Error)
-	}
 
 	item.SellContract = fkSellContract
 	item.UserFollower = fkUserFollower
 	item.CompanyBuyer = fkCompanyBuyer
 	item.CompanySeller = fkCompanySeller
+	item.Region = fkRegion
 
 	return err
 }

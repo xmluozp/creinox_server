@@ -120,11 +120,13 @@ func (item *Company) ScanRow(r *sql.Row) error {
 
 	var columns []interface{}
 
+	columns = item.Receivers()
+
 	fkImageLicense := Image{}
 	fkImageBizCard := Image{}
 	fkRetriever := User{}
 
-	columns = append(item.Receivers(), fkImageLicense.Receivers()...)
+	columns = append(columns, fkImageLicense.Receivers()...)
 	columns = append(columns, fkImageBizCard.Receivers()...)
 	columns = append(columns, fkRetriever.Receivers()...)
 

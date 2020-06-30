@@ -37,11 +37,13 @@ func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
+		// pass, userId := auth.CheckAuth(db, w, r, authName)
+		// if !pass {
+		// 	return
+		// }
 
+		// 下拉列表不验证权限
+		userId := 0
 		var item modelName
 		repo := repository.Repository{}
 
@@ -110,5 +112,34 @@ func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 
 		status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 		utils.SendJson(w, status, returnValue, err)
+	}
+}
+
+func (c Controller) Print(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		pass, userId := auth.CheckAuth(db, w, r, authName)
+		if !pass {
+			return
+		}
+
+		// 从param里取出id，模板所在目录，打印格式（做在utils里面是为了方便日后修改）
+		id, _path, printFormat := utils.FetchPrintPathAndId(r)
+
+		// 生成打印数据(取map出来而不是item，是为了方便篡改)
+		repo := repository.Repository{}
+		dataSource, err := repo.GetPrintSource(db, id, userId)
+
+		if err != nil {
+			w.Write([]byte("error on generating source data," + err.Error()))
+		}
+
+		// 直接打印到writer(因为打印完毕需要删除cache，所以要在删除之前使用writer)
+		err = utils.PrintFromTemplate(w, dataSource, _path, printFormat, userId)
+
+		if err != nil {
+			w.Write([]byte("error on printing," + err.Error()))
+			return
+		}
 	}
 }

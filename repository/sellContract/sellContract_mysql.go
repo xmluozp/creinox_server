@@ -143,7 +143,8 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	orderitem.IsDone = item.IsDone
 	orderitem.Order_memo = item.Order_memo
 
-	result, _, err = utils.DbQueryUpdate(db, tableName_order, tableName_order, orderitem)
+	result, row, err := utils.DbQueryUpdate(db, tableName_order, tableName_order, orderitem)
+	item.ScanRow(row)
 
 	if err != nil {
 		return 0, err
@@ -178,14 +179,23 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	// 删掉对应的order
 	var orderitem models.OrderForm
 	result, row, err = utils.DbQueryDelete(db, tableName_order, tableName_order, item.Order_form_id.Int, orderitem)
+	orderitem.ScanRow(row)
 	// -------
 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
 
-	return b.GetRow(db, id, userId)
+	item, err := b.GetRow(db, id, userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ds, err := utils.GetPrintSourceFromInterface(item)
+
+	return ds, err
 }
 
 // =============================================== customized

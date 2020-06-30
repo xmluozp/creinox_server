@@ -2,10 +2,12 @@ package buyContractRepository
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
+	buySubitemRepository "github.com/xmluozp/creinox_server/repository/buySubitem"
 	"github.com/xmluozp/creinox_server/utils"
 )
 
@@ -127,7 +129,8 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	orderitem.IsDone = item.IsDone
 	orderitem.Order_memo = item.Order_memo
 
-	result, _, err = utils.DbQueryUpdate(db, tableName_order, tableName_order, orderitem)
+	result, row, err := utils.DbQueryUpdate(db, tableName_order, tableName_order, orderitem)
+	item.ScanRow(row)
 
 	if err != nil {
 		return 0, err
@@ -163,12 +166,43 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	var orderitem models.OrderForm
 	result, row, err = utils.DbQueryDelete(db, tableName_order, tableName_order, item.Order_form_id.Int, orderitem)
 	// -------
+	orderitem.ScanRow(row)
 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
-	return b.GetRow(db, id, userId)
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+
+	item, err := b.GetRow(db, id, userId)
+
+	buySubitemRepository := buySubitemRepository.Repository{}
+
+	subitem_list, _, err := buySubitemRepository.GetRows_fromBuyContract(db, id, userId)
+	item.BuySubitem = subitem_list
+
+	if err != nil {
+		return nil, err
+	}
+
+	//----------在这里篡改需要打印的东西
+	ds, err := utils.GetPrintSourceFromInterface(item)
+
+	// 相乘获得总价格
+	utils.ModifyDataSourceList(ds, "buy_subitem_list", "ds_totalPrice",
+		func(subitem map[string]interface{}) string {
+			num1, ok1 := subitem["unitPrice"].(float64)
+			num2, ok2 := subitem["amount"].(float64)
+			if ok1 && ok2 {
+				strNum := fmt.Sprintf("%.2f", num1*num2)
+				return strNum
+			}
+			return "错误数据"
+		})
+
+	ds["ds_rmb"] = utils.FormatConvertNumToCny(item.TotalPrice.Float32)
+	ds["activeAt"] = utils.FormatDate(item.ActiveAt.Time)
+
+	return ds, err
 }
 
 // =============================================== customized

@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/gobuffalo/nulls"
 )
@@ -61,6 +60,9 @@ type MouldContract struct {
 	View_image_thumbnail     nulls.String `col:"" json:"view_image_thumbnail"`
 	View_buyer_company_name  nulls.String `col:"" json:"view_buyer_company_name"`
 	View_seller_company_name nulls.String `col:"" json:"view_seller_company_name"`
+
+	// 打印用
+	Region Region `ref:"region,region_id" json:"region_id.row" validate:"-"`
 
 	// collapse之后要进出款项用
 	// BuyContractList []BuyContract `json:"buyContract_list"`
@@ -131,8 +133,12 @@ func (item *MouldContract) Receivers() (itemPtrs []interface{}) {
 func (item *MouldContract) ScanRow(r *sql.Row) error {
 
 	var columns []interface{}
+
+	fkRegion := Region{}
 	columns = item.Receivers()
+	columns = append(columns, fkRegion.Receivers()...)
 	err := r.Scan(columns...)
+	item.Region = fkRegion
 	return err
 }
 
@@ -140,13 +146,11 @@ func (item *MouldContract) ScanRows(r *sql.Rows) error {
 
 	var columns []interface{}
 
+	fkRegion := Region{}
 	columns = item.Receivers()
-
+	columns = append(columns, fkRegion.Receivers()...)
 	err := r.Scan(columns...)
-
-	if err != nil {
-		fmt.Println("读取多条子订单出错", err.Error)
-	}
+	item.Region = fkRegion
 
 	return err
 }

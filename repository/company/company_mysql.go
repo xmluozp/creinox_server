@@ -119,7 +119,8 @@ func (b repositoryName) AddRow(db *sql.DB, itemRec interface{}, userId int) (mod
 	folder.RefSource = nulls.NewString("company.gallary_folder_id")
 	folder.RefId = item.ID
 
-	result, _, errFolderUpdate := utils.DbQueryUpdate(db, "folder", "folder", folder)
+	result, row, errFolderUpdate := utils.DbQueryUpdate(db, "folder", "folder", folder)
+	folder.ScanRow(row)
 
 	if errFolderUpdate != nil {
 		return item, errFolderUpdate
@@ -134,7 +135,8 @@ func (b repositoryName) UpdateRow(db *sql.DB, itemRec interface{}, userId int) (
 	item := itemRec.(modelName)
 
 	item.UpdateUser_id = nulls.NewInt(userId)
-	result, _, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	item.ScanRow(row)
 
 	// fmt.Println("database updateRow", item)
 
@@ -173,7 +175,15 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
 
-	return b.GetRow(db, id, userId)
+	item, err := b.GetRow(db, id, userId)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ds, err := utils.GetPrintSourceFromInterface(item)
+
+	return ds, err
 }
