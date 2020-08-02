@@ -4,10 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/gobuffalo/nulls"
+	"github.com/xmluozp/creinox_server/enums"
 	"github.com/xmluozp/creinox_server/models"
 	buySubitemRepository "github.com/xmluozp/creinox_server/repository/buySubitem"
+	orderFormRepo "github.com/xmluozp/creinox_server/repository/orderForm"
 	"github.com/xmluozp/creinox_server/utils"
 )
 
@@ -19,7 +22,6 @@ var tableName = "buy_contract"
 
 // 合同和order合体的view，显示用
 var combineName = "combine_buy_contract"
-var tableName_order = "order_form"
 var viewName = "view_buy_contract"
 
 // =============================================== basic CRUD
@@ -68,21 +70,26 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 	// 抽出必要的字段，插入orderform，取出新生成的id
 	orderitem := models.OrderForm{}
-	orderitem.Type = nulls.NewInt(int(2)) // 采购合同type是2
-	orderitem.TotalPrice = item.TotalPrice
-	orderitem.PaidPrice = item.PaidPrice
+	orderitem.ContractType = nulls.NewInt(enums.ContractType.BuyContract) // 采购合同type是2
+	orderitem.Code = item.Code
+	orderitem.InvoiceCode = item.InvoiceCode
+	orderitem.Payable = item.TotalPrice
+	orderitem.PayablePaid = item.PaidPrice
+	orderitem.Receivable = nulls.NewFloat32(0)
+	orderitem.ReceivablePaid = nulls.NewFloat32(0)
 	orderitem.Seller_company_id = item.Seller_company_id
 	orderitem.Buyer_company_id = item.Buyer_company_id
 	orderitem.IsDone = item.IsDone
 	orderitem.Order_memo = item.Order_memo
 
-	orderresult, errInsert := utils.DbQueryInsert(db, tableName_order, orderitem)
+	orderFormRepo := orderFormRepo.Repository{}
+	orderItem, errInsert := orderFormRepo.AddRow(db, orderitem, userId)
 
 	if errInsert != nil {
 		return item, errInsert
 	}
-	orderid, errId := orderresult.LastInsertId()
-	item.Order_form_id = nulls.NewInt(int(orderid))
+	item.Order_form_id = orderItem.ID
+
 	// -------------------
 
 	result, errInsert := utils.DbQueryInsert(db, tableName, item)
@@ -122,15 +129,19 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	// 升级完顺便升级orderform
 	orderitem := models.OrderForm{}
 	orderitem.ID = olditem.Order_form_id
-	orderitem.TotalPrice = item.TotalPrice
-	orderitem.PaidPrice = item.PaidPrice
+	orderitem.Code = item.Code
+	orderitem.InvoiceCode = item.InvoiceCode
+	orderitem.Payable = item.TotalPrice
+	orderitem.PayablePaid = item.PaidPrice
+	orderitem.Receivable = nulls.NewFloat32(0)
+	orderitem.ReceivablePaid = nulls.NewFloat32(0)
 	orderitem.Seller_company_id = item.Seller_company_id
 	orderitem.Buyer_company_id = item.Buyer_company_id
 	orderitem.IsDone = item.IsDone
 	orderitem.Order_memo = item.Order_memo
 
-	result, row, err := utils.DbQueryUpdate(db, tableName_order, tableName_order, orderitem)
-	item.ScanRow(row)
+	orderFormRepo := orderFormRepo.Repository{}
+	_, err = orderFormRepo.UpdateRow(db, orderitem, userId)
 
 	if err != nil {
 		return 0, err
@@ -163,10 +174,8 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	}
 
 	// 删掉对应的order
-	var orderitem models.OrderForm
-	result, row, err = utils.DbQueryDelete(db, tableName_order, tableName_order, item.Order_form_id.Int, orderitem)
-	// -------
-	orderitem.ScanRow(row)
+	orderFormRepo := orderFormRepo.Repository{}
+	_, err = orderFormRepo.DeleteRow(db, item.Order_form_id.Int, userId)
 
 	return item, err
 }
@@ -177,6 +186,7 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 
 	buySubitemRepository := buySubitemRepository.Repository{}
 
+	//----------如果打印子列表，需要取出来
 	subitem_list, _, err := buySubitemRepository.GetRows_fromBuyContract(db, id, userId)
 	item.BuySubitem = subitem_list
 
@@ -192,11 +202,25 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 		func(subitem map[string]interface{}) string {
 			num1, ok1 := subitem["unitPrice"].(float64)
 			num2, ok2 := subitem["amount"].(float64)
+
 			if ok1 && ok2 {
 				strNum := fmt.Sprintf("%.2f", num1*num2)
 				return strNum
 			}
 			return "错误数据"
+		})
+
+	// 提货时间的格式
+	utils.ModifyDataSourceList(ds, "buy_subitem_list", "pickuptimeAt",
+		func(subitem map[string]interface{}) string {
+
+			t, err := time.Parse(time.RFC3339, subitem["pickuptimeAt"].(string))
+
+			if err != nil {
+				return "错误数据"
+			}
+
+			return utils.FormatDate(t)
 		})
 
 	ds["ds_rmb"] = utils.FormatConvertNumToCny(item.TotalPrice.Float32)

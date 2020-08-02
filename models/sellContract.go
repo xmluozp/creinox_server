@@ -20,6 +20,7 @@ type SellContract struct {
 	ShippingPrice  nulls.Float32 `col:"" json:"shippingPrice"`
 	CommissionType nulls.Int     `col:"fk" json:"commissionType"`
 
+	Tt_packing          nulls.String `col:"" json:"tt_packing"`
 	Tt_shipmentDue      nulls.String `col:"" json:"tt_shipmentDue"`
 	Tt_insurance        nulls.String `col:"" json:"tt_insurance"`
 	Tt_paymentCondition nulls.String `col:"" json:"tt_paymentCondition"`
@@ -40,7 +41,8 @@ type SellContract struct {
 	Order_form_id nulls.Int `col:"fk" json:"order_form_id"`
 
 	// order里取
-	Type              nulls.Int     `json:"type"`
+	ContractType      nulls.Int     `json:"contractType"`
+	InvoiceCode       nulls.String  `json:"invoiceCode"`
 	TotalPrice        nulls.Float32 `json:"totalPrice"`
 	PaidPrice         nulls.Float32 `json:"paidPrice"`
 	Seller_company_id nulls.Int     `json:"seller_company_id"`
@@ -78,6 +80,8 @@ func (item *SellContract) Receivers() (itemPtrs []interface{}) {
 		&item.IsTransport,
 		&item.ShippingPrice,
 		&item.CommissionType,
+
+		&item.Tt_packing,
 		&item.Tt_shipmentDue,
 		&item.Tt_insurance,
 		&item.Tt_paymentCondition,
@@ -94,7 +98,8 @@ func (item *SellContract) Receivers() (itemPtrs []interface{}) {
 		&item.Destination_port_id,
 		&item.Currency_id,
 		&item.Shipping_currency_id,
-		&item.Type,
+		&item.ContractType,
+		&item.InvoiceCode,
 		&item.TotalPrice,
 		&item.PaidPrice,
 		&item.Seller_company_id,

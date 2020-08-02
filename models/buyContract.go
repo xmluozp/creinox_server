@@ -34,8 +34,9 @@ type BuyContract struct {
 	UpdateUser_id nulls.Int `col:"fk" json:"updateUser_id"`
 	Order_form_id nulls.Int `col:"fk" json:"order_form_id"`
 
-	// order里取
-	Type              nulls.Int     `json:"type"`
+	// order里取 (应付应收直接统一成totalPrice)
+	ContractType      nulls.Int     `json:"contractType"`
+	InvoiceCode       nulls.String  `json:"invoiceCode"`
 	TotalPrice        nulls.Float32 `json:"totalPrice"`
 	PaidPrice         nulls.Float32 `json:"paidPrice"`
 	Seller_company_id nulls.Int     `json:"seller_company_id"`
@@ -83,7 +84,8 @@ func (item *BuyContract) Receivers() (itemPtrs []interface{}) {
 		&item.PaymentType_id,
 		&item.Follower_id,
 		&item.UpdateUser_id,
-		&item.Type,
+		&item.ContractType,
+		&item.InvoiceCode,
 		&item.TotalPrice,
 		&item.PaidPrice,
 		&item.Seller_company_id,

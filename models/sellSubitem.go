@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/gobuffalo/nulls"
 )
@@ -107,8 +106,6 @@ func (item *SellSubitem) ScanRow(r *sql.Row) error {
 	item.Commodity = fkCommodity
 	item.SellContract = fkSellContract
 	item.UnitTypeItem = fkUnitTypeItem
-
-	fmt.Println("scan item:", item)
 
 	return err
 }

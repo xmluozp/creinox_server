@@ -46,7 +46,8 @@ type MouldContract struct {
 	Gallary_folder_id nulls.Int `col:"fk" json:"gallary_folder_id"`
 
 	// order里取
-	Type              nulls.Int     `json:"type"`
+	ContractType      nulls.Int     `json:"contractType"`
+	InvoiceCode       nulls.String  `json:"invoiceCode"`
 	TotalPrice        nulls.Float32 `json:"totalPrice"`
 	PaidPrice         nulls.Float32 `json:"paidPrice"`
 	Seller_company_id nulls.Int     `json:"seller_company_id"`
@@ -106,7 +107,8 @@ func (item *MouldContract) Receivers() (itemPtrs []interface{}) {
 		&item.Follower_id,
 		&item.UpdateUser_id,
 		&item.Gallary_folder_id,
-		&item.Type,
+		&item.ContractType,
+		&item.InvoiceCode,
 		&item.TotalPrice,
 		&item.PaidPrice,
 		&item.Seller_company_id,

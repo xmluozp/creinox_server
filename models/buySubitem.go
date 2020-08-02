@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/gobuffalo/nulls"
 )
@@ -22,14 +21,15 @@ type BuySubitem struct {
 	NetWeight   nulls.Float32 `col:"" json:"netWeight"`
 	GrossWeight nulls.Float32 `col:"" json:"grossWeight"`
 
-	OuterPackL nulls.Float32 `col:"" json:"outerPackL"`
-	OuterPackW nulls.Float32 `col:"" json:"outerPackW"`
-	OuterPackH nulls.Float32 `col:"" json:"outerPackH"`
-	InnerPackL nulls.Float32 `col:"" json:"innerPackL"`
-	InnerPackW nulls.Float32 `col:"" json:"innerPackW"`
-	InnerPackH nulls.Float32 `col:"" json:"innerPackH"`
-	Fcl20      nulls.Float32 `col:"" json:"fcl20"`
-	Fcl40      nulls.Float32 `col:"" json:"fcl40"`
+	OuterPackL   nulls.Float32 `col:"" json:"outerPackL"`
+	OuterPackW   nulls.Float32 `col:"" json:"outerPackW"`
+	OuterPackH   nulls.Float32 `col:"" json:"outerPackH"`
+	InnerPackL   nulls.Float32 `col:"" json:"innerPackL"`
+	InnerPackW   nulls.Float32 `col:"" json:"innerPackW"`
+	InnerPackH   nulls.Float32 `col:"" json:"innerPackH"`
+	Fcl20        nulls.Float32 `col:"" json:"fcl20"`
+	Fcl40        nulls.Float32 `col:"" json:"fcl40"`
+	PickuptimeAt nulls.Time    `col:"" json:"pickuptimeAt"`
 
 	Product_id      nulls.Int `col:"fk" json:"product_id" validate:"required" errm:"必填"`
 	Sell_subitem_id nulls.Int `col:"fk" json:"sell_subitem_id"`
@@ -75,6 +75,7 @@ func (item *BuySubitem) Receivers() (itemPtrs []interface{}) {
 		&item.InnerPackH,
 		&item.Fcl20,
 		&item.Fcl40,
+		&item.PickuptimeAt,
 
 		&item.Product_id,
 		&item.Sell_subitem_id,
@@ -116,8 +117,6 @@ func (item *BuySubitem) ScanRow(r *sql.Row) error {
 	item.BuyContract = fkBuyContract
 	item.UnitTypeItem = fkUnitTypeItem
 	item.SellSubitem = fkSellSubitem
-
-	fmt.Println("scan item:", item)
 
 	return err
 }

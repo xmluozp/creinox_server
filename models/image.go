@@ -21,6 +21,9 @@ type Image struct {
 	Gallary_folder_id nulls.Int    `col:"" json:"gallary_folder_id"`
 
 	Gallary_folder_memo nulls.String `json:"gallary_folder_id.memo"`
+
+	FileName          nulls.String `col:"" json:"filename"`
+	ThumbnailFileName nulls.String `col:"" json:"thumbnailfilename"`
 }
 
 type ImageList struct {
@@ -80,10 +83,14 @@ func (item *Image) Getter() Image {
 
 	uploadFolder := fmt.Sprintf("%s:%d/%s/", rootUrl, port, uploads)
 
+	item.ThumbnailFileName = item.ThumbnailPath
+
 	if item.ThumbnailPath.Valid {
 		// item.ThumbnailPath = nulls.NewString(uploads + "/" + item.ThumbnailPath.String) // 20200518 因为cors从服务端解决所以去掉这个
 		item.ThumbnailPath = nulls.NewString(uploadFolder + item.ThumbnailPath.String)
 	}
+
+	item.FileName = item.Path
 
 	if item.Path.Valid {
 		item.Path = nulls.NewString(uploadFolder + item.Path.String)
@@ -92,6 +99,7 @@ func (item *Image) Getter() Image {
 	return *item
 }
 
+// 根据网站目录+文件名，生成一个长path，用来前端访问用
 func (item *Image) AddPath(path string) string {
 
 	if path == "" {

@@ -143,7 +143,8 @@ func GetIP(r *http.Request) string {
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
+		// 浏览不设权限，因为要下拉
+		pass, userId := auth.CheckAuth(db, w, r, "")
 		if !pass {
 			return
 		}

@@ -487,7 +487,7 @@ func PrintFromTemplate(
 	resultPath := _cache + "/temporary.xlsx"
 	xls.PrintOut(_path, resultPath, m)
 
-	// --------------------------------------------------------- 转成pdf TODO: 加个判断，看是要pdf还是excel
+	// --------------------------------------------------------- 看是要pdf还是excel，如果pdf就调用程序转
 	if printFormat == "pdf" {
 		fullpath, _ := filepath.Abs(resultPath)
 

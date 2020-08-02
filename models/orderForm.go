@@ -8,14 +8,19 @@ import (
 
 // 这个model单纯为了保存，不负责显示
 type OrderForm struct {
-	ID                nulls.Int     `col:"" json:"id"`
-	Type              nulls.Int     `col:"" json:"type,omitempty"`
-	TotalPrice        nulls.Float32 `col:"" json:"totalPrice"`
-	PaidPrice         nulls.Float32 `col:"" json:"paidPrice"`
-	Seller_company_id nulls.Int     `col:"fk" json:"seller_company_id"`
-	Buyer_company_id  nulls.Int     `col:"fk" json:"buyer_company_id"`
-	IsDone            nulls.Bool    `col:"" json:"isDone"`
-	Order_memo        nulls.String  `col:"" json:"order_memo"`
+	ID             nulls.Int     `col:"" json:"id"`
+	ContractType   nulls.Int     `col:"" json:"contractType,omitempty"`
+	Code           nulls.String  `col:"" json:"code"`
+	InvoiceCode    nulls.String  `col:"" json:"invoiceCode"`
+	Receivable     nulls.Float32 `col:"" json:"receivable"`
+	ReceivablePaid nulls.Float32 `col:"" json:"receivablePaid"`
+	Payable        nulls.Float32 `col:"" json:"payable"`
+	PayablePaid    nulls.Float32 `col:"" json:"payablePaid"`
+
+	Seller_company_id nulls.Int    `col:"fk" json:"seller_company_id"`
+	Buyer_company_id  nulls.Int    `col:"fk" json:"buyer_company_id"`
+	IsDone            nulls.Bool   `col:"" json:"isDone"`
+	Order_memo        nulls.String `col:"" json:"order_memo"`
 }
 type OrderFormList struct {
 	Items []*OrderForm
@@ -25,9 +30,13 @@ func (item *OrderForm) Receivers() (itemPtrs []interface{}) {
 
 	values := []interface{}{
 		&item.ID,
-		&item.Type,
-		&item.TotalPrice,
-		&item.PaidPrice,
+		&item.ContractType,
+		&item.Code,
+		&item.InvoiceCode,
+		&item.Receivable,
+		&item.ReceivablePaid,
+		&item.Payable,
+		&item.PayablePaid,
 		&item.Seller_company_id,
 		&item.Buyer_company_id,
 		&item.IsDone,

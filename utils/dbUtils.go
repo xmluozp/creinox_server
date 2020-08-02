@@ -344,7 +344,7 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 
 // col属性是 newtime 的，update的时候取系统时间
 func DbQueryUpdate(db *sql.DB, tableName string, queryTable string, item interface{}) (sql.Result, *sql.Row, error) {
-	fmt.Println("连接数", db.Stats())
+	// fmt.Println("连接数", db.Stats())
 	// 获取item的值和类型
 	v := reflect.ValueOf(item)
 	t := reflect.TypeOf(item)
@@ -417,6 +417,8 @@ func DbQueryUpdate(db *sql.DB, tableName string, queryTable string, item interfa
 	// 生成UPDATE字符串
 	values[0] = reflect.ValueOf("UPDATE " + tableName + " SET " + strings.Join(columns, ",") + " WHERE id=?;")
 
+	fmt.Println("Update 的sql语句", values[0])
+
 	execDb := reflect.ValueOf(db).MethodByName("Exec")
 
 	// 传入参数：字符串，字段valueof。。。
@@ -433,7 +435,7 @@ func DbQueryUpdate(db *sql.DB, tableName string, queryTable string, item interfa
 	return result, rowUploaded, err
 }
 
-// called from repository
+// called from repository. deleteName 删除的对象； queryTable是返回的对象
 func DbQueryDelete(db *sql.DB, deleteName string, queryTable string, id int, dataModel interface{}) (sql.Result, *sql.Row, error) {
 
 	rowDeleted := DbQueryRow(db, "", queryTable, id, dataModel)

@@ -9,6 +9,8 @@ import (
 	commodityController "github.com/xmluozp/creinox_server/controllers/commodity"
 	commonitemController "github.com/xmluozp/creinox_server/controllers/commonItem"
 	companyController "github.com/xmluozp/creinox_server/controllers/company"
+	financialaccountController "github.com/xmluozp/creinox_server/controllers/financialAccount"
+	financialTransactionController "github.com/xmluozp/creinox_server/controllers/financialTransaction"
 	productController "github.com/xmluozp/creinox_server/controllers/product"
 	productPurchaseController "github.com/xmluozp/creinox_server/controllers/productPurchase"
 
@@ -238,5 +240,21 @@ func Routing(router *mux.Router, db *sql.DB) {
 	// commodity_product
 	router.HandleFunc("/api/commodity_byproduct/{commodity_id}/{product_id}", commodityController.Assemble(db)).Methods("POST")
 	router.HandleFunc("/api/commodity_byproduct/{commodity_id}/{product_id}", commodityController.Disassemble(db)).Methods("DELETE")
+
+	// ------------ financialAccount 内部财务用的账户
+	financialaccountController := financialaccountController.Controller{}
+	router.HandleFunc("/api/financialAccount", financialaccountController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/financialAccount/{id}", financialaccountController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/financialAccount", financialaccountController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/financialAccount", financialaccountController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/financialAccount/{id}", financialaccountController.DeleteItem(db)).Methods("DELETE")
+
+	// ------------ financialAccount 交易明细
+	financialTransactionController := financialTransactionController.Controller{}
+	router.HandleFunc("/api/financialTransaction", financialTransactionController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/financialTransaction/{id}", financialTransactionController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/financialTransaction", financialTransactionController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/financialTransaction", financialTransactionController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/financialTransaction/{id}", financialTransactionController.DeleteItem(db)).Methods("DELETE")
 
 }

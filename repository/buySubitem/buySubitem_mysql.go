@@ -2,10 +2,12 @@ package buySubitemRepository
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
 
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
+	orderFormRepo "github.com/xmluozp/creinox_server/repository/orderForm"
 	"github.com/xmluozp/creinox_server/utils"
 )
 
@@ -65,26 +67,30 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	}
 
 	id, errId := result.LastInsertId()
-
 	item.ID = nulls.NewInt(int(id))
-
 	if errId != nil {
 		return item, errId
 	}
 
-	// 更新相应订单的总金额
-	err := b.UpdateTotalPrice(db, item.ID.Int, userId)
+	// 更新相应订单的总金额. 取出order_form_id
+	order_form_id, err := b.getOrderFormId(db, item.ID.Int)
 	if err != nil {
 		return item, err
 	}
+
+	// 更新相应订单的总金额
+	err = b.UpdateTotalPrice(db, order_form_id, userId)
+	if err != nil {
+		return item, err
+	}
+
 	return item, errId
 }
 
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
 
-	// 更新相应订单的总金额
-	err := b.UpdateTotalPrice(db, item.ID.Int, userId)
-
+	// 更新相应订单的总金额. 取出order_form_id
+	order_form_id, err := b.getOrderFormId(db, item.ID.Int)
 	if err != nil {
 		return 0, err
 	}
@@ -102,6 +108,13 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 		return 0, err
 	}
 
+	// 更新相应订单的总金额
+	err = b.UpdateTotalPrice(db, order_form_id, userId)
+
+	if err != nil {
+		return 0, err
+	}
+
 	return rowsUpdated, err
 }
 
@@ -109,8 +122,8 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	var item modelName
 
-	// 更新相应订单的总金额(放前面因为删除了就没有了)
-	err := b.UpdateTotalPrice(db, id, userId)
+	// 更新相应订单的总金额. 取出order_form_id
+	order_form_id, err := b.getOrderFormId(db, id)
 
 	if err != nil {
 		return nil, err
@@ -131,6 +144,12 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	rowsDeleted, err := result.RowsAffected()
 
 	if err != nil || rowsDeleted == 0 {
+		return nil, err
+	}
+
+	// 更新相应订单的总金额. 实际更新
+	err = b.UpdateTotalPrice(db, order_form_id, userId)
+	if err != nil {
 		return nil, err
 	}
 
@@ -180,21 +199,56 @@ func (b repositoryName) GetRows_fromBuyContract(
 }
 
 // 每次item变动，都更新父合同里面的总价
-func (b repositoryName) UpdateTotalPrice(db *sql.DB, id int, userId int) error {
-
-	//tableName_order
-	var totalPrice float32
-	var order_form_id int
+// 根据item找到orderForm的id。随后更新总价格用
+func (b repositoryName) getOrderFormId(db *sql.DB, id int) (order_form_id int, err error) {
 
 	// 取出price和order form id
-	row := db.QueryRow("SELECT a.order_form_id, b.view_totalPrice FROM buy_contract a LEFT JOIN (SELECT buy_contract_id, SUM(unitPrice * amount) AS view_totalPrice FROM buy_subitem GROUP BY buy_contract_id) b ON a.id = b.buy_contract_id LEFT JOIN buy_subitem c ON c.buy_contract_id = a.id  WHERE c.id=?", id)
+	row := db.QueryRow(`
+		SELECT a.order_form_id 
+		FROM buy_contract a 
+		LEFT JOIN buy_subitem b 
+		ON a.id = b.buy_contract_id 
+		WHERE b.id=?`, id)
 
-	err := row.Scan(&order_form_id, &totalPrice)
+	err = row.Scan(&order_form_id)
+
+	fmt.Println("对应的order form", order_form_id)
+	return order_form_id, err
+}
+
+// 每次item变动，都更新父合同里面的总价
+func (b repositoryName) UpdateTotalPrice(db *sql.DB, order_form_id int, userId int) error {
+
+	//tableName_order
+	var totalPrice nulls.Float32
+
+	// 取出price和order form id
+	// row := db.QueryRow(`
+	// SELECT a.order_form_id, b.view_totalPrice
+	// FROM buy_contract a
+	// LEFT JOIN (SELECT buy_contract_id, SUM(unitPrice * amount)
+	// AS view_totalPrice FROM buy_subitem GROUP BY buy_contract_id) b ON a.id = b.buy_contract_id LEFT JOIN buy_subitem c ON c.buy_contract_id = a.id  WHERE c.id=?`, id)
+
+	row := db.QueryRow(
+		`SELECT a.view_totalPrice FROM
+			(SELECT buy_contract_id, SUM(unitPrice * amount) AS view_totalPrice FROM buy_subitem GROUP BY buy_contract_id) a 
+			RIGHT JOIN buy_contract b
+			ON a.buy_contract_id = b.id WHERE b.order_form_id = ?`, order_form_id)
+
+	err := row.Scan(&totalPrice)
 
 	if err != nil {
+		fmt.Println("错在更新价格", err)
 		return err
 	}
 
-	_, err = db.Exec("UPDATE order_form SET totalPrice=? WHERE id=?", &totalPrice, &order_form_id)
+	orderitem := models.OrderForm{}
+	orderitem.ID = nulls.NewInt(order_form_id)
+	orderitem.Payable = nulls.NewFloat32(totalPrice.Float32) // 不convert一下，会提交null，然后被utils筛掉
+
+	orderFormRepo := orderFormRepo.Repository{}
+	_, err = orderFormRepo.UpdateRow(db, orderitem, userId)
+
+	// _, err = db.Exec("UPDATE order_form SET "+totalPriceName+"=? WHERE id=?", &totalPrice, &order_form_id)
 	return err
 }
