@@ -10,10 +10,13 @@ import (
 	commonitemController "github.com/xmluozp/creinox_server/controllers/commonItem"
 	companyController "github.com/xmluozp/creinox_server/controllers/company"
 	financialaccountController "github.com/xmluozp/creinox_server/controllers/financialAccount"
+	financialledgerController "github.com/xmluozp/creinox_server/controllers/financialLedger"
 	financialTransactionController "github.com/xmluozp/creinox_server/controllers/financialTransaction"
+	financialVoucherController "github.com/xmluozp/creinox_server/controllers/financialVoucher"
 	productController "github.com/xmluozp/creinox_server/controllers/product"
 	productPurchaseController "github.com/xmluozp/creinox_server/controllers/productPurchase"
 
+	orderformController "github.com/xmluozp/creinox_server/controllers/orderForm"
 	sellContractController "github.com/xmluozp/creinox_server/controllers/sellContract"
 	sellSubitemController "github.com/xmluozp/creinox_server/controllers/sellSubitem"
 
@@ -144,6 +147,9 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/category", categoryController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/category/{id}", categoryController.DeleteItem(db)).Methods("DELETE")
 
+	orderformController := orderformController.Controller{}
+	router.HandleFunc("/api/orderform_dropDown", orderformController.GetItems_DropDown(db)).Methods("GET")
+
 	// ------------ sell contract
 	sellContractController := sellContractController.Controller{}
 	router.HandleFunc("/api/sellcontract", sellContractController.GetItems(db)).Methods("GET")
@@ -249,6 +255,14 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/financialAccount", financialaccountController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/financialAccount/{id}", financialaccountController.DeleteItem(db)).Methods("DELETE")
 
+	// ------------ financialLedger 科目树
+	financialledgerController := financialledgerController.Controller{}
+	router.HandleFunc("/api/financialLedger", financialledgerController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/financialLedger/{id}", financialledgerController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/financialLedger", financialledgerController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/financialLedger", financialledgerController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/financialLedger/{id}", financialledgerController.DeleteItem(db)).Methods("DELETE")
+
 	// ------------ financialAccount 交易明细
 	financialTransactionController := financialTransactionController.Controller{}
 	router.HandleFunc("/api/financialTransaction", financialTransactionController.GetItems(db)).Methods("GET")
@@ -257,4 +271,11 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/financialTransaction", financialTransactionController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/financialTransaction/{id}", financialTransactionController.DeleteItem(db)).Methods("DELETE")
 
+	// ------------ financialVoucher 交易凭证
+	financialVoucherController := financialVoucherController.Controller{}
+	router.HandleFunc("/api/financialVoucher", financialVoucherController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/financialVoucher/{id}", financialVoucherController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/financialVoucher", financialVoucherController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/financialVoucher", financialVoucherController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/financialVoucher/{id}", financialVoucherController.DeleteItem(db)).Methods("DELETE")
 }

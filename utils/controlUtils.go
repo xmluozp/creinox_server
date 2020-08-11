@@ -48,6 +48,7 @@ func GetFunc_FetchListHTTPReturn(
 		reflect.ValueOf(searchTerms),
 		reflect.ValueOf(userId)}
 
+	fmt.Println("call values:", args)
 	// 运行数据库语句: db, model, array of model, pagination, query
 	out := gerRows.Call(args)
 	rows := out[0].Interface()

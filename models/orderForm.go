@@ -17,6 +17,9 @@ type OrderForm struct {
 	Payable        nulls.Float32 `col:"" json:"payable"`
 	PayablePaid    nulls.Float32 `col:"" json:"payablePaid"`
 
+	// 搜索用
+	KeyWord nulls.String `json:"keyword" keywords:"code|order_memo|invoiceCode"`
+
 	Seller_company_id nulls.Int    `col:"fk" json:"seller_company_id"`
 	Buyer_company_id  nulls.Int    `col:"fk" json:"buyer_company_id"`
 	IsDone            nulls.Bool   `col:"" json:"isDone"`

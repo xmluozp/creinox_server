@@ -12,7 +12,7 @@ type CommonItem struct {
 	Ename      nulls.String `col:"" json:"ename"`
 	Memo       nulls.String `col:"" json:"memo"`
 	Auth       nulls.String `col:"" json:"auth"`
-	Sorting    nulls.Int    `col:"" json:"sorting"`
+	Sorting    nulls.Int    `col:"orderByAsc" json:"sorting"`
 	IsActive   nulls.Bool   `col:"" json:"isActive"`
 	IsDelete   nulls.Bool   `col:"default" json:"isDelete"`
 	CommonType nulls.Int    `col:"" json:"commonType"`

@@ -19,22 +19,24 @@ type FinancialTransaction struct {
 	Memo              nulls.String  `col:"" json:"memo"`
 	UpdateAt          nulls.Time    `col:"newtime" json:"updateAt"`
 
-	Order_form_id       nulls.Int `col:"fk" json:"order_form_id"`
-	PaymentType_id      nulls.Int `col:"fk" json:"paymentType_id"`
-	FinancialSubject_id nulls.Int `col:"fk" json:"financialSubject_id"`
-	FinancialAccount_id nulls.Int `col:"fk" json:"financialAccount_id"`
-	Currency_id         nulls.Int `col:"fk" json:"currency_id"`
-	Company_id          nulls.Int `col:"fk" json:"company_id"`
-	UpdateUser_id       nulls.Int `col:"fk" json:"updateUser_id"`
+	Order_form_id            nulls.Int `col:"fk" json:"order_form_id"`
+	PaymentType_id           nulls.Int `col:"fk" json:"paymentType_id"`
+	FinancialAccount_id      nulls.Int `col:"fk" json:"financialAccount_id" validate:"required" errm:"必填"`
+	FinancialLedgerDebit_id  nulls.Int `col:"fk" json:"financialLedgerDebit_id"`
+	FinancialLedgerCredit_id nulls.Int `col:"fk" json:"financialLedgerCredit_id"`
+	Currency_id              nulls.Int `col:"fk" json:"currency_id"`
+	Company_id               nulls.Int `col:"fk" json:"company_id"`
+	UpdateUser_id            nulls.Int `col:"fk" json:"updateUser_id"`
 
 	//========fk
-	OrderForm        OrderForm        `ref:"order_form,order_form_id" json:"order_form_id.row" validate:"-"`
-	PaymentType      CommonItem       `ref:"common_item,paymentType_id" json:"paymentType_id.row" validate:"-"`
-	FinancialSubject CommonItem       `ref:"common_item,financialSubject_id" json:"financialSubject_id.row" validate:"-"`
-	FinancialAccount FinancialAccount `ref:"financial_account,financialAccount_id" json:"financialAccount_id.row" validate:"-"`
-	CurrencyItem     CommonItem       `ref:"common_item,currency_id" json:"currency_id.row" validate:"-"`
-	Company          Company          `ref:"company,company_id" json:"company_id.row" validate:"-"`
-	UpdateUser       User             `ref:"user,updateUser_id" json:"updateUser_id.row" validate:"-"`
+	OrderForm             OrderForm        `ref:"order_form,order_form_id" json:"order_form_id.row" validate:"-"`
+	PaymentType           CommonItem       `ref:"common_item,paymentType_id" json:"paymentType_id.row" validate:"-"`
+	FinancialAccount      FinancialAccount `ref:"financial_account,financialAccount_id" json:"financialAccount_id.row" validate:"-"`
+	FinancialLedgerDebit  FinancialLedger  `ref:"financial_ledger,financialLedgerDebit_id" json:"financialLedgerDebit_id.row" validate:"-"`
+	FinancialLedgerCredit FinancialLedger  `ref:"financial_ledger,financialLedgerCredit_id" json:"financialLedgerCredit_id.row" validate:"-"`
+	CurrencyItem          CommonItem       `ref:"common_item,currency_id" json:"currency_id.row" validate:"-"`
+	Company               Company          `ref:"company,company_id" json:"company_id.row" validate:"-"`
+	UpdateUser            User             `ref:"user,updateUser_id" json:"updateUser_id.row" validate:"-"`
 }
 
 type FinancialTransactionList struct {
@@ -57,8 +59,9 @@ func (item *FinancialTransaction) Receivers() (itemPtrs []interface{}) {
 		&item.UpdateAt,
 		&item.Order_form_id,
 		&item.PaymentType_id,
-		&item.FinancialSubject_id,
 		&item.FinancialAccount_id,
+		&item.FinancialLedgerDebit_id,
+		&item.FinancialLedgerCredit_id,
 		&item.Currency_id,
 		&item.Company_id,
 		&item.UpdateUser_id}
@@ -78,8 +81,9 @@ func (item *FinancialTransaction) ScanRow(r *sql.Row) error {
 
 	fkOrderForm := OrderForm{}
 	fkPaymentType := CommonItem{}
-	fkFinancialSubject := CommonItem{}
 	fkFinancialAccount := FinancialAccount{}
+	fkFinancialLedgerDebit := FinancialLedger{}
+	fkFinancialLedgerCredit := FinancialLedger{}
 	fkCurrency := CommonItem{}
 	fkCompany := Company{}
 	fkUpdateUser := User{}
@@ -87,8 +91,9 @@ func (item *FinancialTransaction) ScanRow(r *sql.Row) error {
 	columns = item.Receivers()
 	columns = append(columns, fkOrderForm.Receivers()...)
 	columns = append(columns, fkPaymentType.Receivers()...)
-	columns = append(columns, fkFinancialSubject.Receivers()...)
 	columns = append(columns, fkFinancialAccount.Receivers()...)
+	columns = append(columns, fkFinancialLedgerDebit.Receivers()...)
+	columns = append(columns, fkFinancialLedgerCredit.Receivers()...)
 	columns = append(columns, fkCurrency.Receivers()...)
 	columns = append(columns, fkCompany.Receivers()...)
 	columns = append(columns, fkUpdateUser.Receivers()...)
@@ -97,8 +102,9 @@ func (item *FinancialTransaction) ScanRow(r *sql.Row) error {
 
 	item.OrderForm = fkOrderForm
 	item.PaymentType = fkPaymentType
-	item.FinancialSubject = fkFinancialSubject
 	item.FinancialAccount = fkFinancialAccount
+	item.FinancialLedgerDebit = fkFinancialLedgerDebit
+	item.FinancialLedgerCredit = fkFinancialLedgerCredit
 	item.CurrencyItem = fkCurrency
 	item.Company = fkCompany
 	item.UpdateUser = fkUpdateUser
@@ -112,8 +118,9 @@ func (item *FinancialTransaction) ScanRows(r *sql.Rows) error {
 
 	fkOrderForm := OrderForm{}
 	fkPaymentType := CommonItem{}
-	fkFinancialSubject := CommonItem{}
 	fkFinancialAccount := FinancialAccount{}
+	fkFinancialLedgerDebit := FinancialLedger{}
+	fkFinancialLedgerCredit := FinancialLedger{}
 	fkCurrency := CommonItem{}
 	fkCompany := Company{}
 	fkUpdateUser := User{}
@@ -121,8 +128,9 @@ func (item *FinancialTransaction) ScanRows(r *sql.Rows) error {
 	columns = item.Receivers()
 	columns = append(columns, fkOrderForm.Receivers()...)
 	columns = append(columns, fkPaymentType.Receivers()...)
-	columns = append(columns, fkFinancialSubject.Receivers()...)
 	columns = append(columns, fkFinancialAccount.Receivers()...)
+	columns = append(columns, fkFinancialLedgerDebit.Receivers()...)
+	columns = append(columns, fkFinancialLedgerCredit.Receivers()...)
 	columns = append(columns, fkCurrency.Receivers()...)
 	columns = append(columns, fkCompany.Receivers()...)
 	columns = append(columns, fkUpdateUser.Receivers()...)
@@ -131,8 +139,9 @@ func (item *FinancialTransaction) ScanRows(r *sql.Rows) error {
 
 	item.OrderForm = fkOrderForm
 	item.PaymentType = fkPaymentType
-	item.FinancialSubject = fkFinancialSubject
 	item.FinancialAccount = fkFinancialAccount
+	item.FinancialLedgerDebit = fkFinancialLedgerDebit
+	item.FinancialLedgerCredit = fkFinancialLedgerCredit
 	item.CurrencyItem = fkCurrency
 	item.Company = fkCompany
 	item.UpdateUser = fkUpdateUser

@@ -3,6 +3,7 @@ package orderFormRepository
 import (
 	"database/sql"
 	"fmt"
+	"math"
 
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/enums"
@@ -74,12 +75,9 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 	// =========================== 生成 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
-	voucherItem := b.getVoucher(db, item)
-	_, err = financialVoucherRepo.AddRow(db, voucherItem, userId)
-
-	if err != nil {
-		return item, err
-	}
+	voucherItem1, voucherItem2 := b.getVoucher(db, item)
+	_, err = financialVoucherRepo.AddRow(db, voucherItem1, userId)
+	_, err = financialVoucherRepo.AddRow(db, voucherItem2, userId)
 
 	return item, err
 }
@@ -90,7 +88,7 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	item.ScanRow(row)
 
 	if err != nil {
-		fmt.Println("错在更新row", err)
+		fmt.Println("更新合同出错", err)
 		return 0, err
 	}
 
@@ -100,15 +98,11 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 		return 0, err
 	}
 
-	// =========================== 生成 voucher
+	// =========================== 修改 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
-	voucherItem := b.getVoucher(db, item)
-	_, err = financialVoucherRepo.UpdateVoucher(db, voucherItem, userId)
-
-	if err != nil {
-		fmt.Println("错在更新voucher", err)
-		return 0, err
-	}
+	voucherItem1, voucherItem2 := b.getVoucher(db, item)
+	_, err = financialVoucherRepo.UpdateVoucher(db, voucherItem1, userId)
+	_, err = financialVoucherRepo.UpdateVoucher(db, voucherItem2, userId)
 
 	return rowsUpdated, err
 }
@@ -137,12 +131,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	// =========================== 删除 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
-	voucherItem := b.getVoucher(db, item)
-	_, err = financialVoucherRepo.DeleteVoucher(db, voucherItem.Resource_code.String, userId)
-
-	if err != nil {
-		return 0, err
-	}
+	voucherItem1, voucherItem2 := b.getVoucher(db, item)
+	_, err = financialVoucherRepo.DeleteVoucher(db, voucherItem1.Resource_code.String, userId)
+	_, err = financialVoucherRepo.DeleteVoucher(db, voucherItem2.Resource_code.String, userId)
 
 	return item, err
 }
@@ -162,32 +153,93 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 
 // ================= customized
 
-func (b repositoryName) getVoucher(db *sql.DB, item modelName) models.FinancialVoucher {
+func (b repositoryName) GetRows_DropDown(
+	db *sql.DB,
+	item modelName,
+	items []modelName,
+	pagination models.Pagination, // 需要返回总页数
+	searchTerms map[string]string,
+	userId int) ([]modelName, models.Pagination, error) {
 
-	voucherItem := models.FinancialVoucher{}
-	voucher_financialSubject := ""
-	voucher_resource_code := fmt.Sprintf("order_form/%d", item.ID.Int)
+	// rows这里是一个cursor.
+	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
 
-	// 看总账是应收应付. 应付增加是贷，付款是借（在付款的地方写）
-	switch item.ContractType.Int {
-	case enums.ContractType.SellContract:
-		voucher_financialSubject = enums.FinancialSubjectType.Receivable
-		voucherItem.Debit = item.Receivable
-	case enums.ContractType.BuyContract:
-		voucher_financialSubject = enums.FinancialSubjectType.Payable
-		voucherItem.Credit = item.Payable
-	case enums.ContractType.MouldContract:
-		voucher_financialSubject = enums.FinancialSubjectType.Payable
-		voucherItem.Credit = item.Payable
+	if err != nil {
+		return []modelName{}, pagination, err
 	}
 
-	voucher_detailSubject := fmt.Sprintf("%s %s", enums.ContractTypeLabel[item.ContractType.Int], item.Code.String)
+	defer rows.Close() // 以下代码执行完了，关闭连接
 
-	voucherItem.Memo = item.Order_memo
-	voucherItem.FinancialSubject = nulls.NewString(voucher_financialSubject)
-	voucherItem.Resource_code = nulls.NewString(voucher_resource_code)
-	voucherItem.DetailedSubject = nulls.NewString(voucher_detailSubject)
+	for rows.Next() {
 
-	return voucherItem
+		item.ScanRows(rows)
+		items = append(items, item)
+	}
 
+	if err != nil {
+		return []modelName{}, pagination, err
+	}
+
+	return items, pagination, nil
+}
+
+// 合同修改的时候，价格会变动，所以需要同步票据里的价格。以下根据resource code和item生成需要修改的票据里的value
+func (b repositoryName) getVoucher(db *sql.DB, item modelName) (debit models.FinancialVoucher, credit models.FinancialVoucher) {
+
+	// 返回的item1是借，item2是贷
+	Debit_financialLedger_id := enums.FinancialLedgerType.UnDecided
+	Credit_financialLedger_id := enums.FinancialLedgerType.UnDecided
+
+	voucher_resource_code := fmt.Sprintf("order_form/%d", item.ID.Int)
+
+	// *****合同类别区分***** 总账是应收还是应付?
+	inout := ""
+	switch item.ContractType.Int {
+	case enums.ContractType.SellContract:
+		inout = "in"
+	case enums.ContractType.BuyContract:
+		inout = "out"
+	case enums.ContractType.MouldContract:
+		inout = "out"
+	}
+
+	textMemo := ""
+	switch inout {
+	case "in":
+		Debit_financialLedger_id = enums.FinancialLedgerType.ReceivableDebit
+		Credit_financialLedger_id = enums.FinancialLedgerType.ReceivableCredit
+
+		// debit.Debit = item.Receivable
+		// credit.Credit = item.Receivable
+
+		textMemo = "应收%s货款"
+	case "out":
+		Debit_financialLedger_id = enums.FinancialLedgerType.PayableDebit
+		Credit_financialLedger_id = enums.FinancialLedgerType.PayableCredit
+
+		// debit.Debit = item.Payable
+		// credit.Credit = item.Payable
+
+		textMemo = "应付%s货款"
+	}
+
+	amount := math.Max(float64(item.Payable.Float32), float64(item.Receivable.Float32))
+
+	debit.Debit = nulls.NewFloat32(float32(amount))
+	debit.Credit = nulls.NewFloat32(0)
+
+	credit.Credit = nulls.NewFloat32(float32(amount))
+	credit.Debit = nulls.NewFloat32(0)
+
+	voucher_memo := fmt.Sprintf(textMemo, item.Code.String)
+
+	debit.Resource_code = nulls.NewString(voucher_resource_code)
+	debit.FinancialLedger_id = nulls.NewInt(Debit_financialLedger_id)
+	debit.Memo = nulls.NewString(voucher_memo)
+
+	credit.Resource_code = nulls.NewString(voucher_resource_code)
+	credit.FinancialLedger_id = nulls.NewInt(Credit_financialLedger_id)
+	credit.Memo = nulls.NewString(voucher_memo)
+
+	return debit, credit
 }

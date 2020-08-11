@@ -212,6 +212,19 @@ func copyMap(originalMap map[string]string) map[string]string {
 	return targetMap
 }
 
+// 把字符串以逗号切开，查找包含关系。用来判断col是不是有这个tag
+func CheckCol(str string, target string) bool {
+
+	split := strings.Split(str, ",")
+
+	for _, a := range split {
+		if strings.Trim(a, " ") == strings.Trim(target, " ") {
+			return true
+		}
+	}
+	return false
+}
+
 func GetField(tag, key string, s interface{}) (reflect.Value, reflect.StructField) {
 	rt := reflect.TypeOf(s)
 	v := reflect.ValueOf(s)

@@ -18,11 +18,28 @@ var ContractTypeLabel = map[int]string{
 
 //-------------------
 
-type financialSubjectType struct {
-	Payable    string
-	Receivable string
+type financialLedgerType struct {
+	UnDecided     int
+	PayableDebit  int
+	PayableCredit int
+
+	ReceivableDebit  int
+	ReceivableCredit int
+
+	PayablePayDebit  int
+	PayablePayCredit int
+
+	ReceivablePayDebit  int
+	ReceivablePayCredit int
 }
 
-var FinancialSubjectType = financialSubjectType{
-	Payable:    "应付款",
-	Receivable: "应收款"}
+var FinancialLedgerType = financialLedgerType{
+	UnDecided:           6,
+	PayableDebit:        11,
+	PayableCredit:       8,
+	ReceivableDebit:     7,
+	ReceivableCredit:    9,
+	PayablePayDebit:     8,
+	PayablePayCredit:    10,
+	ReceivablePayDebit:  10,
+	ReceivablePayCredit: 7}

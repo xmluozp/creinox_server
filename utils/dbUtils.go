@@ -38,14 +38,17 @@ func DbQueryRows_Customized(db *sql.DB,
 	selectTable := tableName + " mainTable"
 	selectColumns := "mainTable.*"
 
-	// ----------------------- 判断要不要join
-	// 循环类型里的field
+	// 默认排序列。暂时做成只能有一个排序列，多出来的直接覆盖。
+	defaultOrderByCol := ""
+	// -----------------------
+	// 检查字段： 循环类型里的field，根据field的类型来决定字段要不要保留，如何处理join
+
 	rt := reflect.TypeOf(dataModel)
 	for i := 0; i < rt.NumField(); i++ {
 
 		// 判断field是不是ref
 		f := rt.Field(i)
-		_, isRef := rt.Field(i).Tag.Lookup("ref")
+		_, isRef := f.Tag.Lookup("ref")
 
 		if isRef {
 			refTableName := strings.Split(f.Tag.Get("ref"), ",")[0]
@@ -57,7 +60,15 @@ func DbQueryRows_Customized(db *sql.DB,
 			selectTable += fmt.Sprintf(" LEFT JOIN %s %s ON %s.%s = %s.%s", refTableName, refTableNameUnique, "mainTable", refColumn, refTableNameUnique, "id")
 		}
 
-		// 判断是不是ext，关联表查询用
+		// 判断是不是用来排序的字段，如果有就作为默认排序 (如果前端没有排序，就用它排序)
+		col, isCol := f.Tag.Lookup("col")
+		if isCol && CheckCol(col, "orderByDesc") {
+			defaultOrderByCol = strings.Split(f.Tag.Get("json"), ",")[0] + " DESC"
+		} else if isCol && CheckCol(col, "orderByAsc") {
+			defaultOrderByCol = strings.Split(f.Tag.Get("json"), ",")[0] + " ASC"
+		}
+
+		// 判断是不是 ext，关联表查询用
 	}
 
 	selectTable += stringJoin
@@ -76,6 +87,7 @@ func DbQueryRows_Customized(db *sql.DB,
 	// 用param传参数用
 	var keywords []interface{}
 
+	// 判断查询条件：先看model里面有没有同样名称的字段，如果没有就忽略
 	for k, v := range searchTerms {
 
 		// TODO: string，int，date三种类型. 根据v的判断
@@ -143,8 +155,10 @@ func DbQueryRows_Customized(db *sql.DB,
 
 	if pagination.OrderBy != "" {
 		newQueryString += " ORDER BY mainTable." + pagination.OrderBy + " " + pagination.Order
+	} else if defaultOrderByCol != "" {
+		newQueryString += " ORDER BY mainTable." + defaultOrderByCol + ", mainTable.id DESC"
 	} else {
-		newQueryString += " ORDER BY 1 DESC"
+		newQueryString += " ORDER BY mainTable.id DESC"
 	}
 
 	if pagination.PerPage > 0 {
@@ -318,7 +332,7 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 			continue
 		}
 
-		if isCol && col != "default" && t.Field(i).Name != "ID" {
+		if isCol && !CheckCol(col, "default") && t.Field(i).Name != "ID" {
 			values = append(values, v.Field(i))
 			tagName := strings.Split(t.Field(i).Tag.Get("json"), ",")[0] // use split to ignore tag "options" like omitempty, etc.
 			tagName = fmt.Sprintf("`%s`", tagName)
@@ -384,11 +398,12 @@ func DbQueryUpdate(db *sql.DB, tableName string, queryTable string, item interfa
 
 			fmt.Println("dbUtils_update", t.Field(i).Name, v.Field(i), v.Field(i).FieldByName("Valid").IsValid())
 
-			if col == "newtime" { // 如果每次提交都无论如何要更新时间
+			if CheckCol(col, "newtime") { // 如果每次提交都无论如何要更新时间
 
 				columns = append(columns, tagName+"=CURRENT_TIMESTAMP")
 
-			} else if col == "fk" { // 如果是个外键
+			} else if CheckCol(col, "fk") { // 如果是个外键
+
 				foreignKey := v.Field(i).Interface().(nulls.Int)
 
 				// 如果外键不是0，就设置成空。
@@ -480,6 +495,20 @@ func DbQueryDelete(db *sql.DB, deleteName string, queryTable string, id int, dat
 // }
 
 //------------ private
+
+// 把字符串以逗号切开，查找包含关系。用来判断col是不是有这个tag
+func checkCol(str string, target string) bool {
+
+	split := strings.Split(str, ",")
+
+	for _, a := range split {
+		if strings.Trim(a, " ") == strings.Trim(target, " ") {
+			return true
+		}
+	}
+	return false
+}
+
 func checkCount(row *sql.Row) (count int) {
 	row.Scan(&count)
 	return count
