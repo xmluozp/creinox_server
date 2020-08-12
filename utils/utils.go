@@ -387,8 +387,11 @@ func interactiveToexec(commandName string, params []string) (string, bool) {
 }
 
 func FormatDate(t time.Time) string {
-
 	return t.Format("2006年01月02日")
+}
+
+func FormatDateTime(t time.Time) string {
+	return t.Format("2006年01月02日15:04")
 }
 
 func Log(err error, a ...interface{}) {

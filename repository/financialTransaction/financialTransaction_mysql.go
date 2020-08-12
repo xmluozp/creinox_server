@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"net/http"
+	"time"
 
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/enums"
@@ -149,6 +151,58 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 	}
 
 	ds, err := utils.GetPrintSourceFromInterface(item)
+
+	return ds, err
+}
+
+func (b repositoryName) GetPrintSourceList(db *sql.DB, r *http.Request, userId int) (map[string]interface{}, error) {
+
+	// 分页，排序，搜索关键词
+	pagination := utils.GetPagination(r)
+	searchTerms := utils.GetSearchTerms(r)
+
+	// 随后refactor以后删掉
+	item := modelName{}
+	items := []modelName{}
+
+	items, _, err := b.GetRows(db, item, items, pagination, searchTerms, userId)
+
+	// 统计数据
+	totalIn := float32(0)
+	totalOut := float32(0)
+
+	for i := 0; i < len(items); i++ {
+		totalIn += items[i].Amount_in.Float32
+		totalOut += items[i].Amount_out.Float32
+	}
+
+	dataSource := make(map[string]interface{})
+	dataSource["ds_list"] = items
+	dataSource["ds_totalIn"] = totalIn
+	dataSource["ds_totalOut"] = totalOut
+
+	if len(items) > 0 {
+		dataSource["ds_financialAccount"] = items[0].FinancialAccount.Name
+		dataSource["ds_balance"] = items[0].FinancialAccount.Balance
+		dataSource["ds_now"] = utils.FormatDateTime(time.Now())
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	ds, err := utils.GetPrintSourceFromInterface(dataSource)
+	utils.ModifyDataSourceList(ds, "ds_list", "transdateAt",
+		func(subitem map[string]interface{}) string {
+
+			t, err := time.Parse(time.RFC3339, subitem["transdateAt"].(string))
+
+			if err != nil {
+				return "错误数据"
+			}
+
+			return utils.FormatDateTime(t)
+		})
 
 	return ds, err
 }

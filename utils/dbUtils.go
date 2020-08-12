@@ -104,6 +104,7 @@ func DbQueryRows_Customized(db *sql.DB,
 			continue
 		}
 
+		// 如果字段类型是文字，就直接搜索like
 		if field.Type.String() != "nulls.String" {
 
 			// 看bool: 前端用1和0代替true和false就可以了
@@ -117,15 +118,25 @@ func DbQueryRows_Customized(db *sql.DB,
 				continue
 			}
 
-			// 如果不是int, 试着切分。能切分的是range
+			// 如果不是int, 试着切分。能切分的是range，搜索范围
 			ranges := strings.Split(v, ",")
 
-			// 再看日期
 			if len(ranges) == 2 {
-				_, errT1 := time.Parse("2006/01/02", ranges[0])
-				_, errT2 := time.Parse("2006/01/02", ranges[1])
+
+				// 试图转为日期
+				t1GoFormat, errT1 := time.Parse("2006/01/02", ranges[0])
+				t2GoFormat, errT2 := time.Parse("2006/01/02", ranges[1])
+
+				t1 := t1GoFormat.Format("2006-01-02 15:04:05")
+				t2 := t2GoFormat.Format("2006-01-02 15:04:05")
+
 				if errT1 == nil && errT2 == nil {
-					newQueryStringSearchTerms += " AND mainTable." + k + " >= DATE(" + ranges[0] + ") AND mainTable." + k + " <= DATE(" + ranges[1] + ")"
+					newQueryStringSearchTerms += " AND DATE(" + k + ") >= DATE('" + t1 + "') AND " + k + " <= DATE('" + t2 + "')"
+					continue
+				} else {
+
+					// 如果不是日期，则是数字范围
+					newQueryStringSearchTerms += " AND " + k + " >= " + ranges[0] + " AND " + k + " <= " + ranges[1]
 					continue
 				}
 			}

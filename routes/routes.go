@@ -263,13 +263,14 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/financialLedger", financialledgerController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/financialLedger/{id}", financialledgerController.DeleteItem(db)).Methods("DELETE")
 
-	// ------------ financialAccount 交易明细
+	// ------------ financialTransaction 交易明细
 	financialTransactionController := financialTransactionController.Controller{}
 	router.HandleFunc("/api/financialTransaction", financialTransactionController.GetItems(db)).Methods("GET")
 	router.HandleFunc("/api/financialTransaction/{id}", financialTransactionController.GetItem(db)).Methods("GET")
 	router.HandleFunc("/api/financialTransaction", financialTransactionController.AddItem(db)).Methods("POST")
 	router.HandleFunc("/api/financialTransaction", financialTransactionController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/financialTransaction/{id}", financialTransactionController.DeleteItem(db)).Methods("DELETE")
+	router.HandleFunc("/api/financialTransaction_print/list/{templateFolder}/{template}/{printFormat}", financialTransactionController.PrintList(db)).Methods("GET")
 
 	// ------------ financialVoucher 交易凭证
 	financialVoucherController := financialVoucherController.Controller{}
