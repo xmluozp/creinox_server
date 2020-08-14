@@ -27,11 +27,10 @@ var viewName = "view_buy_contract"
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
-	pagination models.Pagination, // 需要返回总页数
+	pagination models.Pagination,
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// rows这里是一个cursor.
 	rows, err := utils.DbQueryRows(db, "", combineName, &pagination, searchTerms, item)
@@ -79,6 +78,8 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	orderitem.ReceivablePaid = nulls.NewFloat32(0)
 	orderitem.Seller_company_id = item.Seller_company_id
 	orderitem.Buyer_company_id = item.Buyer_company_id
+	orderitem.SellerAddress = item.SellerAddress
+	orderitem.BuyerAddress = item.BuyerAddress
 	orderitem.IsDone = item.IsDone
 	orderitem.Order_memo = item.Order_memo
 
@@ -137,6 +138,8 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	orderitem.ReceivablePaid = nulls.NewFloat32(0)
 	orderitem.Seller_company_id = item.Seller_company_id
 	orderitem.Buyer_company_id = item.Buyer_company_id
+	orderitem.SellerAddress = item.SellerAddress
+	orderitem.BuyerAddress = item.BuyerAddress
 	orderitem.IsDone = item.IsDone
 	orderitem.Order_memo = item.Order_memo
 
@@ -249,8 +252,8 @@ func (b repositoryName) GetRows_fromSellContract(
 	sell_contract_id int,
 	userId int) ([]modelName, models.Pagination, error) {
 
-	var item modelName
-	var items []modelName
+	// var item modelName
+	// var items []modelName
 	var pagination models.Pagination
 	searchTerms := make(map[string]string)
 
@@ -260,5 +263,5 @@ func (b repositoryName) GetRows_fromSellContract(
 	searchTerms["sell_contract_id"] = sell_contract_id_str
 
 	// 这个应该是取出所有
-	return b.GetRows(db, item, items, pagination, searchTerms, userId)
+	return b.GetRows(db, pagination, searchTerms, userId)
 }

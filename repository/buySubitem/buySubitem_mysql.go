@@ -20,11 +20,10 @@ var tableName = "buy_subitem"
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
-	pagination models.Pagination, // 需要返回总页数
+	pagination models.Pagination,
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// rows这里是一个cursor.
 	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
@@ -177,8 +176,8 @@ func (b repositoryName) GetRows_fromBuyContract(
 	buy_contract_id int,
 	userId int) ([]modelName, models.Pagination, error) {
 
-	var item modelName
-	var items []modelName
+	// var item modelName
+	// var items []modelName
 	var pagination models.Pagination
 	searchTerms := make(map[string]string)
 
@@ -188,7 +187,7 @@ func (b repositoryName) GetRows_fromBuyContract(
 	buy_contract_id_str := strconv.Itoa(buy_contract_id)
 	searchTerms["buy_contract_id"] = buy_contract_id_str
 
-	returnitems, pagination, err := b.GetRows(db, item, items, pagination, searchTerms, userId)
+	returnitems, pagination, err := b.GetRows(db, pagination, searchTerms, userId)
 
 	for i := 0; i < len(returnitems); i++ {
 		returnitems[i].BuyContract = models.BuyContract{}

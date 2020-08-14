@@ -52,6 +52,8 @@ type MouldContract struct {
 	PaidPrice         nulls.Float32 `json:"paidPrice"`
 	Seller_company_id nulls.Int     `json:"seller_company_id"`
 	Buyer_company_id  nulls.Int     `json:"buyer_company_id"`
+	SellerAddress     nulls.String  `json:"sellerAddress"`
+	BuyerAddress      nulls.String  `json:"buyerAddress"`
 	IsDone            nulls.Bool    `json:"isDone"`
 	Order_memo        nulls.String  `json:"order_memo"`
 
@@ -113,6 +115,8 @@ func (item *MouldContract) Receivers() (itemPtrs []interface{}) {
 		&item.PaidPrice,
 		&item.Seller_company_id,
 		&item.Buyer_company_id,
+		&item.SellerAddress,
+		&item.BuyerAddress,
 		&item.IsDone,
 		&item.Order_memo,
 		// views

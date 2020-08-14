@@ -19,11 +19,10 @@ var viewName = "view_product"
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
-	pagination models.Pagination, // 需要返回总页数
+	pagination models.Pagination,
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// ---customized:
 	factory_id := searchTerms["companyFactory.id"]
@@ -152,11 +151,10 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 //---------------- customized
 func (b repositoryName) GetRows_DropDown(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	var sqlString string
 
@@ -199,11 +197,10 @@ func (b repositoryName) GetRows_DropDown(
 // 根据销售合同取产品
 func (b repositoryName) GetRows_DropDown_sellContract(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// 拦截 search.
 	sell_contract_id := searchTerms["sell_contract_id"]
@@ -245,11 +242,10 @@ func (b repositoryName) GetRows_DropDown_sellContract(
 // 根据合同的子合同，去搜索子合同对应的商品，然后关联到下属产品
 func (b repositoryName) GetRows_DropDown_sellSubitem(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
 	pagination models.Pagination,
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	sell_subitem_id := searchTerms["sell_subitem_id"]
 	delete(searchTerms, "sell_subitem_id")
@@ -288,11 +284,10 @@ func (b repositoryName) GetRows_DropDown_sellSubitem(
 
 func (b repositoryName) GetRows_Component(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// 拦截 search.
 	parent_id := searchTerms["parent_id"]
@@ -330,11 +325,10 @@ func (b repositoryName) GetRows_Component(
 
 func (b repositoryName) GetRows_ByCommodity(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// 拦截 search.
 	commodity_id := searchTerms["commodity_id"]

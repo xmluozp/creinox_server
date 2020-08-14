@@ -16,7 +16,7 @@ type BuySubitem struct {
 	UnitPrice  nulls.Float32 `col:"" json:"unitPrice"`
 
 	Spec        nulls.String  `col:"" json:"spec"`
-	Thickness   nulls.Float32 `col:"" json:"thickness"`
+	Thickness   nulls.String  `col:"" json:"thickness"`
 	UnitWeight  nulls.Float32 `col:"" json:"unitWeight"`
 	NetWeight   nulls.Float32 `col:"" json:"netWeight"`
 	GrossWeight nulls.Float32 `col:"" json:"grossWeight"`

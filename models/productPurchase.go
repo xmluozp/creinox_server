@@ -17,7 +17,7 @@ type ProductPurchase struct {
 	Spec1         nulls.String  `col:"" json:"spec1"`
 	Spec2         nulls.String  `col:"" json:"spec2"`
 	Spec3         nulls.String  `col:"" json:"spec3"`
-	Thickness     nulls.Float32 `col:"" json:"thickness"`
+	Thickness     nulls.String  `col:"" json:"thickness"`
 	UnitWeight    nulls.Float32 `col:"" json:"unitWeight"`
 	NetWeight     nulls.Float32 `col:"" json:"netWeight"`
 	GrossWeight   nulls.Float32 `col:"" json:"grossWeight"`

@@ -8,6 +8,7 @@ import (
 	"github.com/xmluozp/creinox_server/models"
 	buyContractRepository "github.com/xmluozp/creinox_server/repository/buyContract"
 	commonRepo "github.com/xmluozp/creinox_server/repository/commonItem"
+	financialTransactionRepository "github.com/xmluozp/creinox_server/repository/financialTransaction"
 	orderFormRepo "github.com/xmluozp/creinox_server/repository/orderForm"
 	portRepo "github.com/xmluozp/creinox_server/repository/port"
 	sellSubitemRepository "github.com/xmluozp/creinox_server/repository/sellSubitem"
@@ -29,11 +30,10 @@ var viewName = "view_sell_contract"
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
-	pagination models.Pagination, // 需要返回总页数
+	pagination models.Pagination,
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// rows这里是一个cursor.
 	rows, err := utils.DbQueryRows(db, "", combineName, &pagination, searchTerms, item)
@@ -46,6 +46,7 @@ func (b repositoryName) GetRows(
 
 	buyContractRepository := buyContractRepository.Repository{}
 	sellSubitemRepository := sellSubitemRepository.Repository{}
+	financialTransactionRepository := financialTransactionRepository.Repository{}
 
 	for rows.Next() {
 
@@ -55,8 +56,16 @@ func (b repositoryName) GetRows(
 		buyContract_list, _, _ := buyContractRepository.GetRows_fromSellContract(db, item.ID.Int, userId)
 		item.BuyContractList = buyContract_list
 
+		// 根据销售合同的ID 搜索子订单
 		subitem_list, _, _ := sellSubitemRepository.GetRows_fromSellContract(db, item.ID.Int, userId)
 		item.SellSubitem = subitem_list
+
+		// 根据合同的ID 搜索转账记录
+		trans1_list, _, _ := financialTransactionRepository.GetRows_fromSellContract(db, item.Order_form_id.Int, true, userId)
+		item.FinancialTransactionContractList = trans1_list
+
+		trans2_list, _, _ := financialTransactionRepository.GetRows_fromSellContract(db, item.Order_form_id.Int, false, userId)
+		item.FinancialTransactionOtherList = trans2_list
 
 		items = append(items, item)
 	}
@@ -94,6 +103,8 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	orderitem.ReceivablePaid = item.PaidPrice
 	orderitem.Seller_company_id = item.Seller_company_id
 	orderitem.Buyer_company_id = item.Buyer_company_id
+	orderitem.SellerAddress = item.SellerAddress
+	orderitem.BuyerAddress = item.BuyerAddress
 	orderitem.IsDone = item.IsDone
 	orderitem.Order_memo = item.Order_memo
 
@@ -152,6 +163,8 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	orderitem.ReceivablePaid = item.PaidPrice
 	orderitem.Seller_company_id = item.Seller_company_id
 	orderitem.Buyer_company_id = item.Buyer_company_id
+	orderitem.SellerAddress = item.SellerAddress
+	orderitem.BuyerAddress = item.BuyerAddress
 	orderitem.IsDone = item.IsDone
 	orderitem.Order_memo = item.Order_memo
 

@@ -17,7 +17,7 @@ type Product struct {
 	Spec2         nulls.String  `col:"" json:"spec2"`
 	Spec3         nulls.String  `col:"" json:"spec3"`
 	Barcode       nulls.String  `col:"" json:"barcode"`
-	Thickness     nulls.Float32 `col:"" json:"thickness"`
+	Thickness     nulls.String  `col:"" json:"thickness"`
 	UnitWeight    nulls.Float32 `col:"" json:"unitWeight"`
 	RetrieveTime  nulls.Time    `col:"" json:"retrieveTime"`
 	UpdateAt      nulls.Time    `col:"newtime" json:"updateAt"`

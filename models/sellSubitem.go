@@ -14,7 +14,7 @@ type SellSubitem struct {
 	PackAmount nulls.Int     `col:"" json:"packAmount"`
 	UnitPrice  nulls.Float32 `col:"" json:"unitPrice"`
 	Spec       nulls.String  `col:"" json:"spec"`
-	Thickness  nulls.Float32 `col:"" json:"thickness"`
+	Thickness  nulls.String  `col:"" json:"thickness"`
 
 	OuterPackL nulls.Float32 `col:"" json:"outerPackL"`
 	OuterPackW nulls.Float32 `col:"" json:"outerPackW"`
@@ -37,11 +37,13 @@ type SellSubitem struct {
 	Polishing_id     nulls.Int `col:"fk" json:"polishing_id"`
 	Texture_id       nulls.Int `col:"fk" json:"texture_id"`
 	Pack_id          nulls.Int `col:"fk" json:"pack_id"`
+	ImagePacking_id  nulls.Int `col:"fk" json:"imagePacking_id"`
 
 	// 显示在列表里
 	Commodity    Commodity    `ref:"commodity,commodity_id" json:"commodity_id.row" validate:"-"`
 	SellContract SellContract `ref:"combine_sell_contract,sell_contract_id" json:"sell_contract_id.row" validate:"-"` //这里是取combine
 	UnitTypeItem CommonItem   `ref:"common_item,unitType_id" json:"unitType_id.row" validate:"-"`
+	ImagePacking Image        `ref:"image,imagePacking_id" json:"imagePacking_id.row" validate:"-"`
 }
 
 type SellSubitemList struct {
@@ -76,7 +78,8 @@ func (item *SellSubitem) Receivers() (itemPtrs []interface{}) {
 		&item.Currency_id,
 		&item.Polishing_id,
 		&item.Texture_id,
-		&item.Pack_id}
+		&item.Pack_id,
+		&item.ImagePacking_id}
 
 	valuePtrs := make([]interface{}, len(values))
 
@@ -96,16 +99,19 @@ func (item *SellSubitem) ScanRow(r *sql.Row) error {
 	fkCommodity := Commodity{}
 	fkSellContract := SellContract{}
 	fkUnitTypeItem := CommonItem{}
+	fkImagePacking := Image{}
 
 	columns = append(item.Receivers(), fkCommodity.ReceiversOriginal()...)
 	columns = append(columns, fkSellContract.Receivers()...)
 	columns = append(columns, fkUnitTypeItem.Receivers()...)
+	columns = append(columns, fkImagePacking.Receivers()...)
 
 	err := r.Scan(columns...)
 
 	item.Commodity = fkCommodity
 	item.SellContract = fkSellContract
 	item.UnitTypeItem = fkUnitTypeItem
+	item.ImagePacking = fkImagePacking.Getter()
 
 	return err
 }
@@ -116,16 +122,19 @@ func (item *SellSubitem) ScanRows(r *sql.Rows) error {
 	fkCommodity := Commodity{}
 	fkSellContract := SellContract{}
 	fkUnitTypeItem := CommonItem{}
+	fkImagePacking := Image{}
 
 	columns = append(item.Receivers(), fkCommodity.ReceiversOriginal()...)
 	columns = append(columns, fkSellContract.Receivers()...)
 	columns = append(columns, fkUnitTypeItem.Receivers()...)
+	columns = append(columns, fkImagePacking.Receivers()...)
 
 	err := r.Scan(columns...)
 
 	item.Commodity = fkCommodity
 	item.SellContract = fkSellContract
 	item.UnitTypeItem = fkUnitTypeItem
+	item.ImagePacking = fkImagePacking.Getter()
 
 	return err
 }

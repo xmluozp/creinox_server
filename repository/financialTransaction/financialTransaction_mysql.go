@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gobuffalo/nulls"
@@ -27,11 +28,10 @@ var tableName = "financial_transaction"
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
-	pagination models.Pagination, // 需要返回总页数
+	pagination models.Pagination,
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// rows这里是一个cursor.
 	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
@@ -161,11 +161,7 @@ func (b repositoryName) GetPrintSourceList(db *sql.DB, r *http.Request, userId i
 	pagination := utils.GetPagination(r)
 	searchTerms := utils.GetSearchTerms(r)
 
-	// 随后refactor以后删掉
-	item := modelName{}
-	items := []modelName{}
-
-	items, _, err := b.GetRows(db, item, items, pagination, searchTerms, userId)
+	items, _, err := b.GetRows(db, pagination, searchTerms, userId)
 
 	// 统计数据
 	totalIn := float32(0)
@@ -208,6 +204,33 @@ func (b repositoryName) GetPrintSourceList(db *sql.DB, r *http.Request, userId i
 }
 
 // ================= customized
+
+// 根据合同号取出对应的item
+func (b repositoryName) GetRows_fromSellContract(
+	db *sql.DB,
+	order_form_id int,
+	IsContractPayment bool,
+	userId int) ([]modelName, models.Pagination, error) {
+
+	var pagination models.Pagination
+	searchTerms := make(map[string]string)
+
+	// 不分页
+	pagination.PerPage = -1
+
+	order_form_id_str := strconv.Itoa(order_form_id)
+	searchTerms["order_form_id"] = order_form_id_str
+
+	// 看是否是收付合同款项
+	if IsContractPayment {
+		searchTerms["isContractPayment"] = "1"
+	} else {
+		searchTerms["isContractPayment"] = "0"
+	}
+
+	// 这个应该是取出所有
+	return b.GetRows(db, pagination, searchTerms, userId)
+}
 
 func (b repositoryName) getVoucher(db *sql.DB, item modelName) (
 	debit models.FinancialVoucher,

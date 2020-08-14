@@ -54,11 +54,10 @@ func (b repositoryName) UpdateLoginRow(db *sql.DB, item modelName) (int64, error
 
 func (b repositoryName) GetRows(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	rank := auth.GetRankFromUser(db, userId)
 
@@ -220,11 +219,10 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 func (b repositoryName) GetRowsForLogin(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	rows, err := db.Query("SELECT id, userName, fullName FROM user WHERE isActive = 1")
 

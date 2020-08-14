@@ -20,11 +20,10 @@ var subsql = fmt.Sprintf("(SELECT m1.*, m2.memo FROM %s m1 LEFT JOIN folder m2 O
 
 func (b repositoryName) GetRows(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
-	pagination models.Pagination, // 需要返回总页数
+	pagination models.Pagination,
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// 图片部分限制最多显示100张
 	if pagination.PerPage < 0 {

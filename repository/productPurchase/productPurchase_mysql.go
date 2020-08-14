@@ -18,11 +18,10 @@ var tableName = "product_purchase"
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
-	pagination models.Pagination, // 需要返回总页数
+	pagination models.Pagination,
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// rows这里是一个cursor.
 	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
@@ -135,11 +134,10 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 
 func (b repositoryName) GetRows_GroupByCompany(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// 拦截 product_id ；因为mysql的bug，去重取一的排序只能写在内部，没办法自动用searchTerm来做
 	product_id := searchTerms["product_id"]
@@ -187,11 +185,10 @@ func (b repositoryName) GetRows_GroupByCompany(
 
 func (b repositoryName) GetRows_History(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// 拦截 search
 	productpurchase_id := searchTerms["productpurchase_id"]

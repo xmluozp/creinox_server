@@ -20,11 +20,10 @@ var totalPriceName = "receivable" // 总价格是应收款还是应付款的总�
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
-	pagination models.Pagination, // 需要返回总页数
+	pagination models.Pagination,
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// rows这里是一个cursor.
 	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
@@ -222,8 +221,8 @@ func (b repositoryName) GetRows_fromSellContract(
 	sell_contract_id int,
 	userId int) ([]modelName, models.Pagination, error) {
 
-	var item modelName
-	var items []modelName
+	// var item modelName
+	// var items []modelName
 	var pagination models.Pagination
 	searchTerms := make(map[string]string)
 
@@ -234,5 +233,5 @@ func (b repositoryName) GetRows_fromSellContract(
 	searchTerms["sell_contract_id"] = sell_contract_id_str
 
 	// 这个应该是取出所有
-	return b.GetRows(db, item, items, pagination, searchTerms, userId)
+	return b.GetRows(db, pagination, searchTerms, userId)
 }

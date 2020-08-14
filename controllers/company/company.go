@@ -89,7 +89,7 @@ func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		itemFromRequest := returnItem.(models.Company)
+		itemFromRequest := returnItem.(modelName)
 
 		// 更新image数据库, 上传图片
 		err = updateImage(db, itemFromRequest, files, userId)
@@ -128,8 +128,6 @@ func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
 
 		// convert "reflected" item into company type
 		itemFromRequest := returnItem.(modelName)
-
-		fmt.Println("看看营业执照：", itemFromRequest.ImageLicense_id)
 
 		// 更新公司的两张图片. 如果没有就是删除
 		err = updateImage(db, itemFromRequest, files, userId)
@@ -243,7 +241,7 @@ func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int
 		}
 
 		var err error
-		fileName := fmt.Sprintf("company.image_id.%d", item.ID.Int)
+		fileName := fmt.Sprintf("company.%s.%d", columnName, item.ID.Int)
 		newImageId, err := imageCtrl.Upload(db, oldImage_id, fileName, fileBytes, -1, userId)
 
 		if newImageId != 0 {

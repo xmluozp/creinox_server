@@ -26,8 +26,8 @@ func GetFunc_FetchListHTTPReturn(
 	repo interface{},
 	userId int) (status int, returnValue models.JsonRowsReturn, err error) {
 
-	items := reflect.Zero(reflect.SliceOf(modelType)).Interface()
-	item := reflect.New(modelType).Elem().Interface()
+	// items := reflect.Zero(reflect.SliceOf(modelType)).Interface()
+	// item := reflect.New(modelType).Elem().Interface()
 
 	// query sample:  page=1&rowCount=5&perPage=15&totalCount=10&totalPage=2&order=desc&orderBy=id&q=%7B%22fullName%22%3A%22%E7%8E%8B%E6%80%9D%E8%81%AA%22%7D
 
@@ -42,8 +42,8 @@ func GetFunc_FetchListHTTPReturn(
 	gerRows := reflect.ValueOf(repo).MethodByName(methodName)
 	args := []reflect.Value{
 		reflect.ValueOf(db),
-		reflect.ValueOf(item),
-		reflect.ValueOf(items),
+		// reflect.ValueOf(item),
+		// reflect.ValueOf(items),
 		reflect.ValueOf(pagination),
 		reflect.ValueOf(searchTerms),
 		reflect.ValueOf(userId)}

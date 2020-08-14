@@ -399,7 +399,7 @@ func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int
 		}
 
 		var err error
-		fileName := fmt.Sprintf("product.image_id.%d", item.ID.Int)
+		fileName := fmt.Sprintf("product.%s.%d", columnName, item.ID.Int)
 		newImageId, err := imageCtrl.Upload(db, oldImage_id, fileName, fileBytes, -1, userId)
 
 		if newImageId != 0 {

@@ -23,11 +23,10 @@ var tableMeta = "(SELECT core1.*, core2.product_id as product_id, core3.image_id
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
-	pagination models.Pagination, // 需要返回总页数
+	pagination models.Pagination,
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// rows这里是一个cursor.
 	rows, err := utils.DbQueryRows(db, "", tableMeta, &pagination, searchTerms, item)
@@ -173,7 +172,14 @@ func (b repositoryName) AddRow_WithProduct(db *sql.DB, commodity_product models.
 	}
 
 	// 2. 用产品的属性来填充商品属性（作为初始值），并创建对应商品
-	commodity.Name = product.Name
+
+	// 如果有英文名就用英文名
+	if product.EName.String != "" {
+		commodity.Name = product.EName
+	} else {
+		commodity.Name = product.Name
+	}
+
 	commodity.Code = product.Code
 	commodity.Memo = product.Memo
 	commodity.Category_id = product.Category_id
@@ -202,11 +208,10 @@ func (b repositoryName) AddRow_WithProduct(db *sql.DB, commodity_product models.
 
 func (b repositoryName) GetRows_ByProduct(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// 拦截 search.
 	product_id := searchTerms["product_id"]

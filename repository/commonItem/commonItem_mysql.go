@@ -17,24 +17,21 @@ var tableName = "common_item"
 // =============================================== basic CRUD
 func (b repositoryName) GetRows_DropDown(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
 	userId int) ([]modelName, models.Pagination, error) {
 
 	searchTerms["isActive"] = "1"
 
-	return b.GetRows(db, item, items, pagination, searchTerms, userId)
+	return b.GetRows(db, pagination, searchTerms, userId)
 }
 
 func (b repositoryName) GetRows(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
-	pagination models.Pagination, // 需要返回总页数
+	pagination models.Pagination,
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// rows这里是一个cursor.
 	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)

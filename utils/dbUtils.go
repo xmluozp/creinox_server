@@ -99,16 +99,56 @@ func DbQueryRows_Customized(db *sql.DB,
 		}
 
 		_, field := GetField(k, "json", dataModel)
-
 		if field.Type == nil {
 			continue
 		}
 
-		// 如果字段类型是文字，就直接搜索like
-		if field.Type.String() != "nulls.String" {
+		// 如果是pk或者fk，看有没有逗号
 
-			// 看bool: 前端用1和0代替true和false就可以了
+		col, isCol := field.Tag.Lookup("col")
 
+		if isCol && (col == "fk" || k == "id") {
+
+			inGroup := strings.Split(v, ",")
+
+			// 如果用逗号隔开，是数组
+			if len(inGroup) > 1 {
+				newQueryStringSearchTerms += " AND mainTable." + k + " IN (" + v + ")"
+			} else {
+				newQueryStringSearchTerms += " AND mainTable." + k + " =" + v
+			}
+
+		} else if field.Type.String() == "nulls.String" {
+			// 如果字段类型是文字，就直接搜索like
+
+			// 看是不是内定的keywords模糊搜索, 如果是的话就生成一串or，贴在keywords后面
+			blurkeywordsStr, isBlurKeyword := field.Tag.Lookup("keywords")
+
+			if isBlurKeyword {
+				newQueryStringSearchTerms += " AND (1 = 0"
+				blurkeywords := strings.Split(blurkeywordsStr, "|")
+
+				for _, colName := range blurkeywords {
+					newQueryStringSearchTerms += " OR mainTable." + colName + " LIKE ?"
+					keywords = append(keywords, "%"+v+"%")
+				}
+
+				newQueryStringSearchTerms += ")"
+
+			} else {
+				// 最后作为string去like
+				newQueryStringSearchTerms += " AND mainTable." + k + " LIKE ?"
+				keywords = append(keywords, "%"+v+"%")
+			}
+
+		} else if field.Type.String() == "nulls.Bool" {
+			// 看bool. 空当作false处理
+			if v == "true" || v == "1" {
+				newQueryStringSearchTerms += " AND mainTable." + k + "= 1"
+			} else {
+				newQueryStringSearchTerms += " AND (mainTable." + k + "<> 1 OR mainTable." + k + " IS NULL)"
+			}
+		} else {
 			// 看int:
 			_, errInt := strconv.Atoi(v)
 			k := "mainTable." + k
@@ -139,27 +179,6 @@ func DbQueryRows_Customized(db *sql.DB,
 					newQueryStringSearchTerms += " AND " + k + " >= " + ranges[0] + " AND " + k + " <= " + ranges[1]
 					continue
 				}
-			}
-		} else {
-
-			// 看是不是内定的keywords模糊搜索, 如果是的话就生成一串or，贴在keywords后面
-			blurkeywordsStr, isBlurKeyword := field.Tag.Lookup("keywords")
-
-			if isBlurKeyword {
-				newQueryStringSearchTerms += " AND (1 = 0"
-				blurkeywords := strings.Split(blurkeywordsStr, "|")
-
-				for _, colName := range blurkeywords {
-					newQueryStringSearchTerms += " OR mainTable." + colName + " LIKE ?"
-					keywords = append(keywords, "%"+v+"%")
-				}
-
-				newQueryStringSearchTerms += ")"
-
-			} else {
-				// 最后作为string去like
-				newQueryStringSearchTerms += " AND mainTable." + k + " LIKE ?"
-				keywords = append(keywords, "%"+v+"%")
 			}
 		}
 	}
@@ -197,7 +216,7 @@ func DbQueryRows_Customized(db *sql.DB,
 	pagination.RowCount = rowCount
 
 	fmt.Println("------------------")
-	fmt.Println("查询运行的sql语句：", newQueryStringBegin+newQueryStringSearchTerms+newQueryString)
+	fmt.Println("查询运行的sql语句：", newQueryStringBegin+newQueryStringSearchTerms+newQueryString, keywords)
 	fmt.Println("------------------")
 
 	if err != nil {

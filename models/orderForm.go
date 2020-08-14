@@ -16,6 +16,8 @@ type OrderForm struct {
 	ReceivablePaid nulls.Float32 `col:"" json:"receivablePaid"`
 	Payable        nulls.Float32 `col:"" json:"payable"`
 	PayablePaid    nulls.Float32 `col:"" json:"payablePaid"`
+	SellerAddress  nulls.String  `col:"" json:"sellerAddress"`
+	BuyerAddress   nulls.String  `col:"" json:"buyerAddress"`
 
 	// 搜索用
 	KeyWord nulls.String `json:"keyword" keywords:"code|order_memo|invoiceCode"`
@@ -40,6 +42,8 @@ func (item *OrderForm) Receivers() (itemPtrs []interface{}) {
 		&item.ReceivablePaid,
 		&item.Payable,
 		&item.PayablePaid,
+		&item.SellerAddress,
+		&item.BuyerAddress,
 		&item.Seller_company_id,
 		&item.Buyer_company_id,
 		&item.IsDone,

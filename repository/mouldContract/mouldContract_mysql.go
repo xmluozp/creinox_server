@@ -27,11 +27,10 @@ var combineName = "combine_mould_contract"
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
 	db *sql.DB,
-	item modelName,
-	items []modelName,
-	pagination models.Pagination, // 需要返回总页数
+	pagination models.Pagination,
 	searchTerms map[string]string,
-	userId int) ([]modelName, models.Pagination, error) {
+	userId int) (items []modelName, returnPagination models.Pagination, err error) {
+	var item modelName
 
 	// rows这里是一个cursor.
 	rows, err := utils.DbQueryRows(db, "", combineName, &pagination, searchTerms, item)
@@ -84,6 +83,8 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	orderitem.ReceivablePaid = nulls.NewFloat32(0)
 	orderitem.Seller_company_id = item.Seller_company_id
 	orderitem.Buyer_company_id = item.Buyer_company_id
+	orderitem.SellerAddress = item.SellerAddress
+	orderitem.BuyerAddress = item.BuyerAddress
 	orderitem.IsDone = item.IsDone
 	orderitem.Order_memo = item.Order_memo
 
@@ -143,6 +144,8 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	orderitem.ReceivablePaid = nulls.NewFloat32(0)
 	orderitem.Seller_company_id = item.Seller_company_id
 	orderitem.Buyer_company_id = item.Buyer_company_id
+	orderitem.SellerAddress = item.SellerAddress
+	orderitem.BuyerAddress = item.BuyerAddress
 	orderitem.IsDone = item.IsDone
 	orderitem.Order_memo = item.Order_memo
 
