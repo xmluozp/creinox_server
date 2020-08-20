@@ -186,3 +186,24 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 
 	return ds, err
 }
+
+// 公司专用，取当前类别，当前前缀的code里最大的那个返回
+func (b repositoryName) GetRow_byCode(db *sql.DB, companyType int, keyWord string, userId int) (modelName, error) {
+
+	var item modelName
+	// row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
+
+	row := db.QueryRow(`SELECT company.*
+	FROM company 
+	WHERE UPPER(code) LIKE CONCAT(UPPER(?), "%") AND companyType = ?
+	AND CONVERT(SUBSTRING(code, ?, length(code)), UNSIGNED) > 0
+	ORDER BY CONVERT(SUBSTRING(code, ?, length(code)), UNSIGNED) DESC LIMIT 1`, keyWord, companyType, len(keyWord)+1, len(keyWord)+1)
+
+	err := row.Scan(item.Receivers()...)
+
+	if err != nil {
+		return item, err
+	}
+
+	return item, err
+}

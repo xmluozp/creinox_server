@@ -13,6 +13,7 @@ import (
 	"reflect"
 
 	"github.com/gobuffalo/nulls"
+	"github.com/gorilla/mux"
 	"github.com/xmluozp/creinox_server/auth"
 	folderController "github.com/xmluozp/creinox_server/controllers/folder"
 	imageController "github.com/xmluozp/creinox_server/controllers/imagedata"
@@ -34,6 +35,27 @@ var authNames = []string{
 	"companyshipping"}
 
 // =============================================== basic CRUD
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
 
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -210,6 +232,38 @@ func (c Controller) Print(db *sql.DB) http.HandlerFunc {
 			w.Write([]byte("error on printing," + err.Error()))
 			return
 		}
+	}
+}
+
+func (c Controller) GetRow_byCode(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		pass, userId := auth.CheckAuth(db, w, r, "")
+		if !pass {
+			return
+		}
+
+		repo := repository.Repository{}
+
+		// -------------- customized
+		var returnValue models.JsonRowsReturn
+		params := mux.Vars(r)
+
+		companyType, _ := strconv.Atoi(params["companyType"])
+		keyWord, _ := params["keyWord"]
+
+		returnItem, err := repo.GetRow_byCode(db, companyType, keyWord, userId)
+
+		if err != nil {
+			// returnValue.Info = "没找到对应的代码"
+			returnValue.Row = nil
+			// utils.SendJson(w, http.StatusOK, returnValue, err)
+			// return
+		} else {
+			returnValue.Row = returnItem
+		}
+
+		utils.SendJson(w, http.StatusOK, returnValue, err)
 	}
 }
 

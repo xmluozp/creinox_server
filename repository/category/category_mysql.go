@@ -34,7 +34,11 @@ func (b repositoryName) GetRows(
 	root_id_int, err := strconv.Atoi(root_id)
 
 	if err == nil && root_id_int > 0 {
-		subsql = fmt.Sprintf("SELECT * FROM %s WHERE path LIKE CONCAT((SELECT path FROM %s WHERE id = %d), ',' ,  %d , '%%')", tableName, tableName, root_id_int, root_id_int)
+		subsql = fmt.Sprintf(
+			`SELECT * FROM %s a JOIN (
+			SELECT path, id FROM %s WHERE id =%d) b
+			WHERE a.path = CONCAT(b.path, ',', b.id) or
+			a.path LIKE CONCAT(b.path, ',', b.id, ',', '%%')`, tableName, tableName, root_id_int)
 	} else {
 		subsql = ""
 	}
@@ -134,10 +138,19 @@ func (b repositoryName) UpdateRow_currentCode(db *sql.DB, id int, code string, u
 
 	var item modelName
 
-	item.ID = nulls.NewInt(id)
+	item, err := b.GetRow(db, id, userId)
+
 	item.CurrentCode = nulls.NewString(code)
+	item.ProductCount = nulls.NewInt(item.ProductCount.Int + 1)
 
 	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+
+	// 之后改成重新统计
+	// UPDATE `creinox`.`category` a
+	// LEFT JOIN (SELECT COUNT(*) pc, category_id  FROM `creinox`.`product` GROUP BY category_id) b
+	// ON a.id = b.category_id
+	// SET a.productCount = b.pc;
+
 	item.ScanRow(row)
 
 	if err != nil {

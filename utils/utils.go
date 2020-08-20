@@ -125,6 +125,7 @@ func parseInt(s string) int {
 	}
 }
 
+// 把文本截成文本，数字的格式
 func ParseFlight(s string) (letters, numbers string) {
 
 	// trim the postfix letters (isnt needed)
@@ -147,6 +148,45 @@ func ParseFlight(s string) (letters, numbers string) {
 		}
 	}
 	return string(l), string(n)
+}
+
+// 把文本截成文本，数字，文本，数字……的格式
+func ParseFlightSlice(s string) (returnSlice []string) {
+
+	if s == "" {
+		return nil
+	}
+
+	var str []rune
+
+	isLastDigit := s[0] >= '0' && s[0] <= '9'
+
+	for _, r := range s {
+
+		// 当前是字母还是数字
+		isThisDigit := r >= '0' && r <= '9'
+
+		// 字母和数字之间发生了切换
+		if isLastDigit != isThisDigit {
+
+			// 推入
+			returnSlice = append(returnSlice, string(str))
+			str = nil
+		}
+
+		str = append(str, r)
+
+		// 跟上
+		isLastDigit = isThisDigit
+		// 如果切换就存入
+	}
+
+	// 最后一组str如果有，直接存入
+	if len(str) > 0 {
+		returnSlice = append(returnSlice, string(str))
+	}
+
+	return returnSlice
 }
 
 // 阿拉伯数字转人民币大写
@@ -288,11 +328,14 @@ func GetPrintSourceFromInterface(item interface{}) (map[string]interface{}, erro
 	byteArray, err := json.Marshal(item)
 	var m map[string]interface{}
 	err = json.Unmarshal(byteArray, &m)
+
+	// 200819: 因为打印模板需要判断第一行。如果清掉了，列名就丢失了
 	m = ClearNil(m)
 
 	return m, err
 }
 
+// key: 在dataSource里是什么元素； subitemKey：list中被修改的元素的名称
 func ModifyDataSourceList(ds map[string]interface{},
 	key string,
 	subitemKey string,
@@ -323,8 +366,8 @@ func ClearNil(m map[string]interface{}) map[string]interface{} {
 
 		case []interface{}:
 
-			// 清除列表需要迭代每一项
-			for i := 0; i < len(field); i++ {
+			// 清除列表需要迭代每一项. 保留第一项因为打印模板需要取第一项的列名
+			for i := 1; i < len(field); i++ {
 				if f, ok := field[i].(map[string]interface{}); ok {
 					field[i] = ClearNil(f)
 				}

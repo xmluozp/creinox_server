@@ -35,7 +35,11 @@ func (b repositoryName) GetRows(
 
 	// SELECT * FROM financialLedger WHERE path LIKE CONCAT((SELECT path FROM financialLedger WHERE id = 1), ',',1, '%') ORDER BY path ASC
 	if err == nil && root_id_int > 0 {
-		subsql = fmt.Sprintf("SELECT * FROM %s WHERE path LIKE CONCAT((SELECT path FROM %s WHERE id = %d), ',' ,  %d , '%%')", tableName, tableName, root_id_int, root_id_int)
+		subsql = fmt.Sprintf(
+			`SELECT * FROM %s a JOIN (
+			SELECT path, id FROM %s WHERE id =%d) b
+			WHERE a.path = CONCAT(b.path, ',', b.id) or
+			a.path LIKE CONCAT(b.path, ',', b.id, ',', '%%')`, tableName, tableName, root_id_int)
 	} else {
 		subsql = ""
 	}
@@ -84,7 +88,9 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 		return item, errId
 	}
 
-	return item, errId
+	err := b.updateLedgerNames(db, item.ID.Int)
+
+	return item, err
 }
 
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
@@ -102,7 +108,34 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 		return 0, err
 	}
 
+	err = b.updateLedgerNames(db, item.ID.Int)
+
 	return rowsUpdated, err
+}
+func (b repositoryName) updateLedgerNames(db *sql.DB, id int) (err error) {
+
+	// 更新下属节点的name
+	var updateQuery = `
+		UPDATE financial_ledger main LEFT JOIN    
+		(
+			SELECT a.id, (
+				SELECT CONCAT(GROUP_CONCAT(name SEPARATOR '/'), '/', a.name) FROM financial_ledger b
+				WHERE find_in_set(b.id, a.path)
+			) AS newLedgerName FROM financial_ledger a) sub
+		ON main.id = sub.id JOIN
+		(
+			SELECT path, id FROM financial_ledger WHERE id = %d
+		) conditions
+		SET main.ledgerName = sub.newLedgerName
+		WHERE 
+		main.id = conditions.id OR
+		main.path = CONCAT(conditions.path, ',' , conditions.id) OR
+		main.path LIKE CONCAT(conditions.path, ',' , conditions.id, ',', '%%')
+	`
+	updateQueryCombined := fmt.Sprintf(updateQuery, id)
+	_, err = db.Exec(updateQueryCombined)
+
+	return err
 }
 
 func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {

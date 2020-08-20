@@ -173,13 +173,8 @@ func (b repositoryName) AddRow_WithProduct(db *sql.DB, commodity_product models.
 
 	// 2. 用产品的属性来填充商品属性（作为初始值），并创建对应商品
 
-	// 如果有英文名就用英文名
-	if product.EName.String != "" {
-		commodity.Name = product.EName
-	} else {
-		commodity.Name = product.Name
-	}
-
+	commodity.Name = product.Name
+	commodity.EName = product.EName
 	commodity.Code = product.Code
 	commodity.Memo = product.Memo
 	commodity.Category_id = product.Category_id

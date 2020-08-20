@@ -2,6 +2,9 @@ package financialVoucherRepository
 
 import (
 	"database/sql"
+	"net/http"
+	"strings"
+	"time"
 
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
@@ -69,6 +72,9 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 		return item, errId
 	}
 
+	defer b.DeleteRow(db, item.ID.Int, userId)
+	defer utils.Log(nil, "回滚：删除添加了的凭证")
+
 	return item, errId
 }
 
@@ -130,15 +136,78 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 	return ds, err
 }
 
+func (b repositoryName) GetPrintSourceList(db *sql.DB, r *http.Request, userId int) (map[string]interface{}, error) {
+
+	// 分页，排序，搜索关键词
+	pagination := utils.GetPagination(r)
+	searchTerms := utils.GetSearchTerms(r)
+
+	items, _, err := b.GetRows(db, pagination, searchTerms, userId)
+
+	// 统计数据
+	totalDebit := float32(0)
+	totalCredit := float32(0)
+
+	for i := 0; i < len(items); i++ {
+
+		dsLedgeName := items[i].FinancialLedgerItem.LedgerName.String
+		split := strings.Split(dsLedgeName, "/")
+
+		if len(split) > 1 {
+			items[i].FinancialLedgerItem.LedgerName = nulls.NewString(
+				strings.Join(split[1:], "/"))
+		}
+
+		totalDebit += items[i].Debit.Float32
+		totalCredit += items[i].Credit.Float32
+	}
+
+	dataSource := make(map[string]interface{})
+	dataSource["ds_list"] = items
+	dataSource["ds_totalDebit"] = totalDebit
+	dataSource["ds_totalCredit"] = totalCredit
+
+	if len(items) > 0 {
+		dataSource["ds_now"] = utils.FormatDateTime(time.Now())
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	ds, err := utils.GetPrintSourceFromInterface(dataSource)
+	utils.ModifyDataSourceList(ds, "ds_list", "createAt",
+		func(subitem map[string]interface{}) string {
+
+			t, err := time.Parse(time.RFC3339, subitem["createAt"].(string))
+
+			if err != nil {
+				return "错误数据"
+			}
+
+			return utils.FormatDate(t)
+		})
+
+	// fmt.Println(ds)
+
+	return ds, err
+}
+
 // 根据voucher的code去升级，而不是根据id
-func (b repositoryName) UpdateVoucher(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateVoucher(db *sql.DB, debit modelName, credit modelName, userId int) (rowsUpdated int64, err error) {
 
-	// 根据code取出id
-	sqlstr := "SELECT id FROM " + tableName + " WHERE resource_code = '" + item.Resource_code.String + "' LIMIT 1"
-	row := utils.DbQueryRow(db, sqlstr, tableName, 0, item)
+	// 根据code取出id。 会有两个，一借一贷。根据金额判断
+	sqlstr := "SELECT id FROM " + tableName + " WHERE debit > 0 AND resource_code = '" + debit.Resource_code.String + "' LIMIT 1"
+	rowDebit := utils.DbQueryRow(db, sqlstr, tableName, 0, debit)
 
-	var id int
-	err := row.Scan(&id)
+	sqlstr = "SELECT id FROM " + tableName + " WHERE credit > 0 AND resource_code = '" + credit.Resource_code.String + "' LIMIT 1"
+	rowCredit := utils.DbQueryRow(db, sqlstr, tableName, 0, credit)
+
+	var idDebit int
+	var idCredit int
+
+	err = rowDebit.Scan(&idDebit)
+	err = rowCredit.Scan(&idCredit)
 
 	if err != nil {
 		// 如果没有对应的voucher，就忽略
@@ -146,9 +215,13 @@ func (b repositoryName) UpdateVoucher(db *sql.DB, item modelName, userId int) (i
 	}
 
 	// 修改传进来的item的id （原本是空的）
-	item.ID = nulls.NewInt(id)
+	debit.ID = nulls.NewInt(idDebit)
+	credit.ID = nulls.NewInt(idCredit)
 
-	return b.UpdateRow(db, item, userId)
+	rowsUpdated, err = b.UpdateRow(db, debit, userId)
+	rowsUpdated, err = b.UpdateRow(db, credit, userId)
+
+	return rowsUpdated, err
 }
 
 // 根据voucher的code去删除，而不是根据id

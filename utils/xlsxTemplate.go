@@ -57,7 +57,6 @@ func (m *XlsxTemplate) generateMapping(
 	switch field := node.(type) {
 	case map[string]interface{}:
 		for subColumnName := range field {
-
 			subObjPath := ""
 
 			// 如果是根节点，就不需要"/"
@@ -66,20 +65,20 @@ func (m *XlsxTemplate) generateMapping(
 			} else {
 				subObjPath = objPath + "/" + subColumnName
 			}
-
 			// 不考虑子列表里的图片
 			mapping = m.generateMapping(subObjPath, field[subColumnName], mapping, targetCells)
 		}
 	case []interface{}:
-	case nil:
-		// 如果是数组，直接忽略
+	case nil: // 如果是空，可能只有第一行是空，后面的行里依然有值，所以需要生成对应的key
+		if wholeKey := m.matchMapKey(targetCells, "{{"+objPath+"}}"); wholeKey != "" {
+			mapping[wholeKey] = ""
+		}
 	default:
 
 		// 如果到底了，检查excel里有没有目标格，没有的话就不管： 检查到 {{&}}的格式就是图片，否则{{}}是普通值
 		if wholeKey := m.matchMapKey(targetCells, "{{&"+objPath+"}}"); wholeKey != "" {
 			mapping[wholeKey] = field
 		} else if wholeKey := m.matchMapKey(targetCells, "{{"+objPath+"}}"); wholeKey != "" {
-
 			mapping[wholeKey] = field
 		}
 	}

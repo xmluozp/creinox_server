@@ -115,6 +115,9 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 		return item, errInsert
 	}
 
+	defer orderFormRepo.DeleteRow(db, orderItem.ID.Int, userId)
+	defer utils.Log(nil, "回滚：删除合同")
+
 	item.Order_form_id = orderItem.ID
 	// -------------------
 

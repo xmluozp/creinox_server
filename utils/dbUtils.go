@@ -226,6 +226,7 @@ func DbQueryRows_Customized(db *sql.DB,
 	return rows, err
 }
 
+// query: 没有子查询，而是直接用这段string覆盖查询。 tableName: 表名或者完整的查询结果
 func DbQueryRows(db *sql.DB,
 	query string,
 	tableName string,
@@ -239,6 +240,7 @@ func DbQueryRows(db *sql.DB,
 
 }
 
+// query: 没有子查询，而是直接用这段string覆盖查询。 tableName: 表名或者完整的查询结果
 func DbQueryRow(db *sql.DB,
 	query string,
 	tableName string,

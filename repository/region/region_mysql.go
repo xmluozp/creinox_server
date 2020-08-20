@@ -35,7 +35,11 @@ func (b repositoryName) GetRows(
 
 	// SELECT * FROM region WHERE path LIKE CONCAT((SELECT path FROM region WHERE id = 1), ',',1, '%') ORDER BY path ASC
 	if err == nil && root_id_int > 0 {
-		subsql = fmt.Sprintf("SELECT * FROM %s WHERE path LIKE CONCAT((SELECT path FROM %s WHERE id = %d), ',' ,  %d , '%%')", tableName, tableName, root_id_int, root_id_int)
+		subsql = fmt.Sprintf(
+			`SELECT * FROM %s a JOIN (
+			SELECT path, id FROM %s WHERE id =%d) b
+			WHERE a.path = CONCAT(b.path, ',', b.id) or
+			a.path LIKE CONCAT(b.path, ',', b.id, ',', '%%')`, tableName, tableName, root_id_int)
 	} else {
 		subsql = ""
 	}

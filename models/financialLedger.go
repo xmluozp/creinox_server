@@ -7,17 +7,18 @@ import (
 )
 
 type FinancialLedger struct {
-	ID        nulls.Int    `col:"" json:"id"`
-	Name      nulls.String `col:"" json:"name" validate:"required" errm:"科目名必填"`
-	Code      nulls.String `col:"" json:"code"`
-	IsBuiltin nulls.Bool   `col:"" json:"isBuiltin"`
-	Memo      nulls.String `col:"" json:"memo"`
-	Path      nulls.String `col:"" json:"path"`
-	Auth      nulls.String `col:"" json:"auth"`
-	IsActive  nulls.Bool   `col:"" json:"isActive"`
-	Sorting   nulls.Int    `col:"orderByAsc" json:"sorting"`
-	Parent_id nulls.Int    `col:"fk" json:"parent_id"`
-	Root_id   nulls.Int    `json:"root_id"`
+	ID         nulls.Int    `col:"" json:"id"`
+	Name       nulls.String `col:"" json:"name" validate:"required" errm:"科目名必填"`
+	LedgerName nulls.String `col:"" json:"ledgerName"`
+	Code       nulls.String `col:"" json:"code"`
+	IsBuiltin  nulls.Bool   `col:"" json:"isBuiltin"`
+	Memo       nulls.String `col:"" json:"memo"`
+	Path       nulls.String `col:"" json:"path"`
+	Auth       nulls.String `col:"" json:"auth"`
+	IsActive   nulls.Bool   `col:"" json:"isActive"`
+	Sorting    nulls.Int    `col:"orderByAsc" json:"sorting"`
+	Parent_id  nulls.Int    `col:"fk" json:"parent_id"`
+	Root_id    nulls.Int    `json:"root_id"`
 }
 
 type FinancialLedgerList struct {
@@ -29,6 +30,7 @@ func (item *FinancialLedger) Receivers() (itemPtrs []interface{}) {
 	values := []interface{}{
 		&item.ID,
 		&item.Name,
+		&item.LedgerName,
 		&item.Code,
 		&item.IsBuiltin,
 		&item.Memo,

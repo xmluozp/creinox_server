@@ -27,6 +27,27 @@ type modelName = models.Product
 var authName = "product"
 
 // =============================================== basic CRUD
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
 
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -148,8 +169,16 @@ func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
 
 		// 更新category里的最大编码
 		ca := categoryController.Controller{}
-		_, currentCode := utils.ParseFlight(itemFromRequest.Code.String)
-		ca.Update_currentCode(db, itemFromRequest.Category_id.Int, currentCode, userId)
+		// _, currentCode := utils.ParseFlight(itemFromRequest.Code.String)
+		// currentCodeSlice := utils.ParseFlightSlice(itemFromRequest.Code.String)
+		// var currentCode string
+		// if len(currentCodeSlice) > 2 {
+		// 	currentCode = currentCodeSlice[1]
+		// } else {
+		// 	currentCode = ""
+		// }
+
+		ca.Update_currentCode(db, itemFromRequest.Category_id.Int, itemFromRequest.Code.String, userId)
 
 		if err != nil {
 			var returnValue models.JsonRowsReturn

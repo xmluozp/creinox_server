@@ -45,7 +45,7 @@ func (item *FinancialVoucher) Receivers() (itemPtrs []interface{}) {
 		&item.Memo,
 		&item.CreateAt,
 		&item.FinancialAccount_id,
-		&item.FinancialAccount_id,
+		&item.FinancialLedger_id,
 		&item.UpdateUser_id}
 
 	valuePtrs := make([]interface{}, len(values))

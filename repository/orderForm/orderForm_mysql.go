@@ -63,14 +63,19 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	result, errInsert := utils.DbQueryInsert(db, tableName, item)
 
 	if errInsert != nil {
+		utils.Log(errInsert, "添加合同出错")
 		return item, errInsert
 	}
 
 	id, err := result.LastInsertId()
 	item.ID = nulls.NewInt(int(id))
+
 	if err != nil {
+		utils.Log(err, "添加合同出错")
 		return item, err
 	}
+
+	defer b.DeleteRow(db, item.ID.Int, userId)
 
 	// =========================== 生成 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
@@ -87,21 +92,21 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	item.ScanRow(row)
 
 	if err != nil {
-		fmt.Println("更新合同出错", err)
+		utils.Log(err, "更新合同出错")
 		return 0, err
 	}
 
 	rowsUpdated, err := result.RowsAffected()
 
 	if err != nil {
+		utils.Log(err, "更新合同出错")
 		return 0, err
 	}
 
 	// =========================== 修改 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
-	voucherItem1, voucherItem2 := b.getVoucher(db, item)
-	_, err = financialVoucherRepo.UpdateVoucher(db, voucherItem1, userId)
-	_, err = financialVoucherRepo.UpdateVoucher(db, voucherItem2, userId)
+	debit, credit := b.getVoucher(db, item)
+	_, err = financialVoucherRepo.UpdateVoucher(db, debit, credit, userId)
 
 	return rowsUpdated, err
 }

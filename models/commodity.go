@@ -10,6 +10,7 @@ type Commodity struct {
 	ID            nulls.Int    `col:"" json:"id"`
 	Code          nulls.String `col:"" json:"code"`
 	Name          nulls.String `col:"" json:"name" validate:"required" errm:"必填"`
+	EName         nulls.String `col:"" json:"ename" validate:"required" errm:"必填"`
 	UpdateAt      nulls.Time   `col:"newtime" json:"updateAt"`
 	CreateAt      nulls.Time   `col:"default" json:"createAt"`
 	Memo          nulls.String `col:"" json:"memo"`
@@ -47,6 +48,7 @@ func (item *Commodity) Receivers() (itemPtrs []interface{}) {
 		&item.ID,
 		&item.Code,
 		&item.Name,
+		&item.EName,
 		&item.UpdateAt,
 		&item.CreateAt,
 		&item.Memo,
@@ -71,6 +73,7 @@ func (item *Commodity) ReceiversOriginal() (itemPtrs []interface{}) {
 		&item.ID,
 		&item.Code,
 		&item.Name,
+		&item.EName,
 		&item.UpdateAt,
 		&item.CreateAt,
 		&item.Memo,

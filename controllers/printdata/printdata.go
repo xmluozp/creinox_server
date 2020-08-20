@@ -20,6 +20,27 @@ type Controller struct{}
 var authName = ""
 
 // =============================================== basic CRUD
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
+func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+}
 
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

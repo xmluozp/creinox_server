@@ -7,20 +7,21 @@ import (
 )
 
 type Category struct {
-	ID          nulls.Int    `col:"" json:"id"`
-	Name        nulls.String `col:"" json:"name" validate:"required" errm:"必填"`
-	Ename       nulls.String `col:"" json:"ename"`
-	Prefix      nulls.String `col:"" json:"prefix"`
-	CurrentCode nulls.String `col:"" json:"currentCode"`
-	TreeLock    nulls.Bool   `col:"" json:"treeLock"`
-	Memo        nulls.String `col:"" json:"memo"`
-	Ememo       nulls.String `col:"" json:"ememo"`
-	Path        nulls.String `col:"" json:"path"`
-	UpdateAt    nulls.Time   `col:"newtime" json:"updateAt"`
-	CreateAt    nulls.Time   `col:"default" json:"createAt"`
-	IsDelete    nulls.Bool   `col:"default" json:"isDelete"`
-	Parent_id   nulls.Int    `col:"fk" json:"parent_id"`
-	Root_id     nulls.Int    `json:"root_id"` // to display tree
+	ID           nulls.Int    `col:"" json:"id"`
+	Name         nulls.String `col:"" json:"name" validate:"required" errm:"必填"`
+	Ename        nulls.String `col:"" json:"ename"`
+	Prefix       nulls.String `col:"" json:"prefix"`
+	CurrentCode  nulls.String `col:"" json:"currentCode"`
+	ProductCount nulls.Int    `col:"" json:"productCount"`
+	TreeLock     nulls.Bool   `col:"" json:"treeLock"`
+	Memo         nulls.String `col:"" json:"memo"`
+	Ememo        nulls.String `col:"" json:"ememo"`
+	Path         nulls.String `col:"" json:"path"`
+	UpdateAt     nulls.Time   `col:"newtime" json:"updateAt"`
+	CreateAt     nulls.Time   `col:"default" json:"createAt"`
+	IsDelete     nulls.Bool   `col:"default" json:"isDelete"`
+	Parent_id    nulls.Int    `col:"fk" json:"parent_id"`
+	Root_id      nulls.Int    `json:"root_id"` // to display tree
 }
 
 type CategoryList struct {
@@ -39,6 +40,7 @@ func (item *Category) Receivers() (itemPtrs []interface{}) {
 		&item.Ename,
 		&item.Prefix,
 		&item.CurrentCode,
+		&item.ProductCount,
 		&item.TreeLock,
 		&item.Memo,
 		&item.Ememo,

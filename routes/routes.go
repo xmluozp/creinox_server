@@ -43,7 +43,8 @@ func Routing(router *mux.Router, db *sql.DB) {
 
 	// ------------ test
 	testController := testController.Controller{}
-	router.HandleFunc("/api/test/{v}", testController.Test(db)).Methods("GET") // 加个api避免混淆
+	router.HandleFunc("/api/test/{v}", testController.Test(db)).Methods("GET")        // 加个api避免混淆
+	router.HandleFunc("/api/testApp/{v}", testController.TestApp(db)).Methods("POST") // 加个api避免混淆
 
 	// ------------ role
 	roleController := roleController.Controller{}
@@ -106,6 +107,8 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/company", companyController.AddItem(db)).Methods("POST")
 	router.HandleFunc("/api/company", companyController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/company/{id}", companyController.DeleteItem(db)).Methods("DELETE")
+
+	router.HandleFunc("/api/companyGetCode/{companyType}/{keyWord}", companyController.GetRow_byCode(db)).Methods("GET")
 
 	// ------------ company: rostercontactController
 	rostercontactController := rostercontactController.Controller{}
@@ -279,4 +282,6 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/financialVoucher", financialVoucherController.AddItem(db)).Methods("POST")
 	router.HandleFunc("/api/financialVoucher", financialVoucherController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/financialVoucher/{id}", financialVoucherController.DeleteItem(db)).Methods("DELETE")
+	router.HandleFunc("/api/financialVoucher_print/list/{templateFolder}/{template}/{printFormat}", financialVoucherController.PrintList(db)).Methods("GET")
+
 }

@@ -121,11 +121,11 @@ func GetFunc_FetchRowHTTPReturn(
 
 		fmt.Println("取单数据出错", err.Error())
 		if err == sql.ErrNoRows {
-			returnValue.Info = "Not Found" + err.Error()
+			returnValue.Info = "找不到记录. " + err.Error()
 			return http.StatusNotFound, returnValue, err
 
 		} else {
-			returnValue.Info = "Server error" + err.Error()
+			returnValue.Info = "服务器错误. " + err.Error()
 			return http.StatusNotFound, returnValue, err
 		}
 	}
@@ -154,7 +154,7 @@ func GetFunc_AddWithHTTPReturn(
 
 	if err != nil {
 		fmt.Println("Insert error on controller: ", err)
-		returnValue.Info = "Server error" + err.Error()
+		returnValue.Info = "服务器错误. " + err.Error()
 		return http.StatusInternalServerError, returnValue, item, err
 	}
 
@@ -180,7 +180,7 @@ func GetFunc_UpdateWithHTTPReturn(
 	item := reflect.ValueOf(itemPtr).Elem().Interface()
 
 	if err != nil {
-		returnValue.Info = "Server error" + err.Error()
+		returnValue.Info = "服务器错误. " + err.Error()
 		return http.StatusInternalServerError, returnValue, item, err
 	}
 

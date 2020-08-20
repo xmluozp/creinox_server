@@ -67,6 +67,7 @@ func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error
 
 func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
 
+	item.UpdateUser_id = nulls.NewInt(userId)
 	result, errInsert := utils.DbQueryInsert(db, tableName, item)
 
 	if errInsert != nil {
@@ -93,6 +94,7 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	item.Balance = nulls.Float32{Float32: 0, Valid: false}
 	item.Order_form_id = nulls.Int{Int: 0, Valid: false}
 	item.FinancialAccount_id = nulls.Int{Int: 0, Valid: false}
+	item.UpdateUser_id = nulls.NewInt(userId)
 
 	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
 	item.ScanRow(row)
