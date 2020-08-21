@@ -43,8 +43,9 @@ func Routing(router *mux.Router, db *sql.DB) {
 
 	// ------------ test
 	testController := testController.Controller{}
-	router.HandleFunc("/api/test/{v}", testController.Test(db)).Methods("GET")        // 加个api避免混淆
-	router.HandleFunc("/api/testApp/{v}", testController.TestApp(db)).Methods("POST") // 加个api避免混淆
+	router.HandleFunc("/api/test/{v}", testController.Test(db)).Methods("GET")                      // 加个api避免混淆
+	router.HandleFunc("/api/testApp/{v}", testController.TestApp(db)).Methods("POST")               // 加个api避免混淆
+	router.HandleFunc("/api/testAppReceive/{v}", testController.TestAppReceive(db)).Methods("POST") // 加个api避免混淆
 
 	// ------------ role
 	roleController := roleController.Controller{}

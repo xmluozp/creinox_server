@@ -22,54 +22,41 @@ var authName = "financial"
 // =============================================== basic CRUD
 func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+
+	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	utils.SendJson(w, status, returnValue, err)
 }
+
 func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
-}
-func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
 
-}
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	var item modelName
+	repo := repository.Repository{}
 
-}
-func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
+	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo, userId)
+	utils.SendJson(w, status, returnValue, err)
 }
 
+// =============================================== HTTP REQUESTS
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-
-		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+		c.C_GetItems(w, r, db)
 	}
 }
 
 func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+		c.C_GetItems_DropDown(w, r, db)
 	}
 }

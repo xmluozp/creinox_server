@@ -34,207 +34,209 @@ var authNames = []string{
 	"companydomestic",
 	"companyshipping"}
 
-// =============================================== basic CRUD
-func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-
+// =============================================== HTTP REQUESTS
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		searchTerms := utils.GetSearchTerms(r)
-		companyType, _ := strconv.Atoi(searchTerms["companyType"])
-
-		pass, userId := auth.CheckAuth(db, w, r, authNames[companyType])
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+		c.C_GetItems(w, r, db)
 	}
 }
 
 func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		// 数据权限没做
-		pass, userId := auth.CheckAuth(db, w, r, "")
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+		c.C_GetItem(w, r, db)
 	}
 }
 func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, "")
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-		// f, _, _ := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-
-		status, returnValue, returnItem, files, err := utils.GetFunc_AddWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
-
-		// 验证不通过之类的问题就不需要传图
-		if err != nil {
-			utils.SendJson(w, status, returnValue, err)
-			return
-		}
-
-		itemFromRequest := returnItem.(modelName)
-
-		// 更新image数据库, 上传图片
-		err = updateImage(db, itemFromRequest, files, userId)
-
-		if err != nil {
-			var returnValue models.JsonRowsReturn
-			returnValue.Info = "文件上传错误" + err.Error()
-			utils.SendError(w, http.StatusInternalServerError, returnValue)
-			return
-		}
-
-		utils.SendJson(w, status, returnValue, err)
+		c.C_AddItem(w, r, db)
 	}
 }
 
 func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, "")
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-
-		// upload form
-		status, returnValue, returnItem, files, err := utils.GetFunc_UpdateWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
-
-		// 验证不通过之类的问题就不需要传图
-		if err != nil {
-			utils.SendJson(w, status, returnValue, err)
-			return
-		}
-
-		// convert "reflected" item into company type
-		itemFromRequest := returnItem.(modelName)
-
-		// 更新公司的两张图片. 如果没有就是删除
-		err = updateImage(db, itemFromRequest, files, userId)
-
-		if err != nil {
-			var returnValue models.JsonRowsReturn
-			returnValue.Info = "文件上传错误" + err.Error()
-			utils.SendError(w, http.StatusInternalServerError, returnValue)
-			return
-		}
-
-		// 取最新row返回
-		updatedItem, err := repo.GetRow(db, itemFromRequest.ID.Int, userId)
-		returnValue.Row = updatedItem
-
-		// send success message to front-end
-		utils.SendJson(w, status, returnValue, err)
+		c.C_UpdateItem(w, r, db)
 	}
 }
 
 func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, "")
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-
-		status, returnValue, itemReturn, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		company := itemReturn.(modelName)
-
-		if err == nil {
-
-			// 删除营业执照和名片
-			imageCtrl := imageController.Controller{}
-			imageCtrl.Delete(db, company.ImageLicense_id.Int, userId)
-			imageCtrl.Delete(db, company.ImageBizCard_id.Int, userId)
-
-			// 删除folder (folder下面images的删除在folder处理)
-			folderCtrl := folderController.Controller{}
-			err = folderCtrl.Delete(db, company.Gallary_folder_id.Int, userId)
-
-			if err != nil {
-				returnValue.Info = "删除公司对应图库失败" + err.Error()
-				utils.SendJson(w, http.StatusFailedDependency, returnValue, err)
-			}
-		}
-
-		utils.SendJson(w, status, returnValue, err)
+		c.C_DeleteItem(w, r, db)
 	}
 }
 
 func (c Controller) Print(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, "")
-		if !pass {
-			return
-		}
-
-		// 从param里取出id，模板所在目录，打印格式（做在utils里面是为了方便日后修改）
-		id, _path, printFormat := utils.FetchPrintPathAndId(r)
-
-		// 生成打印数据(取map出来而不是item，是为了方便篡改)
-		repo := repository.Repository{}
-		dataSource, err := repo.GetPrintSource(db, id, userId)
-
-		if err != nil {
-			w.Write([]byte("error on generating source data," + err.Error()))
-		}
-
-		// 直接打印到writer(因为打印完毕需要删除cache，所以要在删除之前使用writer)
-		err = utils.PrintFromTemplate(w, dataSource, _path, printFormat, userId)
-
-		if err != nil {
-			w.Write([]byte("error on printing," + err.Error()))
-			return
-		}
+		c.C_Print(w, r, db)
 	}
 }
 
+// =============================================== basic CRUD
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	searchTerms := utils.GetSearchTerms(r)
+	companyType, _ := strconv.Atoi(searchTerms["companyType"])
+
+	pass, userId := auth.CheckAuth(db, w, r, authNames[companyType])
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	// 数据权限没做
+	pass, userId := auth.CheckAuth(db, w, r, "")
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, "")
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+	// f, _, _ := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+
+	status, returnValue, returnItem, files, err := utils.GetFunc_AddWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
+
+	// 验证不通过之类的问题就不需要传图
+	if err != nil {
+		utils.SendJson(w, status, returnValue, err)
+		return
+	}
+
+	itemFromRequest := returnItem.(modelName)
+
+	// 更新image数据库, 上传图片
+	err = updateImage(db, itemFromRequest, files, userId)
+
+	if err != nil {
+		var returnValue models.JsonRowsReturn
+		returnValue.Info = "文件上传错误" + err.Error()
+		utils.SendError(w, http.StatusInternalServerError, returnValue)
+		return
+	}
+
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, "")
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+
+	// upload form
+	status, returnValue, returnItem, files, err := utils.GetFunc_UpdateWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
+
+	// 验证不通过之类的问题就不需要传图
+	if err != nil {
+		utils.SendJson(w, status, returnValue, err)
+		return
+	}
+
+	// convert "reflected" item into company type
+	itemFromRequest := returnItem.(modelName)
+
+	// 更新公司的两张图片. 如果没有就是删除
+	err = updateImage(db, itemFromRequest, files, userId)
+
+	if err != nil {
+		var returnValue models.JsonRowsReturn
+		returnValue.Info = "文件上传错误" + err.Error()
+		utils.SendError(w, http.StatusInternalServerError, returnValue)
+		return
+	}
+
+	// 取最新row返回
+	updatedItem, err := repo.GetRow(db, itemFromRequest.ID.Int, userId)
+	returnValue.Row = updatedItem
+
+	// send success message to front-end
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, "")
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+
+	status, returnValue, itemReturn, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	company := itemReturn.(modelName)
+
+	if err == nil {
+
+		// 删除营业执照和名片
+		imageCtrl := imageController.Controller{}
+		imageCtrl.Delete(db, company.ImageLicense_id.Int, userId)
+		imageCtrl.Delete(db, company.ImageBizCard_id.Int, userId)
+
+		// 删除folder (folder下面images的删除在folder处理)
+		folderCtrl := folderController.Controller{}
+		err = folderCtrl.Delete(db, company.Gallary_folder_id.Int, userId)
+
+		if err != nil {
+			returnValue.Info = "删除公司对应图库失败" + err.Error()
+			utils.SendJson(w, http.StatusFailedDependency, returnValue, err)
+		}
+	}
+
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, "")
+	if !pass {
+		return
+	}
+
+	// 从param里取出id，模板所在目录，打印格式（做在utils里面是为了方便日后修改）
+	id, _path, printFormat := utils.FetchPrintPathAndId(r)
+
+	// 生成打印数据(取map出来而不是item，是为了方便篡改)
+	repo := repository.Repository{}
+	dataSource, err := repo.GetPrintSource(db, id, userId)
+
+	if err != nil {
+		w.Write([]byte("error on generating source data," + err.Error()))
+	}
+
+	// 直接打印到writer(因为打印完毕需要删除cache，所以要在删除之前使用writer)
+	err = utils.PrintFromTemplate(w, dataSource, _path, printFormat, userId)
+
+	if err != nil {
+		w.Write([]byte("error on printing," + err.Error()))
+		return
+	}
+}
+
+// =============================================== customized
 func (c Controller) GetRow_byCode(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 

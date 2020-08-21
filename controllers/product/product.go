@@ -26,294 +26,310 @@ type modelName = models.Product
 
 var authName = "product"
 
-// =============================================== basic CRUD
-func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-}
-
+// =============================================== HTTP REQUESTS
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-
-		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-
-		utils.SendJson(w, status, returnValue, err)
+		c.C_GetItems(w, r, db)
 	}
 }
 
 func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+		c.C_GetItems_DropDown(w, r, db)
 	}
 }
 
 func (c Controller) GetItems_DropDown_sellContract(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown_sellContract", repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+		c.C_GetItems_DropDown_sellContract(w, r, db)
 	}
 }
 
 func (c Controller) GetItems_DropDown_sellSubitem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown_sellSubitem", repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+		c.C_GetItems_DropDown_sellSubitem(w, r, db)
 	}
 }
 
 func (c Controller) GetItems_ByCommodity(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_ByCommodity", repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+		c.C_GetItems_ByCommodity(w, r, db)
 	}
 }
 
 func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+		c.C_GetItem(w, r, db)
 	}
 }
 func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, "")
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-		// f, _, _ := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-
-		status, returnValue, returnItem, files, err := utils.GetFunc_AddWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
-
-		// 验证不通过之类的问题就不需要传图
-		if err != nil {
-			utils.SendJson(w, status, returnValue, err)
-			return
-		}
-
-		itemFromRequest := returnItem.(modelName)
-
-		// 更新category里的最大编码
-		ca := categoryController.Controller{}
-		// _, currentCode := utils.ParseFlight(itemFromRequest.Code.String)
-		// currentCodeSlice := utils.ParseFlightSlice(itemFromRequest.Code.String)
-		// var currentCode string
-		// if len(currentCodeSlice) > 2 {
-		// 	currentCode = currentCodeSlice[1]
-		// } else {
-		// 	currentCode = ""
-		// }
-
-		ca.Update_currentCode(db, itemFromRequest.Category_id.Int, itemFromRequest.Code.String, userId)
-
-		if err != nil {
-			var returnValue models.JsonRowsReturn
-			returnValue.Info = "编码更新错误" + err.Error()
-			utils.SendError(w, http.StatusInternalServerError, returnValue)
-			return
-		}
-
-		// 更新image数据库, 上传图片
-		err = updateImage(db, itemFromRequest, files, userId)
-
-		if err != nil {
-			var returnValue models.JsonRowsReturn
-			returnValue.Info = "文件上传错误" + err.Error()
-			utils.SendError(w, http.StatusInternalServerError, returnValue)
-			return
-		}
-
-		if itemFromRequest.IsCreateCommodity.Bool {
-			commodityCtrl := commodityController.Controller{}
-			err = commodityCtrl.Add_ByProduct(db, itemFromRequest.ID.Int, userId)
-
-			if err != nil {
-				var returnValue models.JsonRowsReturn
-				returnValue.Info = "设置为商品时出错" + err.Error()
-				utils.SendError(w, http.StatusInternalServerError, returnValue)
-				return
-			}
-		}
-		// 假如设置为商品，就更新商品表
-
-		utils.SendJson(w, status, returnValue, err)
+		c.C_AddItem(w, r, db)
 	}
 }
 
 func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, "")
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-
-		// upload form
-		status, returnValue, returnItem, files, err := utils.GetFunc_UpdateWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
-
-		// 验证不通过之类的问题就不需要传图
-		if err != nil {
-			utils.SendJson(w, status, returnValue, err)
-			return
-		}
-
-		// convert "reflected" item into company type
-		itemFromRequest := returnItem.(modelName)
-
-		// 更新公司的两张图片. 如果没有就是删除
-		err = updateImage(db, itemFromRequest, files, userId)
-
-		if err != nil {
-			var returnValue models.JsonRowsReturn
-			returnValue.Info = "文件上传错误" + err.Error()
-			utils.SendError(w, http.StatusInternalServerError, returnValue)
-			return
-		}
-
-		// 取最新row返回
-		updatedItem, err := repo.GetRow(db, itemFromRequest.ID.Int, userId)
-		returnValue.Row = updatedItem
-
-		// send success message to front-end
-		utils.SendJson(w, status, returnValue, err)
+		c.C_UpdateItem(w, r, db)
 	}
 }
 
 func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, "")
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-
-		status, returnValue, itemReturn, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		product := itemReturn.(modelName)
-
-		if err == nil {
-
-			// 删除产品图片
-			imageCtrl := imageController.Controller{}
-			err = imageCtrl.Delete(db, product.Image_id.Int, userId)
-
-			if err != nil {
-				returnValue.Info = "删除产品对应图库失败" + err.Error()
-				utils.SendJson(w, http.StatusFailedDependency, returnValue, err)
-			}
-		}
-
-		utils.SendJson(w, status, returnValue, err)
+		c.C_DeleteItem(w, r, db)
 	}
 }
 
 func (c Controller) Print(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_Print(w, r, db)
+	}
+}
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
+// =============================================== basic CRUD
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
-		// 从param里取出id，模板所在目录，打印格式（做在utils里面是为了方便日后修改）
-		id, _path, printFormat := utils.FetchPrintPathAndId(r)
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
 
-		// 生成打印数据(取map出来而不是item，是为了方便篡改)
-		repo := repository.Repository{}
-		dataSource, err := repo.GetPrintSource(db, id, userId)
+	var item modelName
+	repo := repository.Repository{}
+
+	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+
+	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo, userId)
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_GetItems_DropDown_sellContract(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+
+	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown_sellContract", repo, userId)
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_GetItems_DropDown_sellSubitem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+
+	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown_sellSubitem", repo, userId)
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_GetItems_ByCommodity(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+
+	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_ByCommodity", repo, userId)
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, "")
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+	// f, _, _ := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+
+	status, returnValue, returnItem, files, err := utils.GetFunc_AddWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
+
+	// 验证不通过之类的问题就不需要传图
+	if err != nil {
+		utils.SendJson(w, status, returnValue, err)
+		return
+	}
+
+	itemFromRequest := returnItem.(modelName)
+
+	// 更新category里的最大编码
+	ca := categoryController.Controller{}
+	// _, currentCode := utils.ParseFlight(itemFromRequest.Code.String)
+	// currentCodeSlice := utils.ParseFlightSlice(itemFromRequest.Code.String)
+	// var currentCode string
+	// if len(currentCodeSlice) > 2 {
+	// 	currentCode = currentCodeSlice[1]
+	// } else {
+	// 	currentCode = ""
+	// }
+
+	ca.Update_currentCode(db, itemFromRequest.Category_id.Int, itemFromRequest.Code.String, userId)
+
+	if err != nil {
+		var returnValue models.JsonRowsReturn
+		returnValue.Info = "编码更新错误" + err.Error()
+		utils.SendError(w, http.StatusInternalServerError, returnValue)
+		return
+	}
+
+	// 更新image数据库, 上传图片
+	err = updateImage(db, itemFromRequest, files, userId)
+
+	if err != nil {
+		var returnValue models.JsonRowsReturn
+		returnValue.Info = "文件上传错误" + err.Error()
+		utils.SendError(w, http.StatusInternalServerError, returnValue)
+		return
+	}
+
+	if itemFromRequest.IsCreateCommodity.Bool {
+		commodityCtrl := commodityController.Controller{}
+		err = commodityCtrl.Add_ByProduct(db, itemFromRequest.ID.Int, userId)
 
 		if err != nil {
-			w.Write([]byte("error on generating source data," + err.Error()))
-		}
-
-		// 直接打印到writer(因为打印完毕需要删除cache，所以要在删除之前使用writer)
-		err = utils.PrintFromTemplate(w, dataSource, _path, printFormat, userId)
-
-		if err != nil {
-			w.Write([]byte("error on printing," + err.Error()))
+			var returnValue models.JsonRowsReturn
+			returnValue.Info = "设置为商品时出错" + err.Error()
+			utils.SendError(w, http.StatusInternalServerError, returnValue)
 			return
 		}
+	}
+	// 假如设置为商品，就更新商品表
+
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, "")
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+
+	// upload form
+	status, returnValue, returnItem, files, err := utils.GetFunc_UpdateWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
+
+	// 验证不通过之类的问题就不需要传图
+	if err != nil {
+		utils.SendJson(w, status, returnValue, err)
+		return
+	}
+
+	// convert "reflected" item into company type
+	itemFromRequest := returnItem.(modelName)
+
+	// 更新公司的两张图片. 如果没有就是删除
+	err = updateImage(db, itemFromRequest, files, userId)
+
+	if err != nil {
+		var returnValue models.JsonRowsReturn
+		returnValue.Info = "文件上传错误" + err.Error()
+		utils.SendError(w, http.StatusInternalServerError, returnValue)
+		return
+	}
+
+	// 取最新row返回
+	updatedItem, err := repo.GetRow(db, itemFromRequest.ID.Int, userId)
+	returnValue.Row = updatedItem
+
+	// send success message to front-end
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, "")
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+
+	status, returnValue, itemReturn, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	product := itemReturn.(modelName)
+
+	if err == nil {
+
+		// 删除产品图片
+		imageCtrl := imageController.Controller{}
+		err = imageCtrl.Delete(db, product.Image_id.Int, userId)
+
+		if err != nil {
+			returnValue.Info = "删除产品对应图库失败" + err.Error()
+			utils.SendJson(w, http.StatusFailedDependency, returnValue, err)
+		}
+	}
+
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	// 从param里取出id，模板所在目录，打印格式（做在utils里面是为了方便日后修改）
+	id, _path, printFormat := utils.FetchPrintPathAndId(r)
+
+	// 生成打印数据(取map出来而不是item，是为了方便篡改)
+	repo := repository.Repository{}
+	dataSource, err := repo.GetPrintSource(db, id, userId)
+
+	if err != nil {
+		w.Write([]byte("error on generating source data," + err.Error()))
+	}
+
+	// 直接打印到writer(因为打印完毕需要删除cache，所以要在删除之前使用writer)
+	err = utils.PrintFromTemplate(w, dataSource, _path, printFormat, userId)
+
+	if err != nil {
+		w.Write([]byte("error on printing," + err.Error()))
+		return
 	}
 }
 

@@ -32,85 +32,190 @@ var authName = ""
 // =============================================== basic CRUD
 func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
-}
-func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
 
+	var item modelName
+	repo := repository.Repository{}
+
+	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	utils.SendJson(w, status, returnValue, err)
 }
+
 func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	utils.SendJson(w, status, returnValue, err)
 }
+
 func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	utils.SendJson(w, status, returnValue, err)
 }
+
 func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	utils.SendJson(w, status, returnValue, err)
 }
-func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
+func (c Controller) C_DeleteItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	var returnValue models.JsonRowsReturn
+	status := http.StatusOK
+	var idList []int
+	err := json.NewDecoder(r.Body).Decode(&idList)
+
+	for _, value := range idList {
+
+		err = c.Delete(db, value, userId)
+		if err != nil {
+			returnValue.Info += fmt.Sprintf("删除图片出错，ID：%d, %s", value, err.Error())
+			status = http.StatusBadRequest
+		}
+	}
+
+	if err == nil { // no err
+		returnValue.Info = fmt.Sprintf("删除%d张图片", len(idList))
+	}
+
+	utils.SendJson(w, status, returnValue, err)
 }
-func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
-}
+func (c Controller) C_AddItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
+	// 取图片列表。假如没有folder，前端会传folder_structure，这里顺便也取出来
+	var item models.Folder
+	status, returnValue, folderItem, files, err := utils.DecodeFormData(r, reflect.TypeOf(item))
+
+	// ---------------
+	// 取出提交的files和folder_id
+	params := mux.Vars(r)
+	folder_id, err := strconv.Atoi(params["folder_id"])
+
+	// 原数据库的公司是没有folder的
+
+	if err != nil {
+		utils.SendJson(w, status, returnValue, err)
+		return
+	}
+
+	// folder id -1说明需要生成folder
+	if folder_id == -1 {
+
+		folderRepo := repositoryFolder.Repository{}
+
+		newFolder, err := folderRepo.AddRow_withRef(db, folderItem.(models.Folder), userId)
+
+		folder_id = newFolder.ID.Int
+
+		if err != nil {
+
+			fmt.Println("folder生成出错", err)
+			utils.SendJson(w, status, returnValue, err)
 			return
 		}
+	}
 
-		var item modelName
-		repo := repository.Repository{}
+	// 循环存入images
+	for key := range files {
+		c.Upload(db, -1, key, files[key], folder_id, userId) // 不需要删旧数据也不需要返回，所以直接存就好
+	}
 
-		status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+	returnValue.Info = fmt.Sprintf("上传了%d张图片", len(files))
+
+	// 把folder的id回传给前端（因为假如folder不存在，有可能新建folder）
+	returnValue.Row = models.Folder{ID: nulls.NewInt(folder_id)}
+
+	// ---------------
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_Show(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	file, _ := os.Open("." + r.URL.Path)
+	// errorHandle(err, w);
+
+	defer file.Close()
+	buff, _ := ioutil.ReadAll(file)
+	// errorHandle(err, w);
+	w.Write(buff)
+}
+
+// =============================================== HTTP REQUESTS
+func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_GetItems(w, r, db)
 	}
 }
 
 func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+		c.C_GetItem(w, r, db)
 	}
 }
 func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		var item modelName
-		repo := repository.Repository{}
-		status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+		c.C_AddItem(w, r, db)
 	}
 }
 
 func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
-
 	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_UpdateItem(w, r, db)
+	}
+}
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
+// 这里是前端的文件夹管理用，特殊处理：手动读取和删除
+func (c Controller) DeleteItems(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_DeleteItems(w, r, db)
+	}
+}
 
-		var item modelName
-		repo := repository.Repository{}
-		status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+// 批量上传
+func (c Controller) AddItems(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_AddItems(w, r, db)
+	}
+}
+func (c Controller) Show(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_Show(w, r, db)
 	}
 }
 
@@ -137,109 +242,6 @@ func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
 // 		utils.SendJson(w, status, returnValue, err)
 // 	}
 // }
-
-// 这里是前端的文件夹管理用，特殊处理：手动读取和删除
-func (c Controller) DeleteItems(db *sql.DB) http.HandlerFunc {
-
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		var returnValue models.JsonRowsReturn
-		status := http.StatusOK
-		var idList []int
-		err := json.NewDecoder(r.Body).Decode(&idList)
-
-		for _, value := range idList {
-
-			err = c.Delete(db, value, userId)
-			if err != nil {
-				returnValue.Info += fmt.Sprintf("删除图片出错，ID：%d, %s", value, err.Error())
-				status = http.StatusBadRequest
-			}
-		}
-
-		if err == nil { // no err
-			returnValue.Info = fmt.Sprintf("删除%d张图片", len(idList))
-		}
-
-		utils.SendJson(w, status, returnValue, err)
-	}
-}
-
-// 批量上传
-func (c Controller) AddItems(db *sql.DB) http.HandlerFunc {
-
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, userId := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		// 取图片列表。假如没有folder，前端会传folder_structure，这里顺便也取出来
-		var item models.Folder
-		status, returnValue, folderItem, files, err := utils.DecodeFormData(r, reflect.TypeOf(item))
-
-		// ---------------
-		// 取出提交的files和folder_id
-		params := mux.Vars(r)
-		folder_id, err := strconv.Atoi(params["folder_id"])
-
-		// 原数据库的公司是没有folder的
-
-		if err != nil {
-			utils.SendJson(w, status, returnValue, err)
-			return
-		}
-
-		// folder id -1说明需要生成folder
-		if folder_id == -1 {
-
-			folderRepo := repositoryFolder.Repository{}
-
-			newFolder, err := folderRepo.AddRow_withRef(db, folderItem.(models.Folder), userId)
-
-			folder_id = newFolder.ID.Int
-
-			if err != nil {
-
-				fmt.Println("folder生成出错", err)
-				utils.SendJson(w, status, returnValue, err)
-				return
-			}
-		}
-
-		// 循环存入images
-		for key := range files {
-			c.Upload(db, -1, key, files[key], folder_id, userId) // 不需要删旧数据也不需要返回，所以直接存就好
-		}
-
-		returnValue.Info = fmt.Sprintf("上传了%d张图片", len(files))
-
-		// 把folder的id回传给前端（因为假如folder不存在，有可能新建folder）
-		returnValue.Row = models.Folder{ID: nulls.NewInt(folder_id)}
-
-		// ---------------
-		utils.SendJson(w, status, returnValue, err)
-	}
-}
-func (c Controller) Show(db *sql.DB) http.HandlerFunc {
-
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		file, _ := os.Open("." + r.URL.Path)
-		// errorHandle(err, w);
-
-		defer file.Close()
-		buff, _ := ioutil.ReadAll(file)
-		// errorHandle(err, w);
-		w.Write(buff)
-	}
-}
 
 // ============================== internal
 

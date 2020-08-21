@@ -22,66 +22,49 @@ var authName = ""
 // =============================================== basic CRUD
 func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
-}
-func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	pass, _ := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
 
-}
-func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	// status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	params := mux.Vars(r)
+	templateFolder, _ := params["templateFolder"]
 
-}
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	// 根据文件夹名称取模板 (首字母要大写，不然读不到)
+	type template struct {
+		Name     string
+		Path     string
+		FileName string
+	}
 
-}
-func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	returnRows := []template{}
+	returnValue := models.JsonRowsReturn{}
 
-}
-func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	root := "templates/" + templateFolder
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 
-}
-func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+		if info != nil && !info.IsDir() && filepath.Ext(path) == ".xlsx" {
+			tmp := template{
+				Name:     strings.TrimSuffix(info.Name(), filepath.Ext(path)),
+				Path:     templateFolder,
+				FileName: info.Name()}
+			returnRows = append(returnRows, tmp)
 
+			fmt.Println("找到文件", info)
+		}
+
+		return err
+	})
+
+	returnValue.Rows = returnRows
+
+	utils.SendJson(w, http.StatusAccepted, returnValue, err)
 }
 
+// =============================================== HTTP REQUESTS
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		pass, _ := auth.CheckAuth(db, w, r, authName)
-		if !pass {
-			return
-		}
-
-		// status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-		params := mux.Vars(r)
-		templateFolder, _ := params["templateFolder"]
-
-		// 根据文件夹名称取模板 (首字母要大写，不然读不到)
-		type template struct {
-			Name     string
-			Path     string
-			FileName string
-		}
-
-		returnRows := []template{}
-		returnValue := models.JsonRowsReturn{}
-
-		root := "templates/" + templateFolder
-		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-
-			if info != nil && !info.IsDir() && filepath.Ext(path) == ".xlsx" {
-				tmp := template{
-					Name:     strings.TrimSuffix(info.Name(), filepath.Ext(path)),
-					Path:     templateFolder,
-					FileName: info.Name()}
-				returnRows = append(returnRows, tmp)
-
-				fmt.Println("找到文件", info)
-			}
-
-			return err
-		})
-
-		returnValue.Rows = returnRows
-
-		utils.SendJson(w, http.StatusAccepted, returnValue, err)
+		c.C_GetItems(w, r, db)
 	}
 }

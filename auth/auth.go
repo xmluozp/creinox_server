@@ -58,6 +58,7 @@ func CheckAuth(db *sql.DB, w http.ResponseWriter, r *http.Request, authTag strin
 	//----------------------------------------/ only for Postman testing
 	tknstr := r.Header.Get("test")
 	if tknstr == "test" {
+		fmt.Println("Postman测试专用权限")
 		return true, 1
 	}
 
