@@ -6,8 +6,7 @@ import (
 	"github.com/gobuffalo/nulls"
 )
 
-// TODO: 此功能暂时不用，所以以下内容数据类型也还没定
-type Application struct {
+type ExpressOrder struct {
 	ID               nulls.Int    `col:"" json:"id"`
 	Content          nulls.String `col:"" json:"accountName" validate:"required" errm:"必填"`
 	Snapshot         nulls.String `col:"" json:"snapshot"`
@@ -23,7 +22,7 @@ type Application struct {
 	ApproveUser   User `ref:"user,approveUser_id" json:"approveUser_id.row" validate:"-"`
 }
 
-func (item *Application) Receivers() (itemPtrs []interface{}) {
+func (item *ExpressOrder) Receivers() (itemPtrs []interface{}) {
 
 	values := []interface{}{
 		&item.ID,
@@ -45,7 +44,7 @@ func (item *Application) Receivers() (itemPtrs []interface{}) {
 	return valuePtrs
 }
 
-func (item *Application) ScanRow(r *sql.Row) error {
+func (item *ExpressOrder) ScanRow(r *sql.Row) error {
 
 	var columns []interface{}
 
@@ -63,7 +62,7 @@ func (item *Application) ScanRow(r *sql.Row) error {
 	return err
 }
 
-func (item *Application) ScanRows(r *sql.Rows) error {
+func (item *ExpressOrder) ScanRows(r *sql.Rows) error {
 
 	var columns []interface{}
 

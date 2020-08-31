@@ -10,12 +10,16 @@ import (
 	commodityController "github.com/xmluozp/creinox_server/controllers/commodity"
 	commonitemController "github.com/xmluozp/creinox_server/controllers/commonItem"
 	companyController "github.com/xmluozp/creinox_server/controllers/company"
+
 	financialaccountController "github.com/xmluozp/creinox_server/controllers/financialAccount"
 	financialledgerController "github.com/xmluozp/creinox_server/controllers/financialLedger"
 	financialTransactionController "github.com/xmluozp/creinox_server/controllers/financialTransaction"
 	financialVoucherController "github.com/xmluozp/creinox_server/controllers/financialVoucher"
+	paymentRequestController "github.com/xmluozp/creinox_server/controllers/paymentRequest"
 	productController "github.com/xmluozp/creinox_server/controllers/product"
 	productPurchaseController "github.com/xmluozp/creinox_server/controllers/productPurchase"
+
+	expressOrderController "github.com/xmluozp/creinox_server/controllers/expressOrder"
 
 	orderformController "github.com/xmluozp/creinox_server/controllers/orderForm"
 	sellContractController "github.com/xmluozp/creinox_server/controllers/sellContract"
@@ -36,6 +40,7 @@ import (
 	roleController "github.com/xmluozp/creinox_server/controllers/role"
 	rostercontactController "github.com/xmluozp/creinox_server/controllers/rosterContact"
 	userController "github.com/xmluozp/creinox_server/controllers/user"
+	userLogController "github.com/xmluozp/creinox_server/controllers/userLog"
 
 	printController "github.com/xmluozp/creinox_server/controllers/printdata"
 )
@@ -48,7 +53,7 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/testApp/{v}", testController.TestApp(db)).Methods("POST")               // 加个api避免混淆
 	router.HandleFunc("/api/testAppReceive/{v}", testController.TestAppReceive(db)).Methods("POST") // 加个api避免混淆
 
-	// ------------ application 申请
+	// ------------ application 申请(泛申请，暂未开发)
 	applicationController := applicationController.Controller{}
 	router.HandleFunc("/api/application", applicationController.GetItems(db)).Methods("GET") // 加个api避免混淆
 	router.HandleFunc("/api/application/{id}", applicationController.GetItem(db)).Methods("GET")
@@ -74,6 +79,14 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/user/login", userController.Login(db)).Methods("POST")
 
 	router.HandleFunc("/api/userList", userController.GetItemsForLogin(db)).Methods("GET")
+
+	// ------------ userLog 用户操作记录
+	userLogController := userLogController.Controller{}
+	router.HandleFunc("/api/userLog", userLogController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/userLog/{id}", userLogController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/userLog", userLogController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/userLog", userLogController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/userLog/{id}", userLogController.DeleteItem(db)).Methods("DELETE")
 
 	// ------------ text template
 	textTemplateController := textTemplateController.Controller{}
@@ -160,8 +173,17 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/category", categoryController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/category/{id}", categoryController.DeleteItem(db)).Methods("DELETE")
 
+	// ------------ order form 合同的通用属性
 	orderformController := orderformController.Controller{}
 	router.HandleFunc("/api/orderform_dropDown", orderformController.GetItems_DropDown(db)).Methods("GET")
+
+	// ------------ express order 快递单(独立的，不属于合同)
+	expressOrderController := expressOrderController.Controller{}
+	router.HandleFunc("/api/expressOrder", expressOrderController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/expressOrder/{id}", expressOrderController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/expressOrder", expressOrderController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/expressOrder", expressOrderController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/expressOrder/{id}", expressOrderController.DeleteItem(db)).Methods("DELETE")
 
 	// ------------ sell contract
 	sellContractController := sellContractController.Controller{}
@@ -259,6 +281,14 @@ func Routing(router *mux.Router, db *sql.DB) {
 	// commodity_product
 	router.HandleFunc("/api/commodity_byproduct/{commodity_id}/{product_id}", commodityController.Assemble(db)).Methods("POST")
 	router.HandleFunc("/api/commodity_byproduct/{commodity_id}/{product_id}", commodityController.Disassemble(db)).Methods("DELETE")
+
+	// ------------ paymentRequest 内部财务用的账户
+	paymentRequestController := paymentRequestController.Controller{}
+	router.HandleFunc("/api/paymentRequest", paymentRequestController.GetItems(db)).Methods("GET")
+	router.HandleFunc("/api/paymentRequest/{id}", paymentRequestController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/paymentRequest", paymentRequestController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/paymentRequest", paymentRequestController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/paymentRequest/{id}", paymentRequestController.DeleteItem(db)).Methods("DELETE")
 
 	// ------------ financialAccount 内部财务用的账户
 	financialaccountController := financialaccountController.Controller{}

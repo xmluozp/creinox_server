@@ -6,7 +6,6 @@ import (
 	"github.com/gobuffalo/nulls"
 )
 
-// TODO: 此功能暂时不用，所以以下内容数据类型也还没定
 type Application struct {
 	ID               nulls.Int    `col:"" json:"id"`
 	Content          nulls.String `col:"" json:"accountName" validate:"required" errm:"必填"`
