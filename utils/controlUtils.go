@@ -411,7 +411,7 @@ func DecodeFormData(
 	mr, err := r.MultipartReader()
 
 	if err != nil {
-		fmt.Println("err1")
+		Log(err)
 		returnValue.Info = "Server error" + err.Error()
 		return http.StatusInternalServerError, returnValue, nil, nil, err
 	}

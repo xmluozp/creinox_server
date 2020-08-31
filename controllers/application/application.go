@@ -1,4 +1,4 @@
-package portController
+package applicationController
 
 import (
 	"database/sql"
@@ -12,9 +12,9 @@ import (
 )
 
 type Controller struct{}
-type modelName = models.Port
+type modelName = models.Application
 
-var authName = "port"
+var authName = "financial/app"
 
 // =============================================== HTTP REQUESTS
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
@@ -80,19 +80,6 @@ func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-
-	pass, userId := auth.CheckAuth(db, w, r, authName)
-	if !pass {
-		return
-	}
-
-	var item modelName
-	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
-	utils.SendJson(w, status, returnValue, err)
-}
-
 func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	pass, userId := auth.CheckAuth(db, w, r, authName)
@@ -145,4 +132,20 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 		w.Write([]byte("error on printing," + err.Error()))
 		return
 	}
+}
+
+// =============================================== customized
+
+// 提交申请
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	utils.SendJson(w, status, returnValue, err)
 }

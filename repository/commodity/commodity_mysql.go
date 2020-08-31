@@ -18,7 +18,37 @@ var tableName = "commodity"
 // var tableMeta = "(SELECT core1.*, core2.product_id as product_id, core3.image_id as image_id FROM commodity core1 LEFT JOIN commodity_product core2 ON core1.id = core2.commodity_id LEFT JOIN product core3 ON core3.id = core2.product_id  WHERE core2.isMeta = 1)"
 
 // 不判断meta，不然删了产品，导致关联删掉了以后，就成了幽灵记录
-var tableMeta = "(SELECT core1.*, core2.product_id as product_id, core3.image_id as image_id FROM commodity core1 LEFT JOIN commodity_product core2 ON core1.id = core2.commodity_id LEFT JOIN product core3 ON core3.id = core2.product_id)"
+// 还是判断meta。删了产品对应的商品和对应的关联也应该删掉了:
+// 		删除产品的时候，判断commodity_product有没有isMeta的。如果有就删除商品. 然后删除所有关联产品的 commodity_product
+// 		删除商品的时候也删除所有对应的commodity_product
+
+var tableMeta = `(
+		SELECT 
+			core1.*, 
+			core2.product_id as product_id, 
+			core3.image_id as image_id 
+			FROM commodity core1 
+				LEFT JOIN commodity_product core2  
+					ON core1.id = core2.commodity_id AND core2.isMeta = 1
+				LEFT JOIN product core3 
+					ON core3.id = core2.product_id)`
+
+var tableAll = `(
+	SELECT 
+		core1.*, 
+		core2.product_id as product_id, 
+		core3.image_id as image_id 
+		FROM commodity core1 
+			LEFT JOIN commodity_product core2  
+				ON core1.id = core2.commodity_id
+			LEFT JOIN product core3 
+				ON core3.id = core2.product_id)`
+
+/*
+	产品和meta应该是一一绑定的。只要有商品，就一定有一个meta。而组合商品作为极少数情况，额外挂载
+		所以是两种情况：meta就是“产品+商品”的单条，否则就是挂载
+		删除产品，meta的商品也删除，对应的挂载就全部删除（组合商品）: 全删除的目前用cascade
+*/
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
@@ -212,8 +242,8 @@ func (b repositoryName) GetRows_ByProduct(
 	product_id := searchTerms["product_id"]
 	delete(searchTerms, "product_id")
 
-	// 根据product_id从中间表取非meta的
-	subsql := fmt.Sprintf("(SELECT m1.*, m2.product_id as product_id, m3.image_id as image_id FROM "+tableName+" m1 LEFT JOIN commodity_product m2 ON m1.id = m2.commodity_id LEFT JOIN product m3 ON m2.product_id = m3.id WHERE m2.product_id = %s AND m2.isMeta = 0)", product_id)
+	// 根据product_id从中间表取(为避免用户迷惑，meta也一起取)
+	subsql := fmt.Sprintf("(SELECT m1.*, m2.product_id as product_id, m3.image_id as image_id FROM "+tableName+" m1 LEFT JOIN commodity_product m2 ON m1.id = m2.commodity_id LEFT JOIN product m3 ON m2.product_id = m3.id WHERE m2.product_id = %s)", product_id)
 
 	rows, err := utils.DbQueryRows(db, "", subsql, &pagination, searchTerms, item)
 
@@ -238,26 +268,42 @@ func (b repositoryName) GetRows_ByProduct(
 
 func (b repositoryName) Assemble(db *sql.DB, commodity_id int, product_id int, userId int) error {
 
-	_, err := db.Exec("INSERT INTO commodity_product (commodity_id, product_id, isMeta) VALUES(?, ?, 0);", commodity_id, product_id)
+	result, err := db.Exec("INSERT INTO commodity_product (commodity_id, product_id, isMeta) VALUES(?, ?, 0);", commodity_id, product_id)
+	rowsUpdated, err := result.RowsAffected()
 
-	var item modelName
-	item.UpdateUser_id = nulls.NewInt(userId)
-	item.ID = nulls.NewInt(commodity_id)
-	_, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
-	item.ScanRow(row)
+	if rowsUpdated > 0 {
+		var item modelName
+		item.UpdateUser_id = nulls.NewInt(userId)
+		item.ID = nulls.NewInt(commodity_id)
+		_, row, errUpdate := utils.DbQueryUpdate(db, tableName, tableName, item)
+		item.ScanRow(row)
+		return errUpdate
+	}
 
 	return err
-
 }
 
 func (b repositoryName) Disassemble(db *sql.DB, commodity_id int, product_id int, userId int) error {
 
-	_, err := db.Exec("DELETE FROM commodity_product WHERE commodity_id = ? AND product_id=?;", commodity_id, product_id)
+	// 看有没有包含主产品。如果有的话删掉商品信息
+	_, err := db.Exec(`
+	DELETE a FROM commodity a JOIN commodity_product b
+	ON a.id = b.commodity_id	
+	WHERE b.commodity_id = ? AND b.product_id=? AND isMeta = 1;
+	`, commodity_id, product_id)
 
-	var item modelName
-	item.UpdateUser_id = nulls.NewInt(userId)
-	item.ID = nulls.NewInt(commodity_id)
-	_, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
-	item.ScanRow(row)
+	// 删掉关联
+	result, err := db.Exec("DELETE FROM commodity_product WHERE commodity_id = ? AND product_id=?;", commodity_id, product_id)
+	rowsUpdated, err := result.RowsAffected()
+
+	if rowsUpdated > 0 {
+		var item modelName
+		item.UpdateUser_id = nulls.NewInt(userId)
+		item.ID = nulls.NewInt(commodity_id)
+		_, row, errUpdate := utils.DbQueryUpdate(db, tableName, tableName, item)
+		item.ScanRow(row)
+		return errUpdate
+	}
+
 	return err
 }

@@ -72,16 +72,20 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 	if err != nil {
 		utils.Log(err, "添加合同出错")
+
 		return item, err
 	}
-
-	defer b.DeleteRow(db, item.ID.Int, userId)
 
 	// =========================== 生成 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
 	voucherItem1, voucherItem2 := b.getVoucher(db, item)
 	_, err = financialVoucherRepo.AddRow(db, voucherItem1, userId)
 	_, err = financialVoucherRepo.AddRow(db, voucherItem2, userId)
+
+	if err != nil {
+		utils.Log(err, "添加凭证失败, 删除合同")
+		b.DeleteRow(db, item.ID.Int, userId)
+	}
 
 	return item, err
 }
@@ -106,6 +110,7 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	// =========================== 修改 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
 	debit, credit := b.getVoucher(db, item)
+	fmt.Println("更新合同后更新凭证", debit, credit)
 	_, err = financialVoucherRepo.UpdateVoucher(db, debit, credit, userId)
 
 	return rowsUpdated, err
@@ -139,6 +144,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	_, err = financialVoucherRepo.DeleteVoucher(db, voucherItem1.Resource_code.String, userId)
 	_, err = financialVoucherRepo.DeleteVoucher(db, voucherItem2.Resource_code.String, userId)
 
+	if err != nil {
+		utils.Log(err, "删除凭证失败")
+	}
 	return item, err
 }
 

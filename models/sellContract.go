@@ -60,10 +60,11 @@ type SellContract struct {
 	Region        Region  `ref:"region,region_id" json:"region_id.row" validate:"-"`
 
 	// collapse的对应合同列表
-	BuyContractList                  []BuyContract          `json:"buyContract_list"`
-	SellSubitem                      []SellSubitem          `json:"subitem_list"`
-	FinancialTransactionContractList []FinancialTransaction `json:"financialTransaction_contract_list"`
-	FinancialTransactionOtherList    []FinancialTransaction `json:"financialTransaction_other_list"`
+	BuyContractList          []BuyContract          `json:"buyContract_list"`
+	SellSubitem              []SellSubitem          `json:"subitem_list"`
+	FinancialTransactionList []FinancialTransaction `json:"financialTransaction_list"`
+
+	FinancialTransactionList_buyContract []FinancialTransaction `json:"financialTransaction_list_buyContract"`
 
 	// ModelContractList ModelContractList `json:"modelContract_list"`
 }

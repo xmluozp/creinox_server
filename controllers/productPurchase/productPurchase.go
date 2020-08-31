@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"net/http"
 	"reflect"
+	"strconv"
 
+	"github.com/gorilla/mux"
 	"github.com/xmluozp/creinox_server/auth"
 	"github.com/xmluozp/creinox_server/models"
 	repository "github.com/xmluozp/creinox_server/repository/productPurchase"
@@ -15,6 +17,42 @@ type Controller struct{}
 type modelName = models.ProductPurchase
 
 var authName = "product"
+
+// =============================================== HTTP REQUESTS
+func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_GetItems(w, r, db)
+	}
+}
+
+func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_GetItem(w, r, db)
+	}
+}
+func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_AddItem(w, r, db)
+	}
+}
+
+func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_UpdateItem(w, r, db)
+	}
+}
+
+func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_DeleteItem(w, r, db)
+	}
+}
+
+func (c Controller) Print(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_Print(w, r, db)
+	}
+}
 
 // =============================================== basic CRUD
 func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
@@ -111,42 +149,6 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 	}
 }
 
-// =============================================== HTTP REQUESTS
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems(w, r, db)
-	}
-}
-
-func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItem(w, r, db)
-	}
-}
-func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItem(w, r, db)
-	}
-}
-
-func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_UpdateItem(w, r, db)
-	}
-}
-
-func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_DeleteItem(w, r, db)
-	}
-}
-
-func (c Controller) Print(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_Print(w, r, db)
-	}
-}
-
 // =============================================== customized
 
 func (c Controller) GetItems_GroupByCompany(db *sql.DB) http.HandlerFunc {
@@ -189,10 +191,22 @@ func (c Controller) GetItem_ByProductId(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_FetchRowHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRow_ByProductId", repo, userId)
-		utils.SendJson(w, status, returnValue, err)
+		var returnValue models.JsonRowsReturn
+		params := mux.Vars(r)
+
+		product_id, _ := strconv.Atoi(params["id"])
+		company_id, _ := strconv.Atoi(params["company_id"])
+
+		returnItem, err := repo.GetRow_ByProductId(db, product_id, company_id, userId)
+
+		if err != nil {
+			returnValue.Row = nil
+		} else {
+			returnValue.Row = returnItem
+		}
+
+		utils.SendJson(w, http.StatusOK, returnValue, err)
 	}
 }

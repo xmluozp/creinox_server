@@ -300,7 +300,7 @@ func GetPagination(r *http.Request) models.Pagination {
 	// 防止无pagination导致数据全取
 	perPagestr := params.Get("perPage")
 	if perPagestr == "" {
-		perPagestr = "50"
+		perPagestr = "100"
 	}
 
 	pagination.Page = parseInt(params.Get("page"))

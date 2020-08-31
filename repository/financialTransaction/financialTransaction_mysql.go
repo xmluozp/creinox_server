@@ -207,11 +207,32 @@ func (b repositoryName) GetPrintSourceList(db *sql.DB, r *http.Request, userId i
 
 // ================= customized
 
+// 收付款以及子合同的收付款
+func (b repositoryName) GetRows_fromOrderForms(
+	db *sql.DB,
+	order_form_ids string,
+	userId int) ([]modelName, models.Pagination, error) {
+
+	// 先取出所有对应合同，逗号隔开
+
+	var pagination models.Pagination
+	searchTerms := make(map[string]string)
+
+	// 不分页
+	pagination.PerPage = -1
+	order_form_id_str := order_form_ids
+	searchTerms["order_form_id"] = order_form_id_str
+
+	fmt.Println("合同：", order_form_id_str)
+
+	// 这个应该是取出所有
+	return b.GetRows(db, pagination, searchTerms, userId)
+}
+
 // 根据合同号取出对应的item
-func (b repositoryName) GetRows_fromSellContract(
+func (b repositoryName) GetRows_fromOrderForm(
 	db *sql.DB,
 	order_form_id int,
-	IsContractPayment bool,
 	userId int) ([]modelName, models.Pagination, error) {
 
 	var pagination models.Pagination
@@ -222,13 +243,6 @@ func (b repositoryName) GetRows_fromSellContract(
 
 	order_form_id_str := strconv.Itoa(order_form_id)
 	searchTerms["order_form_id"] = order_form_id_str
-
-	// 看是否是收付合同款项
-	if IsContractPayment {
-		searchTerms["isContractPayment"] = "1"
-	} else {
-		searchTerms["isContractPayment"] = "0"
-	}
 
 	// 这个应该是取出所有
 	return b.GetRows(db, pagination, searchTerms, userId)

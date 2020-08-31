@@ -231,11 +231,19 @@ func (b repositoryName) GetRows_History(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow_ByProductId(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow_ByProductId(db *sql.DB, product_id int, company_id int, userId int) (modelName, error) {
 
 	var item modelName
 
-	row := db.QueryRow("SELECT a.* FROM "+tableName+" a WHERE a.product_id = ? ORDER BY a.activeAt DESC LIMIT 1", id)
+	var row *sql.Row
+
+	if company_id > 0 {
+		row = db.QueryRow("SELECT a.* FROM "+tableName+" a WHERE a.product_id = ? AND company_id = ? ORDER BY a.activeAt DESC LIMIT 1",
+			product_id, company_id)
+	} else {
+		row = db.QueryRow("SELECT a.* FROM "+tableName+" a WHERE a.product_id = ?  ORDER BY a.activeAt DESC LIMIT 1",
+			product_id)
+	}
 
 	err := row.Scan(item.Receivers()...)
 

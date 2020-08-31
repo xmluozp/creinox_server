@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	"github.com/gorilla/mux"
+	applicationController "github.com/xmluozp/creinox_server/controllers/application"
 	bankaccountController "github.com/xmluozp/creinox_server/controllers/bankAccount"
 	categoryController "github.com/xmluozp/creinox_server/controllers/category"
 	commodityController "github.com/xmluozp/creinox_server/controllers/commodity"
@@ -46,6 +47,14 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/test/{v}", testController.Test(db)).Methods("GET")                      // 加个api避免混淆
 	router.HandleFunc("/api/testApp/{v}", testController.TestApp(db)).Methods("POST")               // 加个api避免混淆
 	router.HandleFunc("/api/testAppReceive/{v}", testController.TestAppReceive(db)).Methods("POST") // 加个api避免混淆
+
+	// ------------ application 申请
+	applicationController := applicationController.Controller{}
+	router.HandleFunc("/api/application", applicationController.GetItems(db)).Methods("GET") // 加个api避免混淆
+	router.HandleFunc("/api/application/{id}", applicationController.GetItem(db)).Methods("GET")
+	router.HandleFunc("/api/application", applicationController.AddItem(db)).Methods("POST")
+	router.HandleFunc("/api/application", applicationController.UpdateItem(db)).Methods("PUT")
+	router.HandleFunc("/api/application/{id}", applicationController.DeleteItem(db)).Methods("DELETE")
 
 	// ------------ role
 	roleController := roleController.Controller{}
@@ -235,7 +244,7 @@ func Routing(router *mux.Router, db *sql.DB) {
 
 	router.HandleFunc("/api/productPurchase_companySearch", productPurchaseController.GetItems_GroupByCompany(db)).Methods("GET")
 	router.HandleFunc("/api/productPurchase_historySearch", productPurchaseController.GetItems_History(db)).Methods("GET")
-	router.HandleFunc("/api/productPurchase_byProductId/{id}", productPurchaseController.GetItem_ByProductId(db)).Methods("GET")
+	router.HandleFunc("/api/productPurchase_byProductId/{id}/{company_id}", productPurchaseController.GetItem_ByProductId(db)).Methods("GET")
 
 	// ------------ commodity
 	commodityController := commodityController.Controller{}

@@ -18,6 +18,20 @@ type modelName = models.Folder
 
 var authName = ""
 
+// =============================================== HTTP REQUESTS
+
+func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_AddItem(w, r, db)
+	}
+}
+
+func (c Controller) Print(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_Print(w, r, db)
+	}
+}
+
 // =============================================== basic CRUD
 func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
@@ -56,20 +70,6 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 	if err != nil {
 		w.Write([]byte("error on printing," + err.Error()))
 		return
-	}
-}
-
-// =============================================== HTTP REQUESTS
-
-func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItem(w, r, db)
-	}
-}
-
-func (c Controller) Print(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_Print(w, r, db)
 	}
 }
 

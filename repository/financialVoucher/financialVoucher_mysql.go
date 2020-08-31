@@ -2,6 +2,7 @@ package financialVoucherRepository
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -68,12 +69,11 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 	id, errId := result.LastInsertId()
 	item.ID = nulls.NewInt(int(id))
+
 	if errId != nil {
+		utils.Log(errId)
 		return item, errId
 	}
-
-	defer b.DeleteRow(db, item.ID.Int, userId)
-	defer utils.Log(nil, "回滚：删除添加了的凭证")
 
 	return item, errId
 }
@@ -197,11 +197,13 @@ func (b repositoryName) GetPrintSourceList(db *sql.DB, r *http.Request, userId i
 func (b repositoryName) UpdateVoucher(db *sql.DB, debit modelName, credit modelName, userId int) (rowsUpdated int64, err error) {
 
 	// 根据code取出id。 会有两个，一借一贷。根据金额判断
-	sqlstr := "SELECT id FROM " + tableName + " WHERE debit > 0 AND resource_code = '" + debit.Resource_code.String + "' LIMIT 1"
-	rowDebit := utils.DbQueryRow(db, sqlstr, tableName, 0, debit)
+	sqlstr := `SELECT id FROM %s WHERE financialLedger_id = %d AND resource_code = '%s' LIMIT 1`
 
-	sqlstr = "SELECT id FROM " + tableName + " WHERE credit > 0 AND resource_code = '" + credit.Resource_code.String + "' LIMIT 1"
-	rowCredit := utils.DbQueryRow(db, sqlstr, tableName, 0, credit)
+	sqlCredit := fmt.Sprintf(sqlstr, tableName, credit.FinancialLedger_id.Int, credit.Resource_code.String)
+	sqlDebit := fmt.Sprintf(sqlstr, tableName, debit.FinancialLedger_id.Int, debit.Resource_code.String)
+
+	rowDebit := utils.DbQueryRow(db, sqlCredit, tableName, 0, debit)
+	rowCredit := utils.DbQueryRow(db, sqlDebit, tableName, 0, credit)
 
 	var idDebit int
 	var idCredit int
@@ -213,6 +215,8 @@ func (b repositoryName) UpdateVoucher(db *sql.DB, debit modelName, credit modelN
 		// 如果没有对应的voucher，就忽略
 		return 0, nil
 	}
+
+	fmt.Println("更新凭证", debit, credit)
 
 	// 修改传进来的item的id （原本是空的）
 	debit.ID = nulls.NewInt(idDebit)

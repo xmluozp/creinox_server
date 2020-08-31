@@ -7,16 +7,18 @@ import (
 )
 
 type Commodity struct {
-	ID            nulls.Int    `col:"" json:"id"`
-	Code          nulls.String `col:"" json:"code"`
-	Name          nulls.String `col:"" json:"name" validate:"required" errm:"必填"`
-	EName         nulls.String `col:"" json:"ename" validate:"required" errm:"必填"`
-	UpdateAt      nulls.Time   `col:"newtime" json:"updateAt"`
-	CreateAt      nulls.Time   `col:"default" json:"createAt"`
-	Memo          nulls.String `col:"" json:"memo"`
-	IsDelete      nulls.Bool   `col:"default" json:"isDelete"`
-	Category_id   nulls.Int    `col:"fk" json:"category_id"`
-	UpdateUser_id nulls.Int    `col:"fk" json:"updateUser_id"`
+	ID            nulls.Int     `col:"" json:"id"`
+	Code          nulls.String  `col:"" json:"code"`
+	Name          nulls.String  `col:"" json:"name" validate:"required" errm:"必填"`
+	EName         nulls.String  `col:"" json:"ename" validate:"required" errm:"必填"`
+	Price         nulls.Float32 `col:"" json:"price"`
+	UpdateAt      nulls.Time    `col:"newtime" json:"updateAt"`
+	CreateAt      nulls.Time    `col:"default" json:"createAt"`
+	Memo          nulls.String  `col:"" json:"memo"`
+	IsDelete      nulls.Bool    `col:"default" json:"isDelete"`
+	Category_id   nulls.Int     `col:"fk" json:"category_id"`
+	Currency_id   nulls.Int     `col:"fk" json:"currency_id"`
+	UpdateUser_id nulls.Int     `col:"fk" json:"updateUser_id"`
 
 	Product_id nulls.Int `json:"product_id"`
 	// ProductList   ProductList  `col:"" json:"product.rows"`
@@ -25,8 +27,7 @@ type Commodity struct {
 
 	// commoditySell表
 	// SellPrice   nulls.Float32 ` json:"sellPrice"`
-	// Currency_id nulls.Int     `col:"fk" json:"currency_id"`
-
+	CurrencyItem CommonItem `ref:"common_item,currency_id" json:"currency_id.row" validate:"-"`
 	// commodity list的搜索用。searchTerms only, 不是数据库字段。
 	CompanyDomesticCustomer_id nulls.Int `json:"companyDomesticCustomer.id"`
 	CompanyOverseasCustomer_id nulls.Int `json:"companyOverseasCustomer.id"`
@@ -49,11 +50,13 @@ func (item *Commodity) Receivers() (itemPtrs []interface{}) {
 		&item.Code,
 		&item.Name,
 		&item.EName,
+		&item.Price,
 		&item.UpdateAt,
 		&item.CreateAt,
 		&item.Memo,
 		&item.IsDelete,
 		&item.Category_id,
+		&item.Currency_id,
 		&item.UpdateUser_id,
 		&item.Product_id,
 		&item.Image_id}
@@ -74,11 +77,13 @@ func (item *Commodity) ReceiversOriginal() (itemPtrs []interface{}) {
 		&item.Code,
 		&item.Name,
 		&item.EName,
+		&item.Price,
 		&item.UpdateAt,
 		&item.CreateAt,
 		&item.Memo,
 		&item.IsDelete,
 		&item.Category_id,
+		&item.Currency_id,
 		&item.UpdateUser_id}
 
 	valuePtrs := make([]interface{}, len(values))
@@ -94,11 +99,14 @@ func (item *Commodity) ScanRow(r *sql.Row) error {
 	var columns []interface{}
 
 	fkImageItem := Image{}
+	fkCurrency := CommonItem{}
 
 	columns = append(item.Receivers(), fkImageItem.Receivers()...)
+	columns = append(columns, fkCurrency.Receivers()...)
 
 	err := r.Scan(columns...)
 
+	item.CurrencyItem = fkCurrency
 	item.ImageItem = fkImageItem.Getter()
 
 	return err
@@ -108,11 +116,14 @@ func (item *Commodity) ScanRows(r *sql.Rows) error {
 	var columns []interface{}
 
 	fkImageItem := Image{}
+	fkCurrency := CommonItem{}
 
 	columns = append(item.Receivers(), fkImageItem.Receivers()...)
+	columns = append(columns, fkCurrency.Receivers()...)
 
 	err := r.Scan(columns...)
 
+	item.CurrencyItem = fkCurrency
 	item.ImageItem = fkImageItem.Getter()
 
 	return err

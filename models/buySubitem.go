@@ -8,7 +8,7 @@ import (
 
 type BuySubitem struct {
 	ID         nulls.Int    `col:"" json:"id"`
-	SellerCode nulls.String `col:"" json:"sellerCode" validate:"required" errm:"必填"`
+	SellerCode nulls.String `col:"" json:"sellerCode"`
 
 	IsReceipt  nulls.Bool    `col:"" json:"isReceipt"`
 	Amount     nulls.Int     `col:"" json:"amount"`
@@ -33,7 +33,7 @@ type BuySubitem struct {
 
 	Product_id      nulls.Int `col:"fk" json:"product_id" validate:"required" errm:"必填"`
 	Sell_subitem_id nulls.Int `col:"fk" json:"sell_subitem_id"`
-	Buy_contract_id nulls.Int `col:"fk" json:"buy_contract_id" validate:"required" errm:"必填"`
+	Buy_contract_id nulls.Int `col:"fk" json:"buy_contract_id"`
 	UnitType_id     nulls.Int `col:"fk" json:"unitType_id"`
 	Currency_id     nulls.Int `col:"fk" json:"currency_id" validate:"required" errm:"必填"`
 	Polishing_id    nulls.Int `col:"fk" json:"polishing_id"`

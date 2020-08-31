@@ -8,7 +8,7 @@ import (
 
 type SellSubitem struct {
 	ID         nulls.Int     `col:"" json:"id"`
-	BuyerCode  nulls.String  `col:"" json:"buyerCode" validate:"required" errm:"必填"`
+	BuyerCode  nulls.String  `col:"" json:"buyerCode" validate:"required" errm:"必填"` // 随后删掉
 	BarCode    nulls.String  `col:"" json:"barCode"`
 	Amount     nulls.Int     `col:"" json:"amount"`
 	PackAmount nulls.Int     `col:"" json:"packAmount"`
@@ -30,10 +30,10 @@ type SellSubitem struct {
 	Fcl20 nulls.Float32 `col:"" json:"fcl20"`
 	Fcl40 nulls.Float32 `col:"" json:"fcl40"`
 
-	Commodity_id     nulls.Int `col:"fk" json:"commodity_id" validate:"required" errm:"必填"`
+	Commodity_id     nulls.Int `col:"fk" json:"commodity_id"`
 	Sell_contract_id nulls.Int `col:"fk" json:"sell_contract_id" validate:"required" errm:"必填"`
 	UnitType_id      nulls.Int `col:"fk" json:"unitType_id"`
-	Currency_id      nulls.Int `col:"fk" json:"currency_id" validate:"required" errm:"必填"`
+	Currency_id      nulls.Int `col:"fk" json:"currency_id"`
 	Polishing_id     nulls.Int `col:"fk" json:"polishing_id"`
 	Texture_id       nulls.Int `col:"fk" json:"texture_id"`
 	Pack_id          nulls.Int `col:"fk" json:"pack_id"`

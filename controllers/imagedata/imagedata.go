@@ -29,6 +29,49 @@ type modelName = models.Image
 
 var authName = ""
 
+// =============================================== HTTP REQUESTS
+func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_GetItems(w, r, db)
+	}
+}
+
+func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_GetItem(w, r, db)
+	}
+}
+func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_AddItem(w, r, db)
+	}
+}
+
+func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_UpdateItem(w, r, db)
+	}
+}
+
+// 这里是前端的文件夹管理用，特殊处理：手动读取和删除
+func (c Controller) DeleteItems(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_DeleteItems(w, r, db)
+	}
+}
+
+// 批量上传
+func (c Controller) AddItems(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_AddItems(w, r, db)
+	}
+}
+func (c Controller) Show(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_Show(w, r, db)
+	}
+}
+
 // =============================================== basic CRUD
 func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
@@ -174,49 +217,6 @@ func (c Controller) C_Show(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	buff, _ := ioutil.ReadAll(file)
 	// errorHandle(err, w);
 	w.Write(buff)
-}
-
-// =============================================== HTTP REQUESTS
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems(w, r, db)
-	}
-}
-
-func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItem(w, r, db)
-	}
-}
-func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItem(w, r, db)
-	}
-}
-
-func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_UpdateItem(w, r, db)
-	}
-}
-
-// 这里是前端的文件夹管理用，特殊处理：手动读取和删除
-func (c Controller) DeleteItems(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_DeleteItems(w, r, db)
-	}
-}
-
-// 批量上传
-func (c Controller) AddItems(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItems(w, r, db)
-	}
-}
-func (c Controller) Show(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_Show(w, r, db)
-	}
 }
 
 // 通用图片管理功能用。否则只有批量删除

@@ -3,6 +3,7 @@ package testController
 import (
 	"bytes"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -76,19 +77,25 @@ func (c Controller) Test(db *sql.DB) http.HandlerFunc {
 func (c Controller) TestApp(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		fmt.Println("==================第一层")
+		// ====================================================== 申请
+		fmt.Println("==================第一层: 接到了原始的request")
 		fmt.Println(r.URL.String())
 		fmt.Println(r.Body)
 		fmt.Println(r.Header)
 
-		// ========== body转json和还原
-		// var content interface{}
-		// body到json
+		// ========== 把Application提取出来
 		bodyBytes, err := ioutil.ReadAll(r.Body)
 
-		// bodyJson, err := json.Marshal(bodyBytes)
+		// 整个表单存到数据库里
+		content := hex.EncodeToString(bodyBytes)
 
-		req, err := http.NewRequest(http.MethodPost, "http://192.168.0.10:8000/api/testAppReceive/asdf123", bytes.NewBuffer(bodyBytes))
+		fmt.Println(content)
+
+		// ====================================================== 审批
+		newBodyBytes, _ := hex.DecodeString("7b0d0a226e616d65223a2022e5bca0e4b889222c0d0a226d6f6e6579223a203130300d0a7d0d0a")
+
+		// 完整链接在前端生成. 存到 attemptUrl
+		req, err := http.NewRequest(http.MethodPost, "http://192.168.0.10:8000/api/testAppReceive/asdf123", bytes.NewBuffer(newBodyBytes))
 
 		// req.Header.Set("Content-type", "application/json")
 
@@ -102,7 +109,8 @@ func (c Controller) TestApp(db *sql.DB) http.HandlerFunc {
 		// 加权限
 		// TODO: 取出审批人的token，作为权限加进去
 		//  req.Header.Set("Authorization", grant)
-		req.Header.Set("test", "test")
+		// req.Header.Set("test", "test")
+		req.Header.Set("Authorization", "okok")
 
 		// if err != nil {
 		// 	fmt.Println("err", err)

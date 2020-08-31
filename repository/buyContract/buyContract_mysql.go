@@ -10,7 +10,9 @@ import (
 	"github.com/xmluozp/creinox_server/enums"
 	"github.com/xmluozp/creinox_server/models"
 	buySubitemRepository "github.com/xmluozp/creinox_server/repository/buySubitem"
+	financialTransactionRepository "github.com/xmluozp/creinox_server/repository/financialTransaction"
 	orderFormRepo "github.com/xmluozp/creinox_server/repository/orderForm"
+
 	"github.com/xmluozp/creinox_server/utils"
 )
 
@@ -41,9 +43,15 @@ func (b repositoryName) GetRows(
 
 	defer rows.Close() // 以下代码执行完了，关闭连接
 
+	financialTransactionRepository := financialTransactionRepository.Repository{}
+
 	for rows.Next() {
 
 		item.ScanRowsView(rows)
+
+		trans1_list, _, _ := financialTransactionRepository.GetRows_fromOrderForm(db, item.Order_form_id.Int, userId)
+		item.FinancialTransactionList = trans1_list
+
 		items = append(items, item)
 	}
 
@@ -90,9 +98,6 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 		return item, errInsert
 	}
 
-	defer orderFormRepo.DeleteRow(db, orderItem.ID.Int, userId)
-	defer utils.Log(nil, "回滚：删除合同")
-
 	item.Order_form_id = orderItem.ID
 
 	// -------------------
@@ -100,6 +105,8 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	result, errInsert := utils.DbQueryInsert(db, tableName, item)
 
 	if errInsert != nil {
+		orderFormRepo.DeleteRow(db, orderItem.ID.Int, userId)
+		utils.Log(nil, "添加合同详情失败，删除合同")
 		return item, errInsert
 	}
 

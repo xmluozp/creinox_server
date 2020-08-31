@@ -16,6 +16,36 @@ type modelName = models.TextTemplate
 
 var authName = ""
 
+// =============================================== HTTP REQUESTS
+func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_GetItems(w, r, db)
+	}
+}
+
+func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_GetItem(w, r, db)
+	}
+}
+func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_AddItem(w, r, db)
+	}
+}
+
+func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_UpdateItem(w, r, db)
+	}
+}
+
+func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_DeleteItem(w, r, db)
+	}
+}
+
 // =============================================== basic CRUD
 func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
@@ -82,36 +112,6 @@ func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql
 
 	status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
-}
-
-// =============================================== HTTP REQUESTS
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems(w, r, db)
-	}
-}
-
-func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItem(w, r, db)
-	}
-}
-func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItem(w, r, db)
-	}
-}
-
-func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_UpdateItem(w, r, db)
-	}
-}
-
-func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_DeleteItem(w, r, db)
-	}
 }
 
 // =============================================== customized

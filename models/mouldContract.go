@@ -69,6 +69,7 @@ type MouldContract struct {
 
 	// collapse之后要进出款项用
 	// BuyContractList []BuyContract `json:"buyContract_list"`
+	FinancialTransactionList []FinancialTransaction `json:"financialTransaction_list"`
 }
 
 type MouldContracList struct {

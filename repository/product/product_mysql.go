@@ -7,6 +7,8 @@ import (
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
 	"github.com/xmluozp/creinox_server/utils"
+
+	commodityRepo "github.com/xmluozp/creinox_server/repository/commodity"
 )
 
 type Repository struct{}
@@ -114,6 +116,10 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	var item modelName
 
+	// 在删除前取出meta商品id备用 (因为删除后的cascade会导致关联信息消失)
+	commodityRepo := commodityRepo.Repository{}
+	commodityItem, err := commodityRepo.GetRow_ByProduct(db, id, userId)
+
 	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
 
 	if err != nil {
@@ -131,6 +137,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	if err != nil || rowsDeleted == 0 {
 		return nil, err
 	}
+
+	// 如果删除产品成功，也删除对应的元商品
+	commodityRepo.DeleteRow(db, commodityItem.ID.Int, userId)
 
 	return item, err
 }
@@ -291,10 +300,10 @@ func (b repositoryName) GetRows_Component(
 
 	// 拦截 search.
 	parent_id := searchTerms["parent_id"]
-	delete(searchTerms, "parent_id")
+	// delete(searchTerms, "parent_id")
 
 	child_id := searchTerms["child_id"]
-	delete(searchTerms, "child_id")
+	// delete(searchTerms, "child_id")
 
 	subsql := "(SELECT * FROM " + tableName + ")"
 	if parent_id != "" {
@@ -334,8 +343,8 @@ func (b repositoryName) GetRows_ByCommodity(
 	commodity_id := searchTerms["commodity_id"]
 	delete(searchTerms, "commodity_id")
 
-	// 不包括商品的元产品
-	subsql := fmt.Sprintf("(SELECT m1.* FROM "+tableName+" m1 LEFT JOIN commodity_product m2 ON m1.id = m2.product_id WHERE m2.commodity_id = %s AND m2.isMeta = 0)", commodity_id)
+	// 包括商品的元产品（避免用户迷惑，但还是需要标注出来）
+	subsql := fmt.Sprintf("(SELECT m1.* FROM "+tableName+" m1 LEFT JOIN commodity_product m2 ON m1.id = m2.product_id WHERE m2.commodity_id = %s)", commodity_id)
 
 	rows, err := utils.DbQueryRows(db, "", subsql, &pagination, searchTerms, item)
 

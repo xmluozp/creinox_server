@@ -3,6 +3,7 @@ package sellContractRepository
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 
 	"github.com/gobuffalo/nulls"
 	"github.com/xmluozp/creinox_server/models"
@@ -61,11 +62,16 @@ func (b repositoryName) GetRows(
 		item.SellSubitem = subitem_list
 
 		// 根据合同的ID 搜索转账记录
-		trans1_list, _, _ := financialTransactionRepository.GetRows_fromSellContract(db, item.Order_form_id.Int, true, userId)
-		item.FinancialTransactionContractList = trans1_list
+		trans_list, _, _ := financialTransactionRepository.GetRows_fromOrderForm(db, item.Order_form_id.Int, userId)
+		item.FinancialTransactionList = trans_list
 
-		trans2_list, _, _ := financialTransactionRepository.GetRows_fromSellContract(db, item.Order_form_id.Int, false, userId)
-		item.FinancialTransactionOtherList = trans2_list
+		// 根据合同的ID 搜索对应采购合同的还账记录
+		order_form_ids := "0"
+		for i := 0; i < len(buyContract_list); i++ {
+			order_form_ids += "," + strconv.Itoa(buyContract_list[i].Order_form_id.Int)
+		}
+		trans_list_buyContract, _, _ := financialTransactionRepository.GetRows_fromOrderForms(db, order_form_ids, userId)
+		item.FinancialTransactionList_buyContract = trans_list_buyContract
 
 		items = append(items, item)
 	}
@@ -115,21 +121,23 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 		return item, errInsert
 	}
 
-	defer orderFormRepo.DeleteRow(db, orderItem.ID.Int, userId)
-	defer utils.Log(nil, "回滚：删除合同")
-
 	item.Order_form_id = orderItem.ID
 	// -------------------
 
 	result, errInsert := utils.DbQueryInsert(db, tableName, item)
 
 	if errInsert != nil {
+		orderFormRepo.DeleteRow(db, orderItem.ID.Int, userId)
+		utils.Log(nil, "添加合同详情失败，删除合同")
+		utils.Log(errInsert)
 		return item, errInsert
 	}
 
 	id, errId := result.LastInsertId()
 	item.ID = nulls.NewInt(int(id))
+
 	if errId != nil {
+		utils.Log(errId)
 		return item, errId
 	}
 

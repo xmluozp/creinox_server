@@ -54,7 +54,8 @@ type BuyContract struct {
 	Region        Region       `ref:"region,region_id" json:"region_id.row" validate:"-"`
 
 	// collapse的对应子合同列表（放的是产品）
-	BuySubitem []BuySubitem `json:"buy_subitem_list"`
+	BuySubitem               []BuySubitem           `json:"buy_subitem_list"`
+	FinancialTransactionList []FinancialTransaction `json:"financialTransaction_list"`
 }
 
 type BuyContractList struct {

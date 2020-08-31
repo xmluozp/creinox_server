@@ -19,6 +19,13 @@ type Controller struct{}
 
 var authName = ""
 
+// =============================================== HTTP REQUESTS
+func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_GetItems(w, r, db)
+	}
+}
+
 // =============================================== basic CRUD
 func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
@@ -60,11 +67,4 @@ func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.D
 	returnValue.Rows = returnRows
 
 	utils.SendJson(w, http.StatusAccepted, returnValue, err)
-}
-
-// =============================================== HTTP REQUESTS
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems(w, r, db)
-	}
 }
