@@ -19,8 +19,9 @@ type PaymentRequest struct {
 	Location        nulls.String `col:"" json:"location"`
 	CreateAt        nulls.Time   `col:"" json:"createAt"`
 	ExpressAt       nulls.Time   `col:"" json:"expressAt"`
-	ExpiryAt        nulls.Time   `col:"" json:"expiryAt"` // 付款到期日
-	Status          nulls.Int    `col:"" json:"status"`   // 0, 申请， 1，通过， 2，拒绝
+	ExpiryAt        nulls.Time   `col:"" json:"expiryAt"`  // 付款到期日
+	ApproveAt       nulls.Time   `col:"" json:"approveAt"` // 审批时间
+	Status          nulls.Int    `col:"" json:"status"`    // 0, 申请， 1，通过， 2，拒绝
 	Memo            nulls.String `col:"" json:"memo"`
 
 	//========fk
@@ -57,6 +58,7 @@ func (item *PaymentRequest) Receivers() (itemPtrs []interface{}) {
 		&item.CreateAt,
 		&item.ExpressAt,
 		&item.ExpiryAt,
+		&item.ApproveAt,
 		&item.Status,
 		&item.Memo,
 		&item.Order_form_id,

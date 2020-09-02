@@ -137,10 +137,12 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
 
-	// 判断用户名是否唯一
-
+	// 判断用户名是否唯一（假如要改名的话。目前暂时没这个需求）
 	count := 0
-	scanErr := db.QueryRow("SELECT COUNT(*) FROM " + tableName + " WHERE userName = '" + item.UserName.String + "'").Scan(&count)
+	scanErr := db.QueryRow(fmt.Sprintf(`
+	SELECT COUNT(*) FROM `+tableName+` WHERE userName = '`+item.UserName.String+`'
+	AND id <> %d
+	`, item.ID.Int)).Scan(&count)
 
 	if scanErr != nil {
 		return 0, scanErr
