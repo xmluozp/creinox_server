@@ -15,6 +15,7 @@ type Controller struct{}
 type modelName = models.PaymentRequest
 
 var authName = "paymentRequest"
+var authNameConfirm = "confirm-payment"
 
 // =============================================== HTTP REQUESTS
 func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
@@ -49,6 +50,18 @@ func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 func (c Controller) Print(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c.C_Print(w, r, db)
+	}
+}
+
+func (c Controller) UpdateItem_approve(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_UpdateItem_approve(w, r, db)
+	}
+}
+
+func (c Controller) UpdateItem_reject(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_UpdateItem_reject(w, r, db)
 	}
 }
 
@@ -145,4 +158,32 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 		w.Write([]byte("error on printing," + err.Error()))
 		return
 	}
+}
+
+// =============================== customized
+
+func (c Controller) C_UpdateItem_approve(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, authNameConfirm)
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn_MethodName(db, w, r, reflect.TypeOf(item), "UpdateRow_approve", repo, userId)
+	utils.SendJson(w, status, returnValue, err)
+}
+
+func (c Controller) C_UpdateItem_reject(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, authNameConfirm)
+	if !pass {
+		return
+	}
+
+	var item modelName
+	repo := repository.Repository{}
+	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn_MethodName(db, w, r, reflect.TypeOf(item), "UpdateRow_reject", repo, userId)
+	utils.SendJson(w, status, returnValue, err)
 }

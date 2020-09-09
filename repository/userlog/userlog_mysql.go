@@ -12,7 +12,7 @@ type Repository struct{}
 type modelName = models.UserLog
 type repositoryName = Repository
 
-var tableName = "log"
+var tableName = "userog"
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(

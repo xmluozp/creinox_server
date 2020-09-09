@@ -177,7 +177,7 @@ func (c Controller) GetLast(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_FetchRowHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRow_GetLast", repo, userId)
+		status, returnValue, err := utils.GetFunc_RowWithHTTPReturn_MethodName(db, w, r, reflect.TypeOf(item), "GetRow_GetLast", repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }

@@ -357,7 +357,8 @@ func (b repositoryName) sideEffectsReverse(db *sql.DB, item modelName, userId in
 	return err
 }
 
-// 增加transaction之后触发的其他改动： 记录本身，3个balance：合同收付款，账户balance，transaction的balance
+// 增加transaction之后触发的其他改动： 记录本身，3个balance：合同收付款，账户balance，transaction的balance.
+// 如果是合同付款，强行指定目标公司。前台也不让修改
 func (b repositoryName) sideEffects(db *sql.DB, item modelName, userId int) error {
 
 	// ===================== 如果是针对合同付款的交易，更新合同本身以及生成对应的明细

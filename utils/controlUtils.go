@@ -91,10 +91,10 @@ func GetFunc_RowWithHTTPReturn(
 	repo interface{},
 	userId int) (status int, returnValue models.JsonRowsReturn, err error) {
 
-	return GetFunc_FetchRowHTTPReturn(db, w, r, modelType, "GetRow", repo, userId)
+	return GetFunc_RowWithHTTPReturn_MethodName(db, w, r, modelType, "GetRow", repo, userId)
 }
 
-func GetFunc_FetchRowHTTPReturn(
+func GetFunc_RowWithHTTPReturn_MethodName(
 	db *sql.DB,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -172,6 +172,18 @@ func GetFunc_UpdateWithHTTPReturn(
 	repo interface{},
 	userId int) (status int, returnValue models.JsonRowsReturn, returnItem interface{}, err error) {
 
+	return GetFunc_UpdateWithHTTPReturn_MethodName(db, w, r, modelType, "UpdateRow", repo, userId)
+}
+
+func GetFunc_UpdateWithHTTPReturn_MethodName(
+	db *sql.DB,
+	w http.ResponseWriter,
+	r *http.Request,
+	modelType reflect.Type, // 数据模型
+	methodName string,
+	repo interface{},
+	userId int) (status int, returnValue models.JsonRowsReturn, returnItem interface{}, err error) {
+
 	itemPtr := reflect.New(modelType).Interface()
 
 	// 不用指针取了再转的话，item会被强行变成map类型
@@ -185,7 +197,7 @@ func GetFunc_UpdateWithHTTPReturn(
 	}
 
 	//  ---------------------------------------  保存数据库
-	status, returnValue, err = updateDateBase(db, item, repo, userId)
+	status, returnValue, err = updateDateBase(db, item, repo, methodName, userId)
 	//  ---------------------------------------
 	return status, returnValue, item, err
 }
@@ -317,7 +329,7 @@ func GetFunc_UpdateWithHTTPReturn_FormData(
 	}
 
 	// --------------------------------------- 保存数据库
-	status, returnValue, err = updateDateBase(db, item, repo, userId)
+	status, returnValue, err = updateDateBase(db, item, repo, "UpdateRow", userId)
 
 	if err != nil {
 		fmt.Println("update err:", err)
@@ -334,6 +346,7 @@ func updateDateBase(
 	db *sql.DB,
 	item interface{}, // 数据模型
 	repo interface{},
+	methodName string,
 	userId int) (int, models.JsonRowsReturn, error) {
 
 	isPassedValidation, returnValue := ValidateInputs(item)
@@ -343,7 +356,7 @@ func updateDateBase(
 		return http.StatusBadRequest, returnValue, err // 400
 	}
 
-	addRow := reflect.ValueOf(repo).MethodByName("UpdateRow")
+	addRow := reflect.ValueOf(repo).MethodByName(methodName)
 	args := []reflect.Value{
 		reflect.ValueOf(db),
 		reflect.ValueOf(item),

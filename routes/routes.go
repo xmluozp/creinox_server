@@ -290,6 +290,9 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/paymentRequest", paymentRequestController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/paymentRequest/{id}", paymentRequestController.DeleteItem(db)).Methods("DELETE")
 
+	router.HandleFunc("/api/paymentRequest_approve", paymentRequestController.UpdateItem_approve(db)).Methods("PUT")
+	router.HandleFunc("/api/paymentRequest_reject", paymentRequestController.UpdateItem_reject(db)).Methods("PUT")
+
 	// ------------ financialAccount 内部财务用的账户
 	financialaccountController := financialaccountController.Controller{}
 	router.HandleFunc("/api/financialAccount", financialaccountController.GetItems(db)).Methods("GET")
