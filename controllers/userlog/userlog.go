@@ -2,6 +2,8 @@ package userLogController
 
 import (
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
 
@@ -43,6 +45,12 @@ func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
 func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		c.C_DeleteItem(w, r, db)
+	}
+}
+
+func (c Controller) DeleteItems(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_DeleteItems(w, r, db)
 	}
 }
 
@@ -145,4 +153,33 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 		w.Write([]byte("error on printing," + err.Error()))
 		return
 	}
+}
+
+func (c Controller) C_DeleteItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	pass, userId := auth.CheckAuth(db, w, r, authName)
+	if !pass {
+		return
+	}
+
+	var returnValue models.JsonRowsReturn
+	status := http.StatusOK
+	var idList []int
+	err := json.NewDecoder(r.Body).Decode(&idList)
+
+	for _, value := range idList {
+
+		_, err := repository.Repository{}.DeleteRow(db, value, userId)
+
+		if err != nil {
+			returnValue.Info += fmt.Sprintf("删除日志出错，ID：%d, %s", value, err.Error())
+			status = http.StatusBadRequest
+		}
+	}
+
+	if err == nil { // no err
+		returnValue.Info = fmt.Sprintf("删除%d个日志", len(idList))
+	}
+
+	utils.SendJson(w, status, returnValue, err)
 }

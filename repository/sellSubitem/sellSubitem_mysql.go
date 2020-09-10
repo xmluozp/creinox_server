@@ -2,11 +2,15 @@ package sellSubitemRepository
 
 import (
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/gobuffalo/nulls"
+	"github.com/xmluozp/creinox_server/enums"
 	"github.com/xmluozp/creinox_server/models"
 	orderFormRepo "github.com/xmluozp/creinox_server/repository/orderForm"
+	userLogRepository "github.com/xmluozp/creinox_server/repository/userLog"
 	"github.com/xmluozp/creinox_server/utils"
 )
 
@@ -83,10 +87,17 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 		return item, err
 	}
 
+	// 记录日志
+	var mapBefore map[string]interface{}
+	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
+	b.ToUserLog(db, enums.LogActions["c"], mapBefore, mapAfter, item, userId)
+
 	return item, errId
 }
 
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+
+	mapBefore, _ := b.GetPrintSource(db, item.ID.Int, userId)
 
 	// 更新相应订单的总金额. 取出order_form_id
 	order_form_id, err := b.getOrderFormId(db, item.ID.Int)
@@ -115,12 +126,17 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 		return 0, err
 	}
 
+	// 记录日志
+	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
+	b.ToUserLog(db, enums.LogActions["u"], mapBefore, mapAfter, item, userId)
+
 	return rowsUpdated, err
 }
 
 func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
 	var item modelName
+	mapBefore, _ := b.GetPrintSource(db, id, userId)
 
 	// 更新相应订单的总金额. 取出order_form_id
 	order_form_id, err := b.getOrderFormId(db, id)
@@ -151,6 +167,10 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	if err != nil {
 		return nil, err
 	}
+
+	// 记录日志
+	var mapAfter map[string]interface{}
+	b.ToUserLog(db, enums.LogActions["d"], mapBefore, mapAfter, item, userId)
 
 	return item, err
 }
@@ -234,4 +254,33 @@ func (b repositoryName) GetRows_fromSellContract(
 
 	// 这个应该是取出所有
 	return b.GetRows(db, pagination, searchTerms, userId)
+}
+
+func (b repositoryName) ToUserLog(db *sql.DB, action string, before map[string]interface{}, after map[string]interface{}, item modelName, userId int) {
+
+	newItem, _ := b.GetRow(db, item.ID.Int, userId)
+
+	memo := fmt.Sprintf(`
+		ID:			%d
+		产品:   	%s
+		单价:		%.2f
+		数量:		%d
+		小计：		%.2f`,
+		newItem.ID.Int,
+		fmt.Sprintf(`[%s] %s`, newItem.Commodity.Code.String, newItem.Commodity.EName.String),
+		newItem.UnitPrice.Float32,
+		newItem.Amount.Int,
+		newItem.UnitPrice.Float32*float32(newItem.Amount.Int))
+
+	logBefore, _ := json.Marshal(before)
+	logAfter, _ := json.Marshal(after)
+
+	var userLog models.UserLog
+	userLog.Type = nulls.NewString(tableName)
+	userLog.FunctionName = nulls.NewString(action)
+	userLog.Memo = nulls.NewString(memo)
+	userLog.SnapshotBefore = nulls.NewString(string(logBefore))
+	userLog.SnapshotAfter = nulls.NewString(string(logAfter))
+
+	userLogRepository.Repository{}.AddRow(db, userLog, userId)
 }

@@ -12,7 +12,7 @@ type Repository struct{}
 type modelName = models.UserLog
 type repositoryName = Repository
 
-var tableName = "userog"
+var tableName = "userLog"
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
@@ -55,6 +55,8 @@ func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error
 }
 
 func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+	
+	item.UpdateUser_id = nulls.NewInt(userId)
 
 	result, errInsert := utils.DbQueryInsert(db, tableName, item)
 

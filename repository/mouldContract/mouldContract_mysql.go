@@ -2,6 +2,8 @@ package mouldContractRepository
 
 import (
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/gobuffalo/nulls"
@@ -11,6 +13,8 @@ import (
 	financialTransactionRepository "github.com/xmluozp/creinox_server/repository/financialTransaction"
 	orderFormRepo "github.com/xmluozp/creinox_server/repository/orderForm"
 	productRepo "github.com/xmluozp/creinox_server/repository/product"
+	userLogRepository "github.com/xmluozp/creinox_server/repository/userLog"
+
 	"github.com/xmluozp/creinox_server/utils"
 )
 
@@ -119,10 +123,17 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 		return item, errId
 	}
 
+	// 记录日志
+	var mapBefore map[string]interface{}
+	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
+	b.ToUserLog(db, enums.LogActions["c"], mapBefore, mapAfter, item, userId)
+
 	return item, errId
 }
 
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+
+	mapBefore, _ := b.GetPrintSource(db, item.ID.Int, userId)
 
 	item.UpdateUser_id = nulls.NewInt(userId)
 
@@ -147,9 +158,9 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	orderitem.Code = item.Code
 	orderitem.InvoiceCode = item.InvoiceCode
 	orderitem.Payable = item.TotalPrice
-	orderitem.PayablePaid = item.PaidPrice
+	// orderitem.PayablePaid = item.PaidPrice
 	orderitem.Receivable = nulls.NewFloat32(0)
-	orderitem.ReceivablePaid = nulls.NewFloat32(0)
+	// orderitem.ReceivablePaid = nulls.NewFloat32(0)
 	orderitem.Seller_company_id = item.Seller_company_id
 	orderitem.Buyer_company_id = item.Buyer_company_id
 	orderitem.SellerAddress = item.SellerAddress
@@ -168,12 +179,17 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	}
 	// -------------------
 
+	// 记录日志
+	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
+	b.ToUserLog(db, enums.LogActions["u"], mapBefore, mapAfter, item, userId)
+
 	return rowsUpdated, err
 }
 
 func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
 	var item modelName
+	mapBefore, _ := b.GetPrintSource(db, id, userId)
 
 	result, row, err := utils.DbQueryDelete(db, tableName, combineName, id, item)
 
@@ -200,6 +216,10 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	// -------
 	orderFormRepo := orderFormRepo.Repository{}
 	_, err = orderFormRepo.DeleteRow(db, item.Order_form_id.Int, userId)
+
+	// 记录日志
+	var mapAfter map[string]interface{}
+	b.ToUserLog(db, enums.LogActions["d"], mapBefore, mapAfter, item, userId)
 
 	return item, err
 }
@@ -257,4 +277,37 @@ func (b repositoryName) GetRow_GetLast(db *sql.DB, id int, userId int) (modelNam
 	err := row.Scan(item.Receivers()...)
 
 	return item, err
+}
+
+func (b repositoryName) ToUserLog(db *sql.DB, action string, before map[string]interface{}, after map[string]interface{}, item modelName, userId int) {
+
+	newItem, _ := b.GetRow(db, item.ID.Int, userId)
+
+	memo := fmt.Sprintf(`
+		ID:			%d
+		合同号:		%s
+		总价:		%.2f
+		签约日期:	 %s
+		预付日期:	 %s
+		预定交付期:	 %s
+		实际交付期:	 %s`,
+		newItem.ID.Int,
+		newItem.Code.String,
+		newItem.TotalPrice.Float32,
+		utils.FormatDate(newItem.ActiveAt.Time),
+		utils.FormatDate(newItem.PrepayAt.Time),
+		utils.FormatDate(newItem.ScheduleAt.Time),
+		utils.FormatDate(newItem.DeliverAt.Time))
+
+	logBefore, _ := json.Marshal(before)
+	logAfter, _ := json.Marshal(after)
+
+	var userLog models.UserLog
+	userLog.Type = nulls.NewString(tableName)
+	userLog.FunctionName = nulls.NewString(action)
+	userLog.Memo = nulls.NewString(memo)
+	userLog.SnapshotBefore = nulls.NewString(string(logBefore))
+	userLog.SnapshotAfter = nulls.NewString(string(logAfter))
+
+	userLogRepository.Repository{}.AddRow(db, userLog, userId)
 }

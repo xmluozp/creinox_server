@@ -11,7 +11,8 @@ type UserLog struct {
 	ID             nulls.Int    `col:"" json:"id"`
 	CreateAt       nulls.Time   `col:"" json:"createAt"`
 	Memo           nulls.String `col:"" json:"memo"`
-	Type           nulls.Int    `col:"" json:"type"`
+	FunctionName   nulls.String `col:"" json:"functionName"`
+	Type           nulls.String `col:"" json:"type"`
 	SnapshotBefore nulls.String `col:"" json:"snapshotBefore"`
 	SnapshotAfter  nulls.String `col:"" json:"snapshotAfter"`
 	UpdateUser_id  nulls.Int    `col:"fk" json:"updateUser_id"`
@@ -26,6 +27,7 @@ func (item *UserLog) Receivers() (itemPtrs []interface{}) {
 		&item.ID,
 		&item.CreateAt,
 		&item.Memo,
+		&item.FunctionName,
 		&item.Type,
 		&item.SnapshotBefore,
 		&item.SnapshotAfter,

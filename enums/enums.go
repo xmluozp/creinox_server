@@ -16,6 +16,11 @@ var ContractTypeLabel = map[int]string{
 	2: "采购合同",
 	3: "产品开发合同"}
 
+var LogActions = map[string]string{
+	"c": "创建",
+	"u": "修改",
+	"d": "删除"}
+
 //-------------------
 
 type financialLedgerType struct {

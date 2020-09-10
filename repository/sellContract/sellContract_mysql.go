@@ -2,6 +2,7 @@ package sellContractRepository
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -13,6 +14,7 @@ import (
 	orderFormRepo "github.com/xmluozp/creinox_server/repository/orderForm"
 	portRepo "github.com/xmluozp/creinox_server/repository/port"
 	sellSubitemRepository "github.com/xmluozp/creinox_server/repository/sellSubitem"
+	userLogRepository "github.com/xmluozp/creinox_server/repository/userLog"
 
 	"github.com/xmluozp/creinox_server/enums"
 	"github.com/xmluozp/creinox_server/utils"
@@ -96,8 +98,6 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 	item.UpdateUser_id = nulls.NewInt(userId)
 
-	fmt.Println("新增", item.Seller_company_id, item.Buyer_company_id)
-
 	// 抽出必要的字段，插入orderform，取出新生成的id
 	orderitem := models.OrderForm{}
 	orderitem.ContractType = nulls.NewInt(enums.ContractType.SellContract) // 销售合同type是1
@@ -141,10 +141,17 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 		return item, errId
 	}
 
+	// 记录日志
+	var mapBefore map[string]interface{}
+	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
+	b.ToUserLog(db, enums.LogActions["c"], mapBefore, mapAfter, item, userId)
+
 	return item, errId
 }
 
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+
+	mapBefore, _ := b.GetPrintSource(db, item.ID.Int, userId)
 
 	item.UpdateUser_id = nulls.NewInt(userId)
 	result, updatedRow, err := utils.DbQueryUpdate(db, tableName, combineName, item)
@@ -168,10 +175,10 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	orderitem.ID = olditem.Order_form_id
 	orderitem.Code = item.Code
 	orderitem.InvoiceCode = item.InvoiceCode
-	orderitem.Payable = nulls.NewFloat32(0)
-	orderitem.PayablePaid = nulls.NewFloat32(0)
-	orderitem.Receivable = item.TotalPrice
-	orderitem.ReceivablePaid = item.PaidPrice
+	// orderitem.Payable = nulls.NewFloat32(0)
+	// orderitem.PayablePaid = nulls.NewFloat32(0)
+	// orderitem.Receivable = item.TotalPrice
+	// orderitem.ReceivablePaid = item.PaidPrice
 	orderitem.Seller_company_id = item.Seller_company_id
 	orderitem.Buyer_company_id = item.Buyer_company_id
 	orderitem.SellerAddress = item.SellerAddress
@@ -187,12 +194,17 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	}
 	// -------------------
 
+	// 记录日志
+	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
+	b.ToUserLog(db, enums.LogActions["u"], mapBefore, mapAfter, item, userId)
+
 	return rowsUpdated, err
 }
 
 func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
 	var item modelName
+	mapBefore, _ := b.GetPrintSource(db, id, userId)
 
 	result, row, err := utils.DbQueryDelete(db, tableName, combineName, id, item)
 
@@ -215,6 +227,10 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	// 删掉对应的order
 	orderFormRepo := orderFormRepo.Repository{}
 	_, err = orderFormRepo.DeleteRow(db, item.Order_form_id.Int, userId)
+
+	// 记录日志
+	var mapAfter map[string]interface{}
+	b.ToUserLog(db, enums.LogActions["d"], mapBefore, mapAfter, item, userId)
 
 	return item, err
 }
@@ -298,3 +314,27 @@ func (b repositoryName) GetRow_GetLast(db *sql.DB, id int, userId int) (modelNam
 // # 	FROM sell_subitem
 // # 	GROUP BY sell_contract_id
 // # ) b ON a.id = b.sell_contract_id;
+
+func (b repositoryName) ToUserLog(db *sql.DB, action string, before map[string]interface{}, after map[string]interface{}, item modelName, userId int) {
+
+	newItem, _ := b.GetRow(db, item.ID.Int, userId)
+
+	memo := fmt.Sprintf(`
+		ID:			%d
+		合同号:		%s
+		总价:		%.2f
+		交货期:		%s`,
+		newItem.ID.Int, newItem.Code.String, newItem.TotalPrice.Float32, utils.FormatDate(newItem.DeliverAt.Time))
+
+	logBefore, _ := json.Marshal(before)
+	logAfter, _ := json.Marshal(after)
+
+	var userLog models.UserLog
+	userLog.Type = nulls.NewString(tableName)
+	userLog.FunctionName = nulls.NewString(action)
+	userLog.Memo = nulls.NewString(memo)
+	userLog.SnapshotBefore = nulls.NewString(string(logBefore))
+	userLog.SnapshotAfter = nulls.NewString(string(logAfter))
+
+	userLogRepository.Repository{}.AddRow(db, userLog, userId)
+}

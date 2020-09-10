@@ -2,6 +2,7 @@ package buyContractRepository
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -12,6 +13,7 @@ import (
 	buySubitemRepository "github.com/xmluozp/creinox_server/repository/buySubitem"
 	financialTransactionRepository "github.com/xmluozp/creinox_server/repository/financialTransaction"
 	orderFormRepo "github.com/xmluozp/creinox_server/repository/orderForm"
+	userLogRepository "github.com/xmluozp/creinox_server/repository/userLog"
 
 	"github.com/xmluozp/creinox_server/utils"
 )
@@ -116,10 +118,17 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 		return item, errId
 	}
 
+	// 记录日志
+	var mapBefore map[string]interface{}
+	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
+	b.ToUserLog(db, enums.LogActions["c"], mapBefore, mapAfter, item, userId)
+
 	return item, errId
 }
 
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+
+	mapBefore, _ := b.GetPrintSource(db, item.ID.Int, userId)
 
 	item.UpdateUser_id = nulls.NewInt(userId)
 
@@ -143,10 +152,10 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	orderitem.ID = olditem.Order_form_id
 	orderitem.Code = item.Code
 	orderitem.InvoiceCode = item.InvoiceCode
-	orderitem.Payable = item.TotalPrice
-	orderitem.PayablePaid = item.PaidPrice
-	orderitem.Receivable = nulls.NewFloat32(0)
-	orderitem.ReceivablePaid = nulls.NewFloat32(0)
+	// orderitem.Payable = item.TotalPrice
+	// orderitem.PayablePaid = item.PaidPrice
+	// orderitem.Receivable = nulls.NewFloat32(0)
+	// orderitem.ReceivablePaid = nulls.NewFloat32(0)
 	orderitem.Seller_company_id = item.Seller_company_id
 	orderitem.Buyer_company_id = item.Buyer_company_id
 	orderitem.SellerAddress = item.SellerAddress
@@ -162,12 +171,17 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	}
 	// -------------------
 
+	// 记录日志
+	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
+	b.ToUserLog(db, enums.LogActions["u"], mapBefore, mapAfter, item, userId)
+
 	return rowsUpdated, err
 }
 
 func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
 
 	var item modelName
+	mapBefore, _ := b.GetPrintSource(db, id, userId)
 
 	result, row, err := utils.DbQueryDelete(db, tableName, combineName, id, item)
 
@@ -190,6 +204,10 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	// 删掉对应的order
 	orderFormRepo := orderFormRepo.Repository{}
 	_, err = orderFormRepo.DeleteRow(db, item.Order_form_id.Int, userId)
+
+	// 记录日志
+	var mapAfter map[string]interface{}
+	b.ToUserLog(db, enums.LogActions["d"], mapBefore, mapAfter, item, userId)
 
 	return item, err
 }
@@ -228,13 +246,18 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 	utils.ModifyDataSourceList(ds, "buy_subitem_list", "pickuptimeAt",
 		func(subitem map[string]interface{}) string {
 
-			t, err := time.Parse(time.RFC3339, subitem["pickuptimeAt"].(string))
+			pickupTime, ok := subitem["pickuptimeAt"].(string)
 
-			if err != nil {
-				return "错误数据"
+			if ok {
+				t, err := time.Parse(time.RFC3339, pickupTime)
+
+				if err != nil {
+					return "错误数据"
+				}
+
+				return utils.FormatDate(t)
 			}
-
-			return utils.FormatDate(t)
+			return ""
 		})
 
 	ds["ds_rmb"] = utils.FormatConvertNumToCny(item.TotalPrice.Float32)
@@ -275,4 +298,28 @@ func (b repositoryName) GetRows_fromSellContract(
 
 	// 这个应该是取出所有
 	return b.GetRows(db, pagination, searchTerms, userId)
+}
+
+func (b repositoryName) ToUserLog(db *sql.DB, action string, before map[string]interface{}, after map[string]interface{}, item modelName, userId int) {
+
+	newItem, _ := b.GetRow(db, item.ID.Int, userId)
+
+	memo := fmt.Sprintf(`
+		ID:			%d
+		合同号:		%s
+		总价:		%.2f
+		交货期:		%s`,
+		newItem.ID.Int, newItem.Code.String, newItem.TotalPrice.Float32, utils.FormatDate(newItem.DeliverAt.Time))
+
+	logBefore, _ := json.Marshal(before)
+	logAfter, _ := json.Marshal(after)
+
+	var userLog models.UserLog
+	userLog.Type = nulls.NewString(tableName)
+	userLog.FunctionName = nulls.NewString(action)
+	userLog.Memo = nulls.NewString(memo)
+	userLog.SnapshotBefore = nulls.NewString(string(logBefore))
+	userLog.SnapshotAfter = nulls.NewString(string(logAfter))
+
+	userLogRepository.Repository{}.AddRow(db, userLog, userId)
 }

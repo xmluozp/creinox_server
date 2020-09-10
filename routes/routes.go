@@ -88,6 +88,8 @@ func Routing(router *mux.Router, db *sql.DB) {
 	router.HandleFunc("/api/userLog", userLogController.UpdateItem(db)).Methods("PUT")
 	router.HandleFunc("/api/userLog/{id}", userLogController.DeleteItem(db)).Methods("DELETE")
 
+	router.HandleFunc("/api/userLog_delete", userLogController.DeleteItems(db)).Methods("PUT")
+
 	// ------------ text template
 	textTemplateController := textTemplateController.Controller{}
 	router.HandleFunc("/api/texttemplate", textTemplateController.GetItems(db)).Methods("GET")
