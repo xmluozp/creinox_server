@@ -89,7 +89,8 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	// 记录日志
 	var mapBefore map[string]interface{}
 	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
-	b.ToUserLog(db, enums.LogActions["c"], mapBefore, mapAfter, item, userId)
+	newItem, _ := b.GetRow(db, item.ID.Int, userId)
+	b.ToUserLog(db, enums.LogActions["c"], mapBefore, mapAfter, newItem, userId)
 
 	return item, errId
 }
@@ -126,7 +127,8 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 
 	// 记录日志
 	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
-	b.ToUserLog(db, enums.LogActions["u"], mapBefore, mapAfter, item, userId)
+	newItem, _ := b.GetRow(db, item.ID.Int, userId)
+	b.ToUserLog(db, enums.LogActions["u"], mapBefore, mapAfter, newItem, userId)
 
 	return rowsUpdated, err
 }
@@ -273,19 +275,17 @@ func (b repositoryName) UpdateTotalPrice(db *sql.DB, order_form_id int, userId i
 
 func (b repositoryName) ToUserLog(db *sql.DB, action string, before map[string]interface{}, after map[string]interface{}, item modelName, userId int) {
 
-	newItem, _ := b.GetRow(db, item.ID.Int, userId)
-
 	memo := fmt.Sprintf(`
 		ID:			%d
 		产品:    	%s
 		单价:		%.2f
 		数量:		%d
 		小计：		%.2f`,
-		newItem.ID.Int,
-		fmt.Sprintf(`[%s] %s`, newItem.Product.Code.String, newItem.Product.Name.String),
-		newItem.UnitPrice.Float32,
-		newItem.Amount.Int,
-		newItem.UnitPrice.Float32*float32(newItem.Amount.Int))
+		item.ID.Int,
+		fmt.Sprintf(`[%s] %s`, item.Product.Code.String, item.Product.Name.String),
+		item.UnitPrice.Float32,
+		item.Amount.Int,
+		item.UnitPrice.Float32*float32(item.Amount.Int))
 
 	logBefore, _ := json.Marshal(before)
 	logAfter, _ := json.Marshal(after)

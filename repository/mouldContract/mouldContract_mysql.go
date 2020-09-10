@@ -126,7 +126,8 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	// 记录日志
 	var mapBefore map[string]interface{}
 	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
-	b.ToUserLog(db, enums.LogActions["c"], mapBefore, mapAfter, item, userId)
+	newItem, _ := b.GetRow(db, item.ID.Int, userId)
+	b.ToUserLog(db, enums.LogActions["c"], mapBefore, mapAfter, newItem, userId)
 
 	return item, errId
 }
@@ -181,7 +182,8 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 
 	// 记录日志
 	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
-	b.ToUserLog(db, enums.LogActions["u"], mapBefore, mapAfter, item, userId)
+	newItem, _ := b.GetRow(db, item.ID.Int, userId)
+	b.ToUserLog(db, enums.LogActions["u"], mapBefore, mapAfter, newItem, userId)
 
 	return rowsUpdated, err
 }
@@ -281,8 +283,6 @@ func (b repositoryName) GetRow_GetLast(db *sql.DB, id int, userId int) (modelNam
 
 func (b repositoryName) ToUserLog(db *sql.DB, action string, before map[string]interface{}, after map[string]interface{}, item modelName, userId int) {
 
-	newItem, _ := b.GetRow(db, item.ID.Int, userId)
-
 	memo := fmt.Sprintf(`
 		ID:			%d
 		合同号:		%s
@@ -291,13 +291,13 @@ func (b repositoryName) ToUserLog(db *sql.DB, action string, before map[string]i
 		预付日期:	 %s
 		预定交付期:	 %s
 		实际交付期:	 %s`,
-		newItem.ID.Int,
-		newItem.Code.String,
-		newItem.TotalPrice.Float32,
-		utils.FormatDate(newItem.ActiveAt.Time),
-		utils.FormatDate(newItem.PrepayAt.Time),
-		utils.FormatDate(newItem.ScheduleAt.Time),
-		utils.FormatDate(newItem.DeliverAt.Time))
+		item.ID.Int,
+		item.Code.String,
+		item.TotalPrice.Float32,
+		utils.FormatDate(item.ActiveAt.Time),
+		utils.FormatDate(item.PrepayAt.Time),
+		utils.FormatDate(item.ScheduleAt.Time),
+		utils.FormatDate(item.DeliverAt.Time))
 
 	logBefore, _ := json.Marshal(before)
 	logAfter, _ := json.Marshal(after)
