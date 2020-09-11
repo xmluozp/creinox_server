@@ -112,6 +112,10 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 	// result, errInsert := db.Exec("INSERT INTO role (name, rank, auth) VALUES(?, ?, ?);", item.Name, item.Rank, item.Auth)
 	item.UpdateUser_id = nulls.NewInt(userId)
+
+	// 数据库没有这个，这是为了显示用的，所以去掉
+	item.Image_id = nulls.Int{Int: 0, Valid: false}
+
 	result, errInsert := utils.DbQueryInsert(db, tableName, item)
 
 	if errInsert != nil {
@@ -130,6 +134,10 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
+
+	// 数据库没有这个，这是为了显示用的，所以去掉
+	item.Image_id = nulls.Int{Int: 0, Valid: false}
+
 	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
 	item.ScanRow(row)
 

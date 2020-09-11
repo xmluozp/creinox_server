@@ -141,15 +141,19 @@ func (b repositoryName) GetRows_GroupByCompany(
 
 	// 拦截 product_id ；因为mysql的bug，去重取一的排序只能写在内部，没办法自动用searchTerm来做
 	product_id := searchTerms["product_id"]
-	delete(searchTerms, "product_id")
+	// delete(searchTerms, "product_id")
 
 	// rows, err := utils.DbQueryRows_Customized(db, "", tableName, &pagination, searchTerms, item, " GROUP BY company_id, currency_id")
 	//select * from product_purchase where id in (select max(id) from product_purchase WHERE product_id = 10 group by company_id, currency_id) order by id desc
 	// old: 	"(SELECT m1.* FROM product_purchase m1 LEFT JOIN product_purchase m2 ON (m1.company_id = m2.company_id AND m1.currency_id = m2.currency_id AND m1.id < m2.id) WHERE m2.id IS NULL)",
 
 	sqlString := fmt.Sprintf(
-		"(select * from product_purchase where id in (select max(id) from product_purchase WHERE product_id = %s group by company_id, currency_id) order by id desc)",
-		product_id)
+		`(select * from product_purchase 
+			where id in 
+			(select max(id) from product_purchase 	
+				WHERE product_id = %s 
+				group by company_id, currency_id) 
+				order by id desc)`, product_id)
 
 	rows, err := utils.DbQueryRows_Customized(db, "",
 		sqlString,

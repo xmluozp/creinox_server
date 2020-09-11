@@ -28,7 +28,8 @@ var tableName = "sell_contract"
 
 // 合同和order合体的view，显示用
 var combineName = "combine_sell_contract"
-var viewName = "view_sell_contract"
+
+// var viewName = "view_sell_contract"
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(

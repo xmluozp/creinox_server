@@ -31,6 +31,9 @@ type Commodity struct {
 	// commodity list的搜索用。searchTerms only, 不是数据库字段。
 	CompanyDomesticCustomer_id nulls.Int `json:"companyDomesticCustomer.id"`
 	CompanyOverseasCustomer_id nulls.Int `json:"companyOverseasCustomer.id"`
+
+	// 搜索用
+	KeyWord nulls.String `json:"keyword" keywords:"code|name|ename"`
 }
 
 type Commodity_product struct {

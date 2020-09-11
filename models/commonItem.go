@@ -8,7 +8,7 @@ import (
 
 type CommonItem struct {
 	ID         nulls.Int    `col:"" json:"id"`
-	Name       nulls.String `col:"" json:"name" validate:"required" errm:"必填"`
+	Name       nulls.String `col:"" json:"name"` // 不是必填的因为有的选项只有英文
 	Ename      nulls.String `col:"" json:"ename"`
 	Memo       nulls.String `col:"" json:"memo"`
 	Auth       nulls.String `col:"" json:"auth"`

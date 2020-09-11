@@ -27,8 +27,6 @@ var tableName = "mould_contract"
 // 合同和order合体的view，显示用
 var combineName = "combine_mould_contract"
 
-// var tableName_order = "order_form"
-
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
 	db *sql.DB,

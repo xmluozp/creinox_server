@@ -109,6 +109,24 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 		return 0, err
 	}
 
+	// 对应的商品需要跟着更新货号和分类
+	commodityRepo := commodityRepo.Repository{}
+	commodityItem, err := commodityRepo.GetRow_ByProduct(db, item.ID.Int, userId)
+
+	fmt.Println("test========= ", commodityItem)
+	fmt.Println("from========= ", item)
+
+	if err == nil {
+		fmt.Println("升级？========= ")
+		commodityItem.Code = item.Code
+		commodityItem.Category_id = item.Category_id
+		_, err = commodityRepo.UpdateRow(db, commodityItem, userId)
+	}
+
+	if err != nil {
+		utils.Log(err, "同步货号出错")
+	}
+
 	return rowsUpdated, err
 }
 

@@ -247,7 +247,7 @@ func (c Controller) Login(db *sql.DB) http.HandlerFunc {
 		tokenString, err := token.SignedString(auth.JwtKey)
 
 		if err != nil {
-			returnValue.Info = "Server error" + err.Error()
+			returnValue.Info = "Server error " + err.Error()
 			utils.SendError(w, http.StatusInternalServerError, returnValue)
 			return
 		}
