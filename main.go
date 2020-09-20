@@ -7,9 +7,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Unknwon/goconfig"
 	"github.com/xmluozp/creinox_server/auth"
 	"github.com/xmluozp/creinox_server/driver"
+	"github.com/xmluozp/creinox_server/initial"
+	"github.com/xmluozp/creinox_server/models"
 	"github.com/xmluozp/creinox_server/routes"
 
 	"github.com/gorilla/handlers"
@@ -26,13 +27,19 @@ func init() {
 func main() {
 
 	// fetch config file
-	cfg, err := goconfig.LoadConfigFile("conf.ini")
+	// cfg, err := goconfig.LoadConfigFile("conf.ini")
 
-	if err != nil {
-		panic("错误，找不到conf.ini配置文件")
-	}
-	_PORT, err := cfg.GetValue("site", "port")
-	_CLIENTURL, err := cfg.GetValue("site", "client")
+	// if err != nil {
+	// 	panic("错误，找不到conf.ini配置文件")
+	// }
+	// _PORT, err := cfg.GetValue("site", "port")
+
+	_CLIENTURL := initial.WriteFile()
+
+	rootUrl, _PORT, _, _ := initial.GetConfig()
+
+	fmt.Println("服务端IP:", rootUrl)
+	fmt.Println("客户端IP:", _CLIENTURL)
 
 	db = driver.ConnectDB()
 
@@ -49,8 +56,10 @@ func main() {
 
 	// router.Use(static.Serve("/", static.LocalFile("./views", true)))
 
+	mydb := models.MyDb{Db: db}
+
 	// router是指针，探进去被修改
-	routes.Routing(router, db)
+	routes.Routing(router, mydb)
 
 	fmt.Println("Server is running at port ", _PORT)
 	//第一个是端口，第二个是响应端口用的function。这里是router

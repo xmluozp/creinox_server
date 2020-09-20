@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/Unknwon/goconfig"
 	"github.com/gobuffalo/nulls"
+	"github.com/xmluozp/creinox_server/initial"
 )
 
 type Image struct {
@@ -71,15 +71,17 @@ func (item *Image) ScanRows(r *sql.Rows) error {
 
 func (item *Image) Getter() Image {
 
-	cfg, err := goconfig.LoadConfigFile("conf.ini")
+	// cfg, err := goconfig.LoadConfigFile("conf.ini")
 
-	if err != nil {
-		panic("错误，找不到conf.ini配置文件")
-	}
+	// if err != nil {
+	// 	panic("错误，找不到conf.ini配置文件")
+	// }
 
-	rootUrl, err := cfg.GetValue("site", "root")
-	port, err := cfg.Int("site", "port")
-	uploads, err := cfg.GetValue("site", "uploads")
+	// rootUrl, err := cfg.GetValue("site", "root")
+	// port, err := cfg.Int("site", "port")
+	// uploads, err := cfg.GetValue("site", "uploads")
+
+	rootUrl, _, port, uploads := initial.GetConfig()
 
 	uploadFolder := fmt.Sprintf("%s:%d/%s/", rootUrl, port, uploads)
 
@@ -106,15 +108,17 @@ func (item *Image) AddPath(path string) string {
 		return path
 	}
 
-	cfg, err := goconfig.LoadConfigFile("conf.ini")
+	// cfg, err := goconfig.LoadConfigFile("conf.ini")
 
-	if err != nil {
-		panic("错误，找不到conf.ini配置文件")
-	}
+	// if err != nil {
+	// 	panic("错误，找不到conf.ini配置文件")
+	// }
 
-	rootUrl, err := cfg.GetValue("site", "root")
-	port, err := cfg.Int("site", "port")
-	uploads, err := cfg.GetValue("site", "uploads")
+	// rootUrl, err := cfg.GetValue("site", "root")
+	// port, err := cfg.Int("site", "port")
+	// uploads, err := cfg.GetValue("site", "uploads")
+
+	rootUrl, _, port, uploads := initial.GetConfig()
 
 	uploadFolder := fmt.Sprintf("%s:%d/%s/", rootUrl, port, uploads)
 

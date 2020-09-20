@@ -1,7 +1,6 @@
 package financialLedgerRepository
 
 import (
-	"database/sql"
 	"fmt"
 	"strconv"
 
@@ -19,7 +18,7 @@ var tableName = "financial_ledger"
 // =============================================== basic CRUD
 
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
@@ -43,7 +42,7 @@ func (b repositoryName) GetRows(
 	} else {
 		subsql = ""
 	}
-	rows, err := utils.DbQueryRows(db, subsql, tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, subsql, tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -63,20 +62,20 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 
 	var item modelName
-	row := utils.DbQueryRow(db, "", tableName, id, item)
+	row := utils.DbQueryRow(mydb, "", tableName, id, item)
 
 	err := item.ScanRow(row)
 
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (modelName, error) {
 
 	// result, errInsert := db.Exec("INSERT INTO role (name, rank, auth) VALUES(?, ?, ?);", item.Name, item.Rank, item.Auth)
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
 		return item, errInsert
@@ -88,14 +87,14 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 		return item, errId
 	}
 
-	err := b.updateLedgerNames(db, item.ID.Int)
+	err := b.updateLedgerNames(mydb, item.ID.Int)
 
 	return item, err
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
 
-	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 	item.ScanRow(row)
 
 	if err != nil {
@@ -108,11 +107,11 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 		return 0, err
 	}
 
-	err = b.updateLedgerNames(db, item.ID.Int)
+	err = b.updateLedgerNames(mydb, item.ID.Int)
 
 	return rowsUpdated, err
 }
-func (b repositoryName) updateLedgerNames(db *sql.DB, id int) (err error) {
+func (b repositoryName) updateLedgerNames(mydb models.MyDb, id int) (err error) {
 
 	// 更新下属节点的name
 	var updateQuery = `
@@ -133,22 +132,25 @@ func (b repositoryName) updateLedgerNames(db *sql.DB, id int) (err error) {
 		main.path LIKE CONCAT(conditions.path, ',' , conditions.id, ',', '%%')
 	`
 	updateQueryCombined := fmt.Sprintf(updateQuery, id)
-	_, err = db.Exec(updateQueryCombined)
+
+	if mydb.Tx != nil {
+		_, err = mydb.Tx.Exec(updateQueryCombined)
+	} else {
+		_, err = mydb.Db.Exec(updateQueryCombined)
+	}
 
 	return err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
-	var item modelName
-
-	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = item.ScanRow(row)
+	result, err := utils.DbQueryDelete(mydb, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -163,9 +165,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err

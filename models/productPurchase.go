@@ -29,6 +29,7 @@ type ProductPurchase struct {
 	InnerPackL    nulls.Float32 `col:"" json:"innerPackL"`
 	InnerPackW    nulls.Float32 `col:"" json:"innerPackW"`
 	InnerPackH    nulls.Float32 `col:"" json:"innerPackH"`
+	Memo          nulls.String  `col:"" json:"memo"`
 	UpdateAt      nulls.Time    `col:"newtime" json:"updateAt"`
 	Product_id    nulls.Int     `col:"fk" json:"product_id" validate:"required" errm:"必填"`
 	Company_id    nulls.Int     `col:"fk" json:"company_id" validate:"required" errm:"必填"`
@@ -40,7 +41,6 @@ type ProductPurchase struct {
 	UpdateUser_id nulls.Int     `col:"fk" json:"updateUser_id"`
 
 	// 显示在列表里
-
 	CompanyItem   Company    `ref:"company,company_id" json:"company_id.row" validate:"-"`
 	CurrencyItem  CommonItem `ref:"common_item,currency_id" json:"currency_id.row" validate:"-"`
 	PolishingItem CommonItem `ref:"common_item,polishing_id" json:"polishing_id.row" validate:"-"`
@@ -77,6 +77,7 @@ func (item *ProductPurchase) Receivers() (itemPtrs []interface{}) {
 		&item.InnerPackL,
 		&item.InnerPackW,
 		&item.InnerPackH,
+		&item.Memo,
 		&item.UpdateAt,
 		&item.Product_id,
 		&item.Company_id,

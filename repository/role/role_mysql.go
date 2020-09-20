@@ -1,7 +1,6 @@
 package roleRepository
 
 import (
-	"database/sql"
 	"fmt"
 
 	"github.com/gobuffalo/nulls"
@@ -19,14 +18,14 @@ var tableName = "role"
 // =============================================== basic CRUD
 
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
 	var item modelName
 
 	var subsql string
-	rank := auth.GetRankFromUser(db, userId)
+	rank := auth.GetRankFromUser(mydb, userId)
 
 	// 系统管理员可以看到所有的
 	if rank > 0 {
@@ -36,7 +35,7 @@ func (b repositoryName) GetRows(
 	}
 
 	// rows这里是一个cursor.
-	rows, err := utils.DbQueryRows(db, "", subsql, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", subsql, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -65,9 +64,9 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 	var item modelName
-	row := utils.DbQueryRow(db, "", tableName, id, item)
+	row := utils.DbQueryRow(mydb, "", tableName, id, item)
 
 	// 假如不是平的struct而有子选项
 	// 就要改写Scan
@@ -77,11 +76,11 @@ func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (modelName, error) {
 
 	// result, errInsert := db.Exec("INSERT INTO role (name, rank, auth) VALUES(?, ?, ?);", item.Name, item.Rank, item.Auth)
 
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
 		return item, errInsert
@@ -96,9 +95,9 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	return item, errId
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
 
-	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 	item.ScanRow(row)
 
 	if err != nil {
@@ -114,17 +113,15 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
-	var item modelName
-
-	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = item.ScanRow(row)
+	result, err := utils.DbQueryDelete(mydb, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -139,9 +136,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err

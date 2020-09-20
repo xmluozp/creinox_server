@@ -1,7 +1,6 @@
 package printControllr
 
 import (
-	"database/sql"
 	"fmt"
 	"net/http"
 	"os"
@@ -20,21 +19,21 @@ type Controller struct{}
 var authName = ""
 
 // =============================================== HTTP REQUESTS
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems(w, r, db)
+		c.C_GetItems(w, r, mydb)
 	}
 }
 
 // =============================================== basic CRUD
-func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, _ := auth.CheckAuth(db, w, r, authName)
+	pass, _ := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
-	// status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	// status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	params := mux.Vars(r)
 	templateFolder, _ := params["templateFolder"]
 

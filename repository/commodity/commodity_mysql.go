@@ -52,14 +52,14 @@ var tableAll = `(
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
 	var item modelName
 
 	// rows这里是一个cursor.
-	rows, err := utils.DbQueryRows(db, "", tableMeta, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", tableMeta, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -80,20 +80,28 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 	var item modelName
 
-	row := utils.DbQueryRow(db, "", tableMeta, id, item)
+	row := utils.DbQueryRow(mydb, "", tableMeta, id, item)
 
 	err := item.ScanRow(row)
 
 	return item, err
 }
 
-func (b repositoryName) GetRow_ByProduct(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow_ByProduct(mydb models.MyDb, id int, userId int) (modelName, error) {
 	var item modelName
 
-	rowCommodityProduct := db.QueryRow("SELECT commodity_id FROM commodity_product WHERE product_id = ? AND isMeta = 1", id)
+	query := "SELECT commodity_id FROM commodity_product WHERE product_id = ? AND isMeta = 1"
+
+	var rowCommodityProduct *sql.Row
+
+	if mydb.Tx != nil {
+		rowCommodityProduct = mydb.Tx.QueryRow(query, id)
+	} else {
+		rowCommodityProduct = mydb.Db.QueryRow(query, id)
+	}
 
 	err := rowCommodityProduct.Scan(&item.ID)
 
@@ -101,14 +109,14 @@ func (b repositoryName) GetRow_ByProduct(db *sql.DB, id int, userId int) (modelN
 		return item, err
 	}
 
-	row := utils.DbQueryRow(db, "", tableMeta, item.ID.Int, item)
+	row := utils.DbQueryRow(mydb, "", tableMeta, item.ID.Int, item)
 
 	err = item.ScanRow(row)
 
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (modelName, error) {
 
 	// result, errInsert := db.Exec("INSERT INTO role (name, rank, auth) VALUES(?, ?, ?);", item.Name, item.Rank, item.Auth)
 	item.UpdateUser_id = nulls.NewInt(userId)
@@ -116,7 +124,7 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	// 数据库没有这个，这是为了显示用的，所以去掉
 	item.Image_id = nulls.Int{Int: 0, Valid: false}
 
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
 		return item, errInsert
@@ -131,14 +139,14 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	return item, errId
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
 
 	// 数据库没有这个，这是为了显示用的，所以去掉
 	item.Image_id = nulls.Int{Int: 0, Valid: false}
 
-	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 	item.ScanRow(row)
 
 	if err != nil {
@@ -154,18 +162,18 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
-	var item modelName
-
-	// result, row, err := utils.DbQueryDelete(db, tableName, id, item)
+	// result, row, err := utils.DbQueryDelete(mydb, tableName, id, item)
 	// 这里特殊，返回一个空的item。因为commodity的image_id字段是在关联的product表里，这里delete的地方取不到，而且外部用不到这个item
-	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
-	item.ScanRow(row)
+
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
 	}
+
+	result, err := utils.DbQueryDelete(mydb, tableName, tableName, id, item)
 
 	// err = item.ScanRow(row)
 
@@ -182,9 +190,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
@@ -196,13 +204,13 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 }
 
 //==================== customized
-func (b repositoryName) AddRow_WithProduct(db *sql.DB, commodity_product models.Commodity_product, userId int) (modelName, error) {
+func (b repositoryName) AddRow_WithProduct(mydb models.MyDb, commodity_product models.Commodity_product, userId int) (modelName, error) {
 
 	// 1. 取出对应产品
 	var commodity modelName
 	var product models.Product
 
-	productRow := utils.DbQueryRow(db, "", "product", commodity_product.Product_id.Int, product)
+	productRow := utils.DbQueryRow(mydb, "", "product", commodity_product.Product_id.Int, product)
 	errGetProduct := product.ScanRow(productRow)
 
 	if errGetProduct != nil {
@@ -217,7 +225,7 @@ func (b repositoryName) AddRow_WithProduct(db *sql.DB, commodity_product models.
 	commodity.Memo = product.Memo
 	commodity.Category_id = product.Category_id
 
-	result, errInsert := utils.DbQueryInsert(db, tableName, commodity)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, commodity)
 
 	if errInsert != nil {
 		return commodity, errInsert
@@ -234,13 +242,13 @@ func (b repositoryName) AddRow_WithProduct(db *sql.DB, commodity_product models.
 	commodity_product.Commodity_id = commodity.ID
 	commodity_product.IsMeta = nulls.NewInt(1) // 创建的时候是1，assemble的时候是0
 
-	result, errInsert = utils.DbQueryInsert(db, "commodity_product", commodity_product)
+	result, errInsert = utils.DbQueryInsert(mydb, "commodity_product", commodity_product)
 
 	return commodity, errId
 }
 
 func (b repositoryName) GetRows_ByProduct(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
@@ -253,7 +261,7 @@ func (b repositoryName) GetRows_ByProduct(
 	// 根据product_id从中间表取(为避免用户迷惑，meta也一起取)
 	subsql := fmt.Sprintf("(SELECT m1.*, m2.product_id as product_id, m3.image_id as image_id FROM "+tableName+" m1 LEFT JOIN commodity_product m2 ON m1.id = m2.commodity_id LEFT JOIN product m3 ON m2.product_id = m3.id WHERE m2.product_id = %s)", product_id)
 
-	rows, err := utils.DbQueryRows(db, "", subsql, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", subsql, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -274,16 +282,25 @@ func (b repositoryName) GetRows_ByProduct(
 	return items, pagination, nil
 }
 
-func (b repositoryName) Assemble(db *sql.DB, commodity_id int, product_id int, userId int) error {
+func (b repositoryName) Assemble(mydb models.MyDb, commodity_id int, product_id int, userId int) (err error) {
 
-	result, err := db.Exec("INSERT INTO commodity_product (commodity_id, product_id, isMeta) VALUES(?, ?, 0);", commodity_id, product_id)
+	query := "INSERT INTO commodity_product (commodity_id, product_id, isMeta) VALUES(?, ?, 0);"
+
+	var result sql.Result
+
+	if mydb.Tx != nil {
+		result, err = mydb.Tx.Exec(query, commodity_id, product_id)
+	} else {
+		result, err = mydb.Db.Exec(query, commodity_id, product_id)
+	}
+
 	rowsUpdated, err := result.RowsAffected()
 
 	if rowsUpdated > 0 {
 		var item modelName
 		item.UpdateUser_id = nulls.NewInt(userId)
 		item.ID = nulls.NewInt(commodity_id)
-		_, row, errUpdate := utils.DbQueryUpdate(db, tableName, tableName, item)
+		_, row, errUpdate := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 		item.ScanRow(row)
 		return errUpdate
 	}
@@ -291,24 +308,34 @@ func (b repositoryName) Assemble(db *sql.DB, commodity_id int, product_id int, u
 	return err
 }
 
-func (b repositoryName) Disassemble(db *sql.DB, commodity_id int, product_id int, userId int) error {
+func (b repositoryName) Disassemble(mydb models.MyDb, commodity_id int, product_id int, userId int) (err error) {
 
-	// 看有没有包含主产品。如果有的话删掉商品信息
-	_, err := db.Exec(`
+	query1 := `
 	DELETE a FROM commodity a JOIN commodity_product b
 	ON a.id = b.commodity_id	
-	WHERE b.commodity_id = ? AND b.product_id=? AND isMeta = 1;
-	`, commodity_id, product_id)
+	WHERE b.commodity_id = ? AND b.product_id=? AND isMeta = 1;`
 
-	// 删掉关联
-	result, err := db.Exec("DELETE FROM commodity_product WHERE commodity_id = ? AND product_id=?;", commodity_id, product_id)
+	query2 := "DELETE FROM commodity_product WHERE commodity_id = ? AND product_id=?;"
+
+	var result sql.Result
+
+	if mydb.Tx != nil {
+		// 看有没有包含主产品。如果有的话删掉商品信息
+		_, err = mydb.Tx.Exec(query1, commodity_id, product_id)
+		// 删掉关联
+		result, err = mydb.Tx.Exec(query2, commodity_id, product_id)
+	} else {
+		_, err = mydb.Db.Exec(query1, commodity_id, product_id)
+		result, err = mydb.Db.Exec(query2, commodity_id, product_id)
+	}
+
 	rowsUpdated, err := result.RowsAffected()
 
 	if rowsUpdated > 0 {
 		var item modelName
 		item.UpdateUser_id = nulls.NewInt(userId)
 		item.ID = nulls.NewInt(commodity_id)
-		_, row, errUpdate := utils.DbQueryUpdate(db, tableName, tableName, item)
+		_, row, errUpdate := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 		item.ScanRow(row)
 		return errUpdate
 	}

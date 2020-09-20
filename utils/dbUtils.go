@@ -18,7 +18,7 @@ import (
 )
 
 // ===================================== 生成搜索后取出rows
-func DbQueryRows_Customized(db *sql.DB,
+func DbQueryRows_Customized(mydb models.MyDb,
 	query string,
 	tableName string,
 	pagination *models.Pagination,
@@ -200,9 +200,16 @@ func DbQueryRows_Customized(db *sql.DB,
 
 	fmt.Println("keywords", keywords)
 	//  ===================================== pagination: 基础查询加query加order和分页
-	rows, err := db.Query(newQueryStringBegin+newQueryStringSearchTerms+newQueryString, keywords...)
+	var rows *sql.Rows
+	var scanErr, err error
 
-	scanErr := db.QueryRow("SELECT COUNT(*) FROM "+tableName+" mainTable WHERE 1=1 "+newQueryStringSearchTerms, keywords...).Scan(&count)
+	if mydb.Tx != nil {
+		rows, err = mydb.Tx.Query(newQueryStringBegin+newQueryStringSearchTerms+newQueryString, keywords...)
+		scanErr = mydb.Tx.QueryRow("SELECT COUNT(*) FROM "+tableName+" mainTable WHERE 1=1 "+newQueryStringSearchTerms, keywords...).Scan(&count)
+	} else {
+		rows, err = mydb.Db.Query(newQueryStringBegin+newQueryStringSearchTerms+newQueryString, keywords...)
+		scanErr = mydb.Db.QueryRow("SELECT COUNT(*) FROM "+tableName+" mainTable WHERE 1=1 "+newQueryStringSearchTerms, keywords...).Scan(&count)
+	}
 
 	if scanErr != nil {
 		fmt.Println("scan出错", scanErr.Error())
@@ -227,7 +234,7 @@ func DbQueryRows_Customized(db *sql.DB,
 }
 
 // query: 没有子查询，而是直接用这段string覆盖查询。 tableName: 表名或者完整的查询结果
-func DbQueryRows(db *sql.DB,
+func DbQueryRows(mydb models.MyDb,
 	query string,
 	tableName string,
 	pagination *models.Pagination,
@@ -236,16 +243,27 @@ func DbQueryRows(db *sql.DB,
 	*sql.Rows,
 	error) {
 
-	return DbQueryRows_Customized(db, query, tableName, pagination, searchTerms, dataModel, "", "")
+	return DbQueryRows_Customized(mydb, query, tableName, pagination, searchTerms, dataModel, "", "")
 
 }
 
 // query: 没有子查询，而是直接用这段string覆盖查询。 tableName: 表名或者完整的查询结果
-func DbQueryRow(db *sql.DB,
+func DbQueryRow(mydb models.MyDb,
 	query string,
 	tableName string,
 	id int,
 	dataModel interface{}) *sql.Row {
+
+	return DbQueryRow_iftx(mydb, query, tableName, id, dataModel, mydb.Tx != nil)
+}
+
+// 最后一个是否事务。删除之前取数据专用。因为如果是事务，删除之前取数据会引起事务不scan不能用的BUG
+func DbQueryRow_iftx(mydb models.MyDb,
+	query string,
+	tableName string,
+	id int,
+	dataModel interface{},
+	ifTx bool) *sql.Row {
 
 	var newQueryString string
 	var newQueryStringBegin string
@@ -282,13 +300,25 @@ func DbQueryRow(db *sql.DB,
 
 	fmt.Println("搜索单条数据", newQueryStringBegin)
 
-	if id > 0 {
-		row = db.QueryRow(newQueryStringBegin+newQueryStringSearchTerms+newQueryString, id)
+	// 200915: 因为一个坑，query不关闭，事务不能继续，而我删除之前需要取数据出来，就会冲突。所以读数据不能用事务
+	// 依然需要事务因为有时候需要在commit的create之前取数据
+	if ifTx && mydb.Tx != nil {
+		if id > 0 {
+			row = mydb.Tx.QueryRow(newQueryStringBegin+newQueryStringSearchTerms+newQueryString, id)
+		} else {
+			row = mydb.Tx.QueryRow(newQueryStringBegin + newQueryStringSearchTerms + newQueryString)
+		}
 	} else {
-		row = db.QueryRow(newQueryStringBegin + newQueryStringSearchTerms + newQueryString)
+
+		if id > 0 {
+			row = mydb.Db.QueryRow(newQueryStringBegin+newQueryStringSearchTerms+newQueryString, id)
+		} else {
+			row = mydb.Db.QueryRow(newQueryStringBegin + newQueryStringSearchTerms + newQueryString)
+		}
 	}
 
 	return row
+
 }
 
 func GetPagination(r *http.Request) models.Pagination {
@@ -333,7 +363,7 @@ func GetSearchTerms(r *http.Request) map[string]string {
 	return queryObject
 }
 
-func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, error) {
+func DbQueryInsert(mydb models.MyDb, tableName string, item interface{}) (sql.Result, error) {
 
 	// 获取item的值和类型
 	v := reflect.ValueOf(item)
@@ -376,7 +406,12 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 	// 生成INSERT字符串
 	values[0] = reflect.ValueOf("INSERT INTO " + tableName + " (" + strings.Join(columns, ",") + ") VALUES(" + strings.Join(questionMarks, ",") + ");")
 
-	execDb := reflect.ValueOf(db).MethodByName("Exec")
+	var execDb reflect.Value
+	if mydb.Tx != nil {
+		execDb = reflect.ValueOf(mydb.Tx).MethodByName("Exec")
+	} else {
+		execDb = reflect.ValueOf(mydb.Db).MethodByName("Exec")
+	}
 
 	fmt.Println("SQL:insert", values[0])
 	// 传入参数：字符串，字段valueof。。。
@@ -389,7 +424,7 @@ func DbQueryInsert(db *sql.DB, tableName string, item interface{}) (sql.Result, 
 }
 
 // col属性是 newtime 的，update的时候取系统时间
-func DbQueryUpdate(db *sql.DB, tableName string, queryTable string, item interface{}) (sql.Result, *sql.Row, error) {
+func DbQueryUpdate(mydb models.MyDb, tableName string, queryTable string, item interface{}) (sql.Result, *sql.Row, error) {
 	// fmt.Println("连接数", db.Stats())
 	// 获取item的值和类型
 	v := reflect.ValueOf(item)
@@ -466,7 +501,12 @@ func DbQueryUpdate(db *sql.DB, tableName string, queryTable string, item interfa
 
 	fmt.Println("Update 的sql语句", values[0])
 
-	execDb := reflect.ValueOf(db).MethodByName("Exec")
+	var execDb reflect.Value
+	if mydb.Tx != nil {
+		execDb = reflect.ValueOf(mydb.Tx).MethodByName("Exec")
+	} else {
+		execDb = reflect.ValueOf(mydb.Db).MethodByName("Exec")
+	}
 
 	// 传入参数：字符串，字段valueof。。。
 	out := execDb.Call(values)
@@ -477,19 +517,21 @@ func DbQueryUpdate(db *sql.DB, tableName string, queryTable string, item interfa
 	// 取出id搜索记录
 	id := v.FieldByName("ID").Interface().(nulls.Int).Int
 
-	rowUploaded := DbQueryRow(db, "", queryTable, id, item)
+	rowUploaded := DbQueryRow(mydb, "", queryTable, id, item)
 
 	return result, rowUploaded, err
 }
 
 // called from repository. deleteName 删除的对象； queryTable是返回的对象
-func DbQueryDelete(db *sql.DB, deleteName string, queryTable string, id int, dataModel interface{}) (sql.Result, *sql.Row, error) {
-
-	rowDeleted := DbQueryRow(db, "", queryTable, id, dataModel)
+func DbQueryDelete(mydb models.MyDb, deleteName string, queryTable string, id int, dataModel interface{}) (result sql.Result, err error) {
 
 	// db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
 
-	result, err := db.Exec("DELETE FROM "+deleteName+" WHERE id = ?", id)
+	if mydb.Tx != nil {
+		result, err = mydb.Tx.Exec("DELETE FROM "+deleteName+" WHERE id = ?", id)
+	} else {
+		result, err = mydb.Db.Exec("DELETE FROM "+deleteName+" WHERE id = ?", id)
+	}
 
 	fmt.Println("删除 ", "DELETE FROM "+deleteName+" WHERE id = ?", id)
 
@@ -505,11 +547,11 @@ func DbQueryDelete(db *sql.DB, deleteName string, queryTable string, id int, dat
 
 	}
 
-	return result, rowDeleted, err
+	return result, err
 }
 
 // called from repository
-// func DbQueryDelete_multiple(db *sql.DB, tableName string, id int) (sql.Result, error) {
+// func DbQueryDelete_multiple(mydb models.MyDb, tableName string, id int) (sql.Result, error) {
 
 // 	result, err := db.Exec("DELETE FROM "+tableName+" WHERE id = ?", id)
 

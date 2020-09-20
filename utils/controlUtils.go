@@ -18,7 +18,7 @@ import (
 )
 
 func GetFunc_FetchListHTTPReturn(
-	db *sql.DB,
+	mydb models.MyDb,
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
@@ -41,7 +41,7 @@ func GetFunc_FetchListHTTPReturn(
 
 	gerRows := reflect.ValueOf(repo).MethodByName(methodName)
 	args := []reflect.Value{
-		reflect.ValueOf(db),
+		reflect.ValueOf(mydb),
 		// reflect.ValueOf(item),
 		// reflect.ValueOf(items),
 		reflect.ValueOf(pagination),
@@ -73,29 +73,29 @@ func GetFunc_FetchListHTTPReturn(
 }
 
 func GetFunc_RowsWithHTTPReturn(
-	db *sql.DB,
+	mydb models.MyDb,
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
 	repo interface{},
 	userId int) (status int, returnValue models.JsonRowsReturn, err error) {
 
-	return GetFunc_FetchListHTTPReturn(db, w, r, modelType, "GetRows", repo, userId)
+	return GetFunc_FetchListHTTPReturn(mydb, w, r, modelType, "GetRows", repo, userId)
 }
 
 func GetFunc_RowWithHTTPReturn(
-	db *sql.DB,
+	mydb models.MyDb,
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
 	repo interface{},
 	userId int) (status int, returnValue models.JsonRowsReturn, err error) {
 
-	return GetFunc_RowWithHTTPReturn_MethodName(db, w, r, modelType, "GetRow", repo, userId)
+	return GetFunc_RowWithHTTPReturn_MethodName(mydb, w, r, modelType, "GetRow", repo, userId)
 }
 
 func GetFunc_RowWithHTTPReturn_MethodName(
-	db *sql.DB,
+	mydb models.MyDb,
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
@@ -109,7 +109,7 @@ func GetFunc_RowWithHTTPReturn_MethodName(
 
 	getRow := reflect.ValueOf(repo).MethodByName(methodName)
 	args := []reflect.Value{
-		reflect.ValueOf(db),
+		reflect.ValueOf(mydb),
 		reflect.ValueOf(id),
 		reflect.ValueOf(userId)}
 	out := getRow.Call(args)
@@ -138,7 +138,7 @@ func GetFunc_RowWithHTTPReturn_MethodName(
 
 // Here returns function to shows message to the front. In case we want to pop a message afterall instead of pop it on halfway
 func GetFunc_AddWithHTTPReturn(
-	db *sql.DB,
+	mydb models.MyDb,
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
@@ -159,24 +159,24 @@ func GetFunc_AddWithHTTPReturn(
 	}
 
 	// ====================================== 保存数据库
-	status, returnValue, row, err := addDateBase(db, item, repo, userId)
+	status, returnValue, row, err := addDateBase(mydb, item, repo, userId)
 
 	return status, returnValue, row, err
 }
 
 func GetFunc_UpdateWithHTTPReturn(
-	db *sql.DB,
+	mydb models.MyDb,
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
 	repo interface{},
 	userId int) (status int, returnValue models.JsonRowsReturn, returnItem interface{}, err error) {
 
-	return GetFunc_UpdateWithHTTPReturn_MethodName(db, w, r, modelType, "UpdateRow", repo, userId)
+	return GetFunc_UpdateWithHTTPReturn_MethodName(mydb, w, r, modelType, "UpdateRow", repo, userId)
 }
 
 func GetFunc_UpdateWithHTTPReturn_MethodName(
-	db *sql.DB,
+	mydb models.MyDb,
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
@@ -197,14 +197,14 @@ func GetFunc_UpdateWithHTTPReturn_MethodName(
 	}
 
 	//  ---------------------------------------  保存数据库
-	status, returnValue, err = updateDateBase(db, item, repo, methodName, userId)
+	status, returnValue, err = updateDateBase(mydb, item, repo, methodName, userId)
 	//  ---------------------------------------
 	return status, returnValue, item, err
 }
 
 // TODO: 批量删除
 // func GetFunc_DeleteWithHTTPReturn_Multiple(
-// 	db *sql.DB,
+// 	mydb models.MyDb,
 // 	w http.ResponseWriter,
 // 	r *http.Request,
 // 	modelType reflect.Type, // 数据模型
@@ -219,7 +219,7 @@ func GetFunc_UpdateWithHTTPReturn_MethodName(
 
 // 	deleteRows := reflect.ValueOf(repo).MethodByName("DeleteRows")
 // 	args := []reflect.Value{
-// 		reflect.ValueOf(db),
+// 		reflect.ValueOf(mydb),
 // 		reflect.ValueOf(idList),
 // 		reflect.ValueOf(userId)}
 // 	out := deleteRows.Call(args)
@@ -245,7 +245,7 @@ func GetFunc_UpdateWithHTTPReturn_MethodName(
 // }
 
 func GetFunc_DeleteWithHTTPReturn(
-	db *sql.DB,
+	mydb models.MyDb,
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type, // 数据模型
@@ -258,7 +258,7 @@ func GetFunc_DeleteWithHTTPReturn(
 
 	getRow := reflect.ValueOf(repo).MethodByName("DeleteRow")
 	args := []reflect.Value{
-		reflect.ValueOf(db),
+		reflect.ValueOf(mydb),
 		reflect.ValueOf(id),
 		reflect.ValueOf(userId)}
 	out := getRow.Call(args)
@@ -286,7 +286,7 @@ func GetFunc_DeleteWithHTTPReturn(
 
 // Here returns function to shows message to the front. In case we want to pop a message afterall instead of pop it on halfway
 func GetFunc_AddWithHTTPReturn_FormData(
-	db *sql.DB,
+	mydb models.MyDb,
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type,
@@ -301,7 +301,7 @@ func GetFunc_AddWithHTTPReturn_FormData(
 	}
 
 	//  ---------------------------------------  保存数据库
-	status, returnValue, row, err := addDateBase(db, item, repo, userId)
+	status, returnValue, row, err := addDateBase(mydb, item, repo, userId)
 
 	if err != nil {
 		fmt.Println("update err:", err)
@@ -314,7 +314,7 @@ func GetFunc_AddWithHTTPReturn_FormData(
 
 // Here returns function to shows message to the front. In case we want to pop a message afterall instead of pop it on halfway
 func GetFunc_UpdateWithHTTPReturn_FormData(
-	db *sql.DB,
+	mydb models.MyDb,
 	w http.ResponseWriter,
 	r *http.Request,
 	modelType reflect.Type,
@@ -329,7 +329,7 @@ func GetFunc_UpdateWithHTTPReturn_FormData(
 	}
 
 	// --------------------------------------- 保存数据库
-	status, returnValue, err = updateDateBase(db, item, repo, "UpdateRow", userId)
+	status, returnValue, err = updateDateBase(mydb, item, repo, "UpdateRow", userId)
 
 	if err != nil {
 		fmt.Println("update err:", err)
@@ -343,7 +343,7 @@ func GetFunc_UpdateWithHTTPReturn_FormData(
 // ====================== private ======================
 
 func updateDateBase(
-	db *sql.DB,
+	mydb models.MyDb,
 	item interface{}, // 数据模型
 	repo interface{},
 	methodName string,
@@ -358,7 +358,7 @@ func updateDateBase(
 
 	addRow := reflect.ValueOf(repo).MethodByName(methodName)
 	args := []reflect.Value{
-		reflect.ValueOf(db),
+		reflect.ValueOf(mydb),
 		reflect.ValueOf(item),
 		reflect.ValueOf(userId)}
 	out := addRow.Call(args)
@@ -377,7 +377,7 @@ func updateDateBase(
 }
 
 func addDateBase(
-	db *sql.DB,
+	mydb models.MyDb,
 	item interface{}, // 数据模型
 	repo interface{},
 	userId int) (int, models.JsonRowsReturn, interface{}, error) {
@@ -393,7 +393,7 @@ func addDateBase(
 
 	addRow := reflect.ValueOf(repo).MethodByName("AddRow")
 	args := []reflect.Value{
-		reflect.ValueOf(db),
+		reflect.ValueOf(mydb),
 		reflect.ValueOf(item),
 		reflect.ValueOf(userId)}
 	out := addRow.Call(args)
@@ -535,7 +535,7 @@ func PrintFromTemplate(
 // id, _ := strconv.Atoi(params["id"])
 // roleRepo := roleRepository.RoleRepository{}
 
-// rowsDeleted, err := roleRepo.DeleteRow(db, id)
+// rowsDeleted, err := roleRepo.DeleteRow(mydb, id)
 
 // if err != nil {
 // 	returnValue.Info = "Server error"
@@ -571,7 +571,7 @@ func PrintFromTemplate(
 
 // roleRepo := roleRepository.RoleRepository{}
 
-// rowsUpdated, err := roleRepo.UpdateRow(db, role)
+// rowsUpdated, err := roleRepo.UpdateRow(mydb, role)
 
 // if err != nil {
 // 	returnValue.Info = "Server error"
@@ -610,7 +610,7 @@ func PrintFromTemplate(
 // roleRepo := roleRepository.RoleRepository{}
 
 // // TODO: 改成传指针试试，减少一个变量
-// role, err = roleRepo.AddRow(db, role)
+// role, err = roleRepo.AddRow(mydb, role)
 
 // if err != nil {
 // 	returnValue.Info = "Server error"
@@ -645,7 +645,7 @@ func PrintFromTemplate(
 // searchTerms := utils.GetSearchTerms(r)
 
 // // 运行数据库语句: db, model, array of model, pagination, query
-// roles, err := roleRepo.GetRoles(db, role, roles, &pagination, searchTerms)
+// roles, err := roleRepo.GetRoles(mydb, role, roles, &pagination, searchTerms)
 
 // if err != nil {
 // 	returnValue.Info = "Server error"
@@ -670,7 +670,7 @@ func PrintFromTemplate(
 
 // id, _ := strconv.Atoi(params["id"])
 // roleRepo := roleRepository.RoleRepository{}
-// role, err := roleRepo.GetRow(db, id)
+// role, err := roleRepo.GetRow(mydb, id)
 
 // if err != nil {
 // 	if err == sql.ErrNoRows {

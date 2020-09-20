@@ -1,7 +1,6 @@
 package textTemplateController
 
 import (
-	"database/sql"
 	"net/http"
 	"reflect"
 
@@ -17,39 +16,39 @@ type modelName = models.TextTemplate
 var authName = ""
 
 // =============================================== HTTP REQUESTS
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems(w, r, db)
+		c.C_GetItems(w, r, mydb)
 	}
 }
 
-func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItem(w, r, db)
+		c.C_GetItem(w, r, mydb)
 	}
 }
-func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) AddItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItem(w, r, db)
-	}
-}
-
-func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_UpdateItem(w, r, db)
+		c.C_AddItem(w, r, mydb)
 	}
 }
 
-func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) UpdateItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_DeleteItem(w, r, db)
+		c.C_UpdateItem(w, r, mydb)
+	}
+}
+
+func (c Controller) DeleteItem(mydb models.MyDb) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_DeleteItem(w, r, mydb)
 	}
 }
 
 // =============================================== basic CRUD
-func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -57,52 +56,52 @@ func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.D
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -110,15 +109,15 @@ func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
 // =============================================== customized
-func (c Controller) GetItems_Template(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems_Template(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(mydb, w, r, authName)
 		if !pass {
 			return
 		}
@@ -126,7 +125,7 @@ func (c Controller) GetItems_Template(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_Template", repo, userId)
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(mydb, w, r, reflect.TypeOf(item), "GetRows_Template", repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }

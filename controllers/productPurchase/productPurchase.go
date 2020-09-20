@@ -1,7 +1,6 @@
 package productPurchaseController
 
 import (
-	"database/sql"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -19,45 +18,45 @@ type modelName = models.ProductPurchase
 var authName = "product"
 
 // =============================================== HTTP REQUESTS
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems(w, r, db)
+		c.C_GetItems(w, r, mydb)
 	}
 }
 
-func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItem(w, r, db)
+		c.C_GetItem(w, r, mydb)
 	}
 }
-func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) AddItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItem(w, r, db)
-	}
-}
-
-func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_UpdateItem(w, r, db)
+		c.C_AddItem(w, r, mydb)
 	}
 }
 
-func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) UpdateItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_DeleteItem(w, r, db)
+		c.C_UpdateItem(w, r, mydb)
 	}
 }
 
-func (c Controller) Print(db *sql.DB) http.HandlerFunc {
+func (c Controller) DeleteItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_Print(w, r, db)
+		c.C_DeleteItem(w, r, mydb)
+	}
+}
+
+func (c Controller) Print(mydb models.MyDb) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_Print(w, r, mydb)
 	}
 }
 
 // =============================================== basic CRUD
-func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -65,52 +64,52 @@ func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.D
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -118,13 +117,13 @@ func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -134,7 +133,7 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 
 	// 生成打印数据(取map出来而不是item，是为了方便篡改)
 	repo := repository.Repository{}
-	dataSource, err := repo.GetPrintSource(db, id, userId)
+	dataSource, err := repo.GetPrintSource(mydb, id, userId)
 
 	if err != nil {
 		w.Write([]byte("error on generating source data," + err.Error()))
@@ -151,10 +150,10 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 
 // =============================================== customized
 
-func (c Controller) GetItems_GroupByCompany(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems_GroupByCompany(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(mydb, w, r, authName)
 		if !pass {
 			return
 		}
@@ -162,15 +161,15 @@ func (c Controller) GetItems_GroupByCompany(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_GroupByCompany", repo, userId)
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(mydb, w, r, reflect.TypeOf(item), "GetRows_GroupByCompany", repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
 
-func (c Controller) GetItems_History(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems_History(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(mydb, w, r, authName)
 		if !pass {
 			return
 		}
@@ -178,15 +177,15 @@ func (c Controller) GetItems_History(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_History", repo, userId)
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(mydb, w, r, reflect.TypeOf(item), "GetRows_History", repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
 
-func (c Controller) GetItem_ByProductId(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItem_ByProductId(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(mydb, w, r, authName)
 		if !pass {
 			return
 		}
@@ -199,7 +198,7 @@ func (c Controller) GetItem_ByProductId(db *sql.DB) http.HandlerFunc {
 		product_id, _ := strconv.Atoi(params["id"])
 		company_id, _ := strconv.Atoi(params["company_id"])
 
-		returnItem, err := repo.GetRow_ByProductId(db, product_id, company_id, userId)
+		returnItem, err := repo.GetRow_ByProductId(mydb, product_id, company_id, userId)
 
 		if err != nil {
 			returnValue.Row = nil

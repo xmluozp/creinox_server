@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"database/sql"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -58,7 +57,7 @@ type Credentials struct {
 }
 
 // Check if current user has the authentication
-func CheckAuth(db *sql.DB, w http.ResponseWriter, r *http.Request, authTag string) (bool, int) {
+func CheckAuth(mydb models.MyDb, w http.ResponseWriter, r *http.Request, authTag string) (bool, int) {
 
 	//----------------------------------------/ only for Postman testing
 	tknstr := r.Header.Get("test")
@@ -134,11 +133,11 @@ func GetUserNameFromToken(w http.ResponseWriter, r *http.Request, tknStr string)
 	return claims.UserId, claims.UserName, claims.Auth, nil
 }
 
-func GetRankFromUser(db *sql.DB, userId int) int {
+func GetRankFromUser(mydb models.MyDb, userId int) int {
 
 	rank := -1
 
-	result := db.QueryRow("SELECT a.rank FROM role a LEFT JOIN user b ON a.id = b.role_id WHERE b.id = ?", userId)
+	result := mydb.Db.QueryRow("SELECT a.rank FROM role a LEFT JOIN user b ON a.id = b.role_id WHERE b.id = ?", userId)
 
 	result.Scan((&rank))
 

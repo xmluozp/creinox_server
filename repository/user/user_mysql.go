@@ -19,12 +19,12 @@ type repositoryName = Repository
 var tableName = "user"
 
 // =============================================== Login
-func (b repositoryName) GetLoginRow(db *sql.DB, userName string) (modelName, error) {
+func (b repositoryName) GetLoginRow(mydb models.MyDb, userName string) (modelName, error) {
 
 	var item modelName
 
 	// passed in is the encryped password
-	row := db.QueryRow("SELECT * FROM "+tableName+" WHERE userName = ? AND isActive = 1", userName)
+	row := mydb.Db.QueryRow("SELECT * FROM "+tableName+" WHERE userName = ? AND isActive = 1", userName)
 
 	err := row.Scan(item.Receivers()...)
 	// item.ScanRow(row)
@@ -32,10 +32,10 @@ func (b repositoryName) GetLoginRow(db *sql.DB, userName string) (modelName, err
 	return item, err
 }
 
-func (b repositoryName) UpdateLoginRow(db *sql.DB, item modelName) (int64, error) {
+func (b repositoryName) UpdateLoginRow(mydb models.MyDb, item modelName) (int64, error) {
 
 	// login更新，只更新ip, 上次登录，token
-	result, err := db.Exec("UPDATE user SET ip=?, lastLogin = CURRENT_TIMESTAMP, token=? WHERE id=?", &item.IP, &item.Token, &item.ID)
+	result, err := mydb.Db.Exec("UPDATE user SET ip=?, lastLogin = CURRENT_TIMESTAMP, token=? WHERE id=?", &item.IP, &item.Token, &item.ID)
 
 	if err != nil {
 		return 0, err
@@ -53,18 +53,18 @@ func (b repositoryName) UpdateLoginRow(db *sql.DB, item modelName) (int64, error
 // =============================================== basic CRUD
 
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
 	var item modelName
 
-	rank := auth.GetRankFromUser(db, userId)
+	rank := auth.GetRankFromUser(mydb, userId)
 
 	// 搜索roles比自己小的
 	subsql := fmt.Sprintf("(SELECT a.* FROM user a LEFT JOIN role b ON b.id = a.role_id WHERE b.rank > %d OR b.rank IS NULL OR a.id = %d)", rank, userId)
 
-	rows, err := utils.DbQueryRows(db, "", subsql, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", subsql, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -88,9 +88,9 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 	var item modelName
-	row := utils.DbQueryRow(db, "", tableName, id, item)
+	row := utils.DbQueryRow(mydb, "", tableName, id, item)
 
 	err := item.ScanRow(row)
 
@@ -100,12 +100,12 @@ func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (modelName, error) {
 
 	// 判断用户名是否唯一
 
 	count := 0
-	scanErr := db.QueryRow("SELECT COUNT(*) FROM " + tableName + " WHERE userName = '" + item.UserName.String + "'").Scan(&count)
+	scanErr := mydb.Db.QueryRow("SELECT COUNT(*) FROM " + tableName + " WHERE userName = '" + item.UserName.String + "'").Scan(&count)
 
 	if scanErr != nil {
 		return item, scanErr
@@ -119,7 +119,7 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	hashedPass, _ := auth.HashPassword(item.Password.String)
 	item.Password = nulls.NewString(hashedPass)
 
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
 		return item, errInsert
@@ -135,11 +135,11 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	return item, errId
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
 
 	// 判断用户名是否唯一（假如要改名的话。目前暂时没这个需求）
 	count := 0
-	scanErr := db.QueryRow(fmt.Sprintf(`
+	scanErr := mydb.Db.QueryRow(fmt.Sprintf(`
 	SELECT COUNT(*) FROM `+tableName+` WHERE userName = '`+item.UserName.String+`'
 	AND id <> %d
 	`, item.ID.Int)).Scan(&count)
@@ -160,22 +160,22 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	if item.Password.String != "" {
 		hashedPass, _ := auth.HashPassword(item.Password.String)
 		item.Password = nulls.NewString(hashedPass)
-		result, row, err = utils.DbQueryUpdate(db, tableName, tableName, item)
+		result, row, err = utils.DbQueryUpdate(mydb, tableName, tableName, item)
 		item.ScanRow(row)
 
 	} else {
 		// 防止最高管理员把自己禁用或者降级
 		if item.ID.Int == userId {
-			result, err = db.Exec("UPDATE user SET fullName = ?, memo = ? WHERE id=?", &item.FullName, &item.Memo, &item.ID)
+			result, err = mydb.Db.Exec("UPDATE user SET fullName = ?, memo = ? WHERE id=?", &item.FullName, &item.Memo, &item.ID)
 
 		} else {
-			result, err = db.Exec("UPDATE user SET fullName = ?, memo = ?, isActive = ?, role_id=? WHERE id=?", &item.FullName, &item.Memo, &item.IsActive, &item.Role_id, &item.ID)
+			result, err = mydb.Db.Exec("UPDATE user SET fullName = ?, memo = ?, isActive = ?, role_id=? WHERE id=?", &item.FullName, &item.Memo, &item.IsActive, &item.Role_id, &item.ID)
 		}
 	}
 
 	// result, err := db.Exec("UPDATE role SET name=?, rank = ?, auth=? WHERE id=?", &item.Name, &item.Rank, &item.Auth, &item.ID)
 
-	// result, err = utils.DbQueryUpdate(db, tableName, item)
+	// result, err = utils.DbQueryUpdate(mydb, tableName, item)
 
 	if err != nil {
 		return 0, err
@@ -190,21 +190,19 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
-
-	var item modelName
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
 	if id == userId {
 		return nil, errors.New("You can not delete yourself")
 	}
 
-	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = item.ScanRow(row)
+	result, err := utils.DbQueryDelete(mydb, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -220,13 +218,13 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 }
 
 func (b repositoryName) GetRowsForLogin(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
 	var item modelName
 
-	rows, err := db.Query("SELECT id, userName, fullName FROM user WHERE isActive = 1")
+	rows, err := mydb.Db.Query("SELECT id, userName, fullName FROM user WHERE isActive = 1")
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -252,9 +250,9 @@ func (b repositoryName) GetRowsForLogin(
 	return items, pagination, nil
 
 }
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err

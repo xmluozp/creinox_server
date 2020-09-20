@@ -1,7 +1,6 @@
 package folderContrller
 
 import (
-	"database/sql"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -20,35 +19,35 @@ var authName = ""
 
 // =============================================== HTTP REQUESTS
 
-func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) AddItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItem(w, r, db)
+		c.C_AddItem(w, r, mydb)
 	}
 }
 
-func (c Controller) Print(db *sql.DB) http.HandlerFunc {
+func (c Controller) Print(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_Print(w, r, db)
+		c.C_Print(w, r, mydb)
 	}
 }
 
 // =============================================== basic CRUD
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -58,7 +57,7 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 
 	// 生成打印数据(取map出来而不是item，是为了方便篡改)
 	repo := repository.Repository{}
-	dataSource, err := repo.GetPrintSource(db, id, userId)
+	dataSource, err := repo.GetPrintSource(mydb, id, userId)
 
 	if err != nil {
 		w.Write([]byte("error on generating source data," + err.Error()))
@@ -76,14 +75,14 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 // ============================== internal
 
 // 删除folder把对应的image删掉。id 是 folder_id
-func (c Controller) Delete(db *sql.DB, folder_id int, userId int) error {
+func (c Controller) Delete(mydb models.MyDb, folder_id int, userId int) error {
 
 	imageCtrl := imageController.Controller{}
 
 	repo := repository.Repository{}
-	_, err := repo.DeleteRow(db, folder_id, userId)
+	_, err := repo.DeleteRow(mydb, folder_id, userId)
 
-	// folder, err := repo.GetRow(db, folder_id, userId)
+	// folder, err := repo.GetRow(mydb, folder_id, userId)
 
 	// if err != nil {
 	// 	fmt.Println("删除folder时取folder失败")
@@ -91,7 +90,7 @@ func (c Controller) Delete(db *sql.DB, folder_id int, userId int) error {
 	// 	return err
 	// }
 
-	images, err := imageCtrl.ItemsByFolder(db, folder_id, userId)
+	images, err := imageCtrl.ItemsByFolder(mydb, folder_id, userId)
 
 	if err != nil {
 		fmt.Println("删除folder时取下属images失败")
@@ -102,7 +101,7 @@ func (c Controller) Delete(db *sql.DB, folder_id int, userId int) error {
 	// fmt.Println("images", images)
 
 	for key := range images {
-		err = imageCtrl.Delete(db, images[key].ID.Int, userId)
+		err = imageCtrl.Delete(mydb, images[key].ID.Int, userId)
 		if err != nil {
 			fmt.Println("删除folder时删除下属images失败")
 			utils.Log(err)

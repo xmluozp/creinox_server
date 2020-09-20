@@ -1,7 +1,6 @@
 package paymentRequestController
 
 import (
-	"database/sql"
 	"net/http"
 	"reflect"
 
@@ -18,57 +17,57 @@ var authName = "paymentRequest"
 var authNameConfirm = "confirm-payment"
 
 // =============================================== HTTP REQUESTS
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems(w, r, db)
+		c.C_GetItems(w, r, mydb)
 	}
 }
 
-func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItem(w, r, db)
+		c.C_GetItem(w, r, mydb)
 	}
 }
-func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) AddItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItem(w, r, db)
-	}
-}
-
-func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_UpdateItem(w, r, db)
+		c.C_AddItem(w, r, mydb)
 	}
 }
 
-func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) UpdateItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_DeleteItem(w, r, db)
+		c.C_UpdateItem(w, r, mydb)
 	}
 }
 
-func (c Controller) Print(db *sql.DB) http.HandlerFunc {
+func (c Controller) DeleteItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_Print(w, r, db)
+		c.C_DeleteItem(w, r, mydb)
 	}
 }
 
-func (c Controller) UpdateItem_approve(db *sql.DB) http.HandlerFunc {
+func (c Controller) Print(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_UpdateItem_approve(w, r, db)
+		c.C_Print(w, r, mydb)
 	}
 }
 
-func (c Controller) UpdateItem_reject(db *sql.DB) http.HandlerFunc {
+func (c Controller) UpdateItem_approve(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_UpdateItem_reject(w, r, db)
+		c.C_UpdateItem_approve(w, r, mydb)
+	}
+}
+
+func (c Controller) UpdateItem_reject(mydb models.MyDb) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_UpdateItem_reject(w, r, mydb)
 	}
 }
 
 // =============================================== basic CRUD
-func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -76,52 +75,52 @@ func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.D
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -129,13 +128,13 @@ func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -145,7 +144,7 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 
 	// 生成打印数据(取map出来而不是item，是为了方便篡改)
 	repo := repository.Repository{}
-	dataSource, err := repo.GetPrintSource(db, id, userId)
+	dataSource, err := repo.GetPrintSource(mydb, id, userId)
 
 	if err != nil {
 		w.Write([]byte("error on generating source data," + err.Error()))
@@ -162,28 +161,28 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 
 // =============================== customized
 
-func (c Controller) C_UpdateItem_approve(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_UpdateItem_approve(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authNameConfirm)
+	pass, userId := auth.CheckAuth(mydb, w, r, authNameConfirm)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn_MethodName(db, w, r, reflect.TypeOf(item), "UpdateRow_approve", repo, userId)
+	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn_MethodName(mydb, w, r, reflect.TypeOf(item), "UpdateRow_approve", repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_UpdateItem_reject(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_UpdateItem_reject(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authNameConfirm)
+	pass, userId := auth.CheckAuth(mydb, w, r, authNameConfirm)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn_MethodName(db, w, r, reflect.TypeOf(item), "UpdateRow_reject", repo, userId)
+	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn_MethodName(mydb, w, r, reflect.TypeOf(item), "UpdateRow_reject", repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }

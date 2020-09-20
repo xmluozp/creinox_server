@@ -22,14 +22,14 @@ var tableName = "buy_subitem"
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
 	var item modelName
 
 	// rows这里是一个cursor.
-	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -50,19 +50,19 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 	var item modelName
-	row := utils.DbQueryRow(db, "", tableName, id, item)
+	row := utils.DbQueryRow(mydb, "", tableName, id, item)
 
 	err := item.ScanRow(row)
 
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (modelName, error) {
 
 	// item.UpdateUser_id = nulls.NewInt(userId)
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
 		return item, errInsert
@@ -75,37 +75,37 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	}
 
 	// 更新相应订单的总金额. 取出order_form_id
-	order_form_id, err := b.getOrderFormId(db, item.ID.Int)
+	order_form_id, err := b.getOrderFormId(mydb, item.ID.Int)
 	if err != nil {
 		return item, err
 	}
 
 	// 更新相应订单的总金额
-	err = b.UpdateTotalPrice(db, order_form_id, userId)
+	err = b.UpdateTotalPrice(mydb, order_form_id, userId)
 	if err != nil {
 		return item, err
 	}
 
 	// 记录日志
 	var mapBefore map[string]interface{}
-	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
-	newItem, _ := b.GetRow(db, item.ID.Int, userId)
-	b.ToUserLog(db, enums.LogActions["c"], mapBefore, mapAfter, newItem, userId)
+	mapAfter, _ := b.GetPrintSource(mydb, item.ID.Int, userId)
+	newItem, _ := b.GetRow(mydb, item.ID.Int, userId)
+	b.ToUserLog(mydb, enums.LogActions["c"], mapBefore, mapAfter, newItem, userId)
 
 	return item, errId
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
 
-	mapBefore, _ := b.GetPrintSource(db, item.ID.Int, userId)
+	mapBefore, _ := b.GetPrintSource(mydb, item.ID.Int, userId)
 
 	// 更新相应订单的总金额. 取出order_form_id
-	order_form_id, err := b.getOrderFormId(db, item.ID.Int)
+	order_form_id, err := b.getOrderFormId(mydb, item.ID.Int)
 	if err != nil {
 		return 0, err
 	}
 
-	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 	item.ScanRow(row)
 
 	if err != nil {
@@ -119,39 +119,38 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	}
 
 	// 更新相应订单的总金额
-	err = b.UpdateTotalPrice(db, order_form_id, userId)
+	err = b.UpdateTotalPrice(mydb, order_form_id, userId)
 
 	if err != nil {
 		return 0, err
 	}
 
 	// 记录日志
-	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
-	newItem, _ := b.GetRow(db, item.ID.Int, userId)
-	b.ToUserLog(db, enums.LogActions["u"], mapBefore, mapAfter, newItem, userId)
+	mapAfter, _ := b.GetPrintSource(mydb, item.ID.Int, userId)
+	newItem, _ := b.GetRow(mydb, item.ID.Int, userId)
+	b.ToUserLog(mydb, enums.LogActions["u"], mapBefore, mapAfter, newItem, userId)
 
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
-	var item modelName
-	mapBefore, _ := b.GetPrintSource(db, id, userId)
+	mapBefore, _ := b.GetPrintSource(mydb, id, userId)
 
 	// 更新相应订单的总金额. 取出order_form_id
-	order_form_id, err := b.getOrderFormId(db, id)
+	order_form_id, err := b.getOrderFormId(mydb, id)
 
 	if err != nil {
 		return nil, err
 	}
 
-	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = item.ScanRow(row)
+	result, err := utils.DbQueryDelete(mydb, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -164,21 +163,21 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	}
 
 	// 更新相应订单的总金额. 实际更新
-	err = b.UpdateTotalPrice(db, order_form_id, userId)
+	err = b.UpdateTotalPrice(mydb, order_form_id, userId)
 	if err != nil {
 		return nil, err
 	}
 
 	// 记录日志
 	var mapAfter map[string]interface{}
-	b.ToUserLog(db, enums.LogActions["d"], mapBefore, mapAfter, item, userId)
+	b.ToUserLog(mydb, enums.LogActions["d"], mapBefore, mapAfter, item, userId)
 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
@@ -193,7 +192,7 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 
 // 用做列表显示的collapse、以及打印的时候取子订单用
 func (b repositoryName) GetRows_fromBuyContract(
-	db *sql.DB,
+	mydb models.MyDb,
 	buy_contract_id int,
 	userId int) ([]modelName, models.Pagination, error) {
 
@@ -208,7 +207,7 @@ func (b repositoryName) GetRows_fromBuyContract(
 	buy_contract_id_str := strconv.Itoa(buy_contract_id)
 	searchTerms["buy_contract_id"] = buy_contract_id_str
 
-	returnitems, pagination, err := b.GetRows(db, pagination, searchTerms, userId)
+	returnitems, pagination, err := b.GetRows(mydb, pagination, searchTerms, userId)
 
 	for i := 0; i < len(returnitems); i++ {
 		returnitems[i].BuyContract = models.BuyContract{}
@@ -220,24 +219,30 @@ func (b repositoryName) GetRows_fromBuyContract(
 
 // 每次item变动，都更新父合同里面的总价
 // 根据item找到orderForm的id。随后更新总价格用
-func (b repositoryName) getOrderFormId(db *sql.DB, id int) (order_form_id int, err error) {
+func (b repositoryName) getOrderFormId(mydb models.MyDb, id int) (order_form_id int, err error) {
 
+	query := `
+	SELECT a.order_form_id 
+	FROM buy_contract a 
+	LEFT JOIN buy_subitem b 
+	ON a.id = b.buy_contract_id 
+	WHERE b.id=?`
+
+	var row *sql.Row
 	// 取出price和order form id
-	row := db.QueryRow(`
-		SELECT a.order_form_id 
-		FROM buy_contract a 
-		LEFT JOIN buy_subitem b 
-		ON a.id = b.buy_contract_id 
-		WHERE b.id=?`, id)
+	if mydb.Tx != nil {
+		row = mydb.Tx.QueryRow(query, id)
+	} else {
+		row = mydb.Db.QueryRow(query, id)
+	}
 
 	err = row.Scan(&order_form_id)
 
-	fmt.Println("对应的order form", order_form_id)
 	return order_form_id, err
 }
 
 // 每次item变动，都更新父合同里面的总价
-func (b repositoryName) UpdateTotalPrice(db *sql.DB, order_form_id int, userId int) error {
+func (b repositoryName) UpdateTotalPrice(mydb models.MyDb, order_form_id int, userId int) error {
 
 	//tableName_order
 	var totalPrice nulls.Float32
@@ -249,11 +254,18 @@ func (b repositoryName) UpdateTotalPrice(db *sql.DB, order_form_id int, userId i
 	// LEFT JOIN (SELECT buy_contract_id, SUM(unitPrice * amount)
 	// AS view_totalPrice FROM buy_subitem GROUP BY buy_contract_id) b ON a.id = b.buy_contract_id LEFT JOIN buy_subitem c ON c.buy_contract_id = a.id  WHERE c.id=?`, id)
 
-	row := db.QueryRow(
-		`SELECT a.view_totalPrice FROM
-			(SELECT buy_contract_id, SUM(unitPrice * amount) AS view_totalPrice FROM buy_subitem GROUP BY buy_contract_id) a 
-			RIGHT JOIN buy_contract b
-			ON a.buy_contract_id = b.id WHERE b.order_form_id = ?`, order_form_id)
+	query := `SELECT a.view_totalPrice FROM
+	(SELECT buy_contract_id, SUM(unitPrice * amount) AS view_totalPrice FROM buy_subitem GROUP BY buy_contract_id) a 
+	RIGHT JOIN buy_contract b
+	ON a.buy_contract_id = b.id WHERE b.order_form_id = ?`
+
+	var row *sql.Row
+
+	if mydb.Tx != nil {
+		row = mydb.Tx.QueryRow(query, order_form_id)
+	} else {
+		row = mydb.Db.QueryRow(query, order_form_id)
+	}
 
 	err := row.Scan(&totalPrice)
 
@@ -267,13 +279,13 @@ func (b repositoryName) UpdateTotalPrice(db *sql.DB, order_form_id int, userId i
 	orderitem.Payable = nulls.NewFloat32(totalPrice.Float32) // 不convert一下，会提交null，然后被utils筛掉
 
 	orderFormRepo := orderFormRepo.Repository{}
-	_, err = orderFormRepo.UpdateRow(db, orderitem, userId)
+	_, err = orderFormRepo.UpdateRow(mydb, orderitem, userId)
 
 	// _, err = db.Exec("UPDATE order_form SET "+totalPriceName+"=? WHERE id=?", &totalPrice, &order_form_id)
 	return err
 }
 
-func (b repositoryName) ToUserLog(db *sql.DB, action string, before map[string]interface{}, after map[string]interface{}, item modelName, userId int) {
+func (b repositoryName) ToUserLog(mydb models.MyDb, action string, before map[string]interface{}, after map[string]interface{}, item modelName, userId int) {
 
 	memo := fmt.Sprintf(`
 		ID:			%d
@@ -297,5 +309,5 @@ func (b repositoryName) ToUserLog(db *sql.DB, action string, before map[string]i
 	userLog.SnapshotBefore = nulls.NewString(string(logBefore))
 	userLog.SnapshotAfter = nulls.NewString(string(logAfter))
 
-	userLogRepository.Repository{}.AddRow(db, userLog, userId)
+	userLogRepository.Repository{}.AddRow(mydb, userLog, userId)
 }

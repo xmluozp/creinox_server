@@ -1,7 +1,6 @@
 package financialVoucherRepository
 
 import (
-	"database/sql"
 	"fmt"
 	"net/http"
 	"strings"
@@ -20,14 +19,14 @@ var tableName = "financial_voucher"
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
 	var item modelName
 
 	// rows这里是一个cursor.
-	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -48,20 +47,20 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 	var item modelName
-	row := utils.DbQueryRow(db, "", tableName, id, item)
+	row := utils.DbQueryRow(mydb, "", tableName, id, item)
 
 	err := item.ScanRow(row)
 
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (modelName, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
 
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
 		return item, errInsert
@@ -78,11 +77,11 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	return item, errId
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
 
-	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 	item.ScanRow(row)
 
 	if err != nil {
@@ -98,17 +97,15 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
-	var item modelName
-
-	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = item.ScanRow(row)
+	result, err := utils.DbQueryDelete(mydb, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -123,9 +120,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
@@ -136,13 +133,13 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 	return ds, err
 }
 
-func (b repositoryName) GetPrintSourceList(db *sql.DB, r *http.Request, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSourceList(mydb models.MyDb, r *http.Request, userId int) (map[string]interface{}, error) {
 
 	// 分页，排序，搜索关键词
 	pagination := utils.GetPagination(r)
 	searchTerms := utils.GetSearchTerms(r)
 
-	items, _, err := b.GetRows(db, pagination, searchTerms, userId)
+	items, _, err := b.GetRows(mydb, pagination, searchTerms, userId)
 
 	// 统计数据
 	totalDebit := float32(0)
@@ -194,7 +191,7 @@ func (b repositoryName) GetPrintSourceList(db *sql.DB, r *http.Request, userId i
 }
 
 // 根据voucher的code去升级，而不是根据id
-func (b repositoryName) UpdateVoucher(db *sql.DB, debit modelName, credit modelName, userId int) (rowsUpdated int64, err error) {
+func (b repositoryName) UpdateVoucher(mydb models.MyDb, debit modelName, credit modelName, userId int) (rowsUpdated int64, err error) {
 
 	// 根据code取出id。 会有两个，一借一贷。根据金额判断
 	sqlstr := `SELECT id FROM %s WHERE financialLedger_id = %d AND resource_code = '%s' LIMIT 1`
@@ -202,8 +199,8 @@ func (b repositoryName) UpdateVoucher(db *sql.DB, debit modelName, credit modelN
 	sqlCredit := fmt.Sprintf(sqlstr, tableName, credit.FinancialLedger_id.Int, credit.Resource_code.String)
 	sqlDebit := fmt.Sprintf(sqlstr, tableName, debit.FinancialLedger_id.Int, debit.Resource_code.String)
 
-	rowDebit := utils.DbQueryRow(db, sqlCredit, tableName, 0, debit)
-	rowCredit := utils.DbQueryRow(db, sqlDebit, tableName, 0, credit)
+	rowDebit := utils.DbQueryRow(mydb, sqlCredit, tableName, 0, debit)
+	rowCredit := utils.DbQueryRow(mydb, sqlDebit, tableName, 0, credit)
 
 	var idDebit int
 	var idCredit int
@@ -222,19 +219,19 @@ func (b repositoryName) UpdateVoucher(db *sql.DB, debit modelName, credit modelN
 	debit.ID = nulls.NewInt(idDebit)
 	credit.ID = nulls.NewInt(idCredit)
 
-	rowsUpdated, err = b.UpdateRow(db, debit, userId)
-	rowsUpdated, err = b.UpdateRow(db, credit, userId)
+	rowsUpdated, err = b.UpdateRow(mydb, debit, userId)
+	rowsUpdated, err = b.UpdateRow(mydb, credit, userId)
 
 	return rowsUpdated, err
 }
 
 // 根据voucher的code去删除，而不是根据id
-func (b repositoryName) DeleteVoucher(db *sql.DB, voucherResourceCode string, userId int) (interface{}, error) {
+func (b repositoryName) DeleteVoucher(mydb models.MyDb, voucherResourceCode string, userId int) (interface{}, error) {
 
 	// 根据code取出id
 	sqlstr := "SELECT id FROM " + tableName + " WHERE resource_code = '" + voucherResourceCode + "' LIMIT 1"
 	var voucherItem modelName
-	row := utils.DbQueryRow(db, sqlstr, tableName, 0, voucherItem)
+	row := utils.DbQueryRow(mydb, sqlstr, tableName, 0, voucherItem)
 
 	var id int
 	err := row.Scan(&id)
@@ -244,5 +241,5 @@ func (b repositoryName) DeleteVoucher(db *sql.DB, voucherResourceCode string, us
 		return nil, nil
 	}
 
-	return b.DeleteRow(db, id, userId)
+	return b.DeleteRow(mydb, id, userId)
 }

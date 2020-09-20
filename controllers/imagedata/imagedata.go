@@ -1,7 +1,6 @@
 package imageControllr
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -14,10 +13,10 @@ import (
 	"strconv"
 
 	"github.com/BurntSushi/graphics-go/graphics"
-	"github.com/Unknwon/goconfig"
 	"github.com/gobuffalo/nulls"
 	"github.com/gorilla/mux"
 	"github.com/xmluozp/creinox_server/auth"
+	"github.com/xmluozp/creinox_server/initial"
 	"github.com/xmluozp/creinox_server/models"
 	repositoryFolder "github.com/xmluozp/creinox_server/repository/folder"
 	repository "github.com/xmluozp/creinox_server/repository/imagedata"
@@ -30,52 +29,52 @@ type modelName = models.Image
 var authName = ""
 
 // =============================================== HTTP REQUESTS
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems(w, r, db)
+		c.C_GetItems(w, r, mydb)
 	}
 }
 
-func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItem(w, r, db)
+		c.C_GetItem(w, r, mydb)
 	}
 }
-func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) AddItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItem(w, r, db)
+		c.C_AddItem(w, r, mydb)
 	}
 }
 
-func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) UpdateItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_UpdateItem(w, r, db)
+		c.C_UpdateItem(w, r, mydb)
 	}
 }
 
 // 这里是前端的文件夹管理用，特殊处理：手动读取和删除
-func (c Controller) DeleteItems(db *sql.DB) http.HandlerFunc {
+func (c Controller) DeleteItems(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_DeleteItems(w, r, db)
+		c.C_DeleteItems(w, r, mydb)
 	}
 }
 
 // 批量上传
-func (c Controller) AddItems(db *sql.DB) http.HandlerFunc {
+func (c Controller) AddItems(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItems(w, r, db)
+		c.C_AddItems(w, r, mydb)
 	}
 }
-func (c Controller) Show(db *sql.DB) http.HandlerFunc {
+func (c Controller) Show(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_Show(w, r, db)
+		c.C_Show(w, r, mydb)
 	}
 }
 
 // =============================================== basic CRUD
-func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -83,52 +82,52 @@ func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.D
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_DeleteItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_DeleteItems(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -140,7 +139,7 @@ func (c Controller) C_DeleteItems(w http.ResponseWriter, r *http.Request, db *sq
 
 	for _, value := range idList {
 
-		err = c.Delete(db, value, userId)
+		err = c.Delete(mydb, value, userId)
 		if err != nil {
 			returnValue.Info += fmt.Sprintf("删除图片出错，ID：%d, %s", value, err.Error())
 			status = http.StatusBadRequest
@@ -154,9 +153,9 @@ func (c Controller) C_DeleteItems(w http.ResponseWriter, r *http.Request, db *sq
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_AddItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_AddItems(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -182,7 +181,7 @@ func (c Controller) C_AddItems(w http.ResponseWriter, r *http.Request, db *sql.D
 
 		folderRepo := repositoryFolder.Repository{}
 
-		newFolder, err := folderRepo.AddRow_withRef(db, folderItem.(models.Folder), userId)
+		newFolder, err := folderRepo.AddRow_withRef(mydb, folderItem.(models.Folder), userId)
 
 		folder_id = newFolder.ID.Int
 
@@ -196,7 +195,7 @@ func (c Controller) C_AddItems(w http.ResponseWriter, r *http.Request, db *sql.D
 
 	// 循环存入images
 	for key := range files {
-		c.Upload(db, -1, key, files[key], folder_id, userId) // 不需要删旧数据也不需要返回，所以直接存就好
+		c.Upload(mydb, -1, key, files[key], folder_id, userId) // 不需要删旧数据也不需要返回，所以直接存就好
 	}
 
 	returnValue.Info = fmt.Sprintf("上传了%d张图片", len(files))
@@ -208,7 +207,7 @@ func (c Controller) C_AddItems(w http.ResponseWriter, r *http.Request, db *sql.D
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_Show(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_Show(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
 	file, _ := os.Open("." + r.URL.Path)
 	// errorHandle(err, w);
@@ -220,11 +219,11 @@ func (c Controller) C_Show(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 // 通用图片管理功能用。否则只有批量删除
-// func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
+// func (c Controller) DeleteItem(mydb models.MyDb) http.HandlerFunc {
 
 // 	return func(w http.ResponseWriter, r *http.Request) {
 
-// 		pass, userId := auth.CheckAuth(db, w, r, authName)
+// 		pass, userId := auth.CheckAuth(mydb, w, r, authName)
 // 		if !pass {
 // 			return
 // 		}
@@ -232,7 +231,7 @@ func (c Controller) C_Show(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 // 		var item modelName
 // 		repo := repository.Repository{}
 
-// 		status, returnValue, deletedItem, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+// 		status, returnValue, deletedItem, err := utils.GetFunc_DeleteWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 
 // 		// 取出旧图片删掉
 // 		imageOld := deletedItem.(models.Image)
@@ -247,28 +246,28 @@ func (c Controller) C_Show(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 // Get item by folder; Folder will be connected with company/product/other tables
 func (c Controller) ItemsByFolder(
-	db *sql.DB,
+	mydb models.MyDb,
 	folderId int,
 	userId int) ([]modelName, error) {
 
 	repo := repository.Repository{}
-	images, err := repo.GetRowsByFolder(db, folderId, userId)
+	images, err := repo.GetRowsByFolder(mydb, folderId, userId)
 
 	return images, err
 }
 
 // Get item. Will be called by other controller
-func (c Controller) Item(db *sql.DB, id int) (image modelName, err error) {
+func (c Controller) Item(mydb models.MyDb, id int) (image modelName, err error) {
 
 	repo := repository.Repository{}
-	image, err = repo.GetRow(db, id, 0)
+	image, err = repo.GetRow(mydb, id, 0)
 
 	return image, err
 }
 
 // Upload withouth a front-end-expected json return. input: old table, old column, old id, the file. output: new imagedata id
 func (c Controller) Upload(
-	db *sql.DB,
+	mydb models.MyDb,
 	oldImage_id int,
 	fileName string,
 	fileBytes []byte,
@@ -349,7 +348,7 @@ func (c Controller) Upload(
 
 	repo := repository.Repository{}
 
-	newImagedataResult, err := repo.AddRow(db, newImagedata, userId)
+	newImagedataResult, err := repo.AddRow(mydb, newImagedata, userId)
 
 	if err != nil {
 		return 0, err
@@ -357,7 +356,7 @@ func (c Controller) Upload(
 
 	// 删除原图：
 	if oldImage_id > 0 {
-		c.Delete(db, oldImage_id, userId)
+		c.Delete(mydb, oldImage_id, userId)
 	}
 
 	// 忽略错误。因为有可能数据库没图片
@@ -366,14 +365,14 @@ func (c Controller) Upload(
 
 // Delete withouth a front-end-expected json return
 func (c Controller) Delete(
-	db *sql.DB,
+	mydb models.MyDb,
 	id int,
 	userId int) error {
 
 	repo := repository.Repository{}
 
 	// 删除原图：
-	deletedItem, err := repo.DeleteRow(db, id, userId)
+	deletedItem, err := repo.DeleteRow(mydb, id, userId)
 
 	// 如果没有原图就不管
 	if err != nil {
@@ -383,13 +382,13 @@ func (c Controller) Delete(
 
 	imageOld := deletedItem.(models.Image)
 
-	cfg, err := goconfig.LoadConfigFile("conf.ini")
+	// cfg, err := goconfig.LoadConfigFile("conf.ini")
 
-	if err != nil {
-		panic("错误，找不到conf.ini配置文件")
-	}
+	// if err != nil {
+	// 	panic("错误，找不到conf.ini配置文件")
+	// }
 
-	uploads, err := cfg.GetValue("site", "uploads")
+	_, _, _, uploads := initial.GetConfig()
 
 	os.Remove(uploads + "/" + imageOld.Path.String)
 	os.Remove(uploads + "/" + imageOld.ThumbnailPath.String)

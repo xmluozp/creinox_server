@@ -1,7 +1,6 @@
 package sellSubitemController
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	_ "image/gif"
@@ -25,45 +24,45 @@ type modelName = models.SellSubitem
 var authName = "sellcontract"
 
 // =============================================== HTTP REQUESTS
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems(w, r, db)
+		c.C_GetItems(w, r, mydb)
 	}
 }
 
-func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItem(w, r, db)
+		c.C_GetItem(w, r, mydb)
 	}
 }
-func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) AddItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItem(w, r, db)
-	}
-}
-
-func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_UpdateItem(w, r, db)
+		c.C_AddItem(w, r, mydb)
 	}
 }
 
-func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) UpdateItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_DeleteItem(w, r, db)
+		c.C_UpdateItem(w, r, mydb)
 	}
 }
 
-func (c Controller) Print(db *sql.DB) http.HandlerFunc {
+func (c Controller) DeleteItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_Print(w, r, db)
+		c.C_DeleteItem(w, r, mydb)
+	}
+}
+
+func (c Controller) Print(mydb models.MyDb) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_Print(w, r, mydb)
 	}
 }
 
 // =============================================== basic CRUD
-func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -71,26 +70,26 @@ func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.D
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -98,7 +97,7 @@ func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, returnItem, files, err := utils.GetFunc_AddWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, returnItem, files, err := utils.GetFunc_AddWithHTTPReturn_FormData(mydb, w, r, reflect.TypeOf(item), repo, userId)
 
 	// 验证不通过之类的问题就不需要传图
 	if err != nil {
@@ -109,7 +108,7 @@ func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB
 	itemFromRequest := returnItem.(modelName)
 
 	// 更新image数据库, 上传图片
-	err = updateImage(db, itemFromRequest, files, userId)
+	err = updateImage(mydb, itemFromRequest, files, userId)
 
 	if err != nil {
 		var returnValue models.JsonRowsReturn
@@ -119,21 +118,21 @@ func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB
 	}
 
 	// 取最新row返回
-	updatedItem, err := repo.GetRow(db, itemFromRequest.ID.Int, userId)
+	updatedItem, err := repo.GetRow(mydb, itemFromRequest.ID.Int, userId)
 	returnValue.Row = updatedItem
 
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, returnItem, files, err := utils.GetFunc_UpdateWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, returnItem, files, err := utils.GetFunc_UpdateWithHTTPReturn_FormData(mydb, w, r, reflect.TypeOf(item), repo, userId)
 
 	// 验证不通过之类的问题就不需要传图
 	if err != nil {
@@ -144,7 +143,7 @@ func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql
 	// convert "reflected" item into company type
 	itemFromRequest := returnItem.(modelName)
 
-	err = updateImage(db, itemFromRequest, files, userId)
+	err = updateImage(mydb, itemFromRequest, files, userId)
 
 	if err != nil {
 		var returnValue models.JsonRowsReturn
@@ -154,16 +153,16 @@ func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql
 	}
 
 	// 取最新row返回
-	updatedItem, err := repo.GetRow(db, itemFromRequest.ID.Int, userId)
+	updatedItem, err := repo.GetRow(mydb, itemFromRequest.ID.Int, userId)
 	returnValue.Row = updatedItem
 
 	// send success message to front-end
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -171,13 +170,13 @@ func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -187,7 +186,7 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 
 	// 生成打印数据(取map出来而不是item，是为了方便篡改)
 	repo := repository.Repository{}
-	dataSource, err := repo.GetPrintSource(db, id, userId)
+	dataSource, err := repo.GetPrintSource(mydb, id, userId)
 
 	if err != nil {
 		w.Write([]byte("error on generating source data," + err.Error()))
@@ -204,12 +203,12 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 
 // =============================================== customized
 // 以下这段代码找不到方法generalization，只好复制粘贴到各自的controllers里。但代码都是一样的：把业务表里附带的image update到image表、上传到文件夹、更新业务表对应fk
-func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int) error {
+func updateImage(mydb models.MyDb, item modelName, files map[string][]byte, userId int) error {
 
 	repo := repository.Repository{}
 
 	// update
-	updatedItem, _ := repo.GetRow(db, item.ID.Int, 0)
+	updatedItem, _ := repo.GetRow(mydb, item.ID.Int, 0)
 	newImageIds := make(map[string]int)
 
 	// upload image(here will be twice: license, biscard), return new image id -------------------------------------
@@ -232,7 +231,7 @@ func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int
 
 		var err error
 		fileName := fmt.Sprintf("sellSubitem.%s.%d", columnName, item.ID.Int)
-		newImageId, err := imageCtrl.Upload(db, oldImage_id, fileName, fileBytes, -1, userId)
+		newImageId, err := imageCtrl.Upload(mydb, oldImage_id, fileName, fileBytes, -1, userId)
 
 		if newImageId != 0 {
 			newImageIds[columnName] = newImageId
@@ -247,7 +246,7 @@ func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int
 	if len(newImageIds) > 0 {
 		jsonString, err := json.Marshal(newImageIds)
 		json.Unmarshal(jsonString, &updatedItem)
-		_, err = repo.UpdateRow(db, updatedItem, userId)
+		_, err = repo.UpdateRow(mydb, updatedItem, userId)
 
 		// send error of upload file to front-end
 		if err != nil {

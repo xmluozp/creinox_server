@@ -19,13 +19,13 @@ var tableName = "company"
 // =============================================== basic CRUD
 
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
 	var item modelName
 
-	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -50,19 +50,19 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 
 	var item modelName
 	// row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
 
 	// todo: 取图片
-	row := utils.DbQueryRow(db, "", tableName, id, item)
+	row := utils.DbQueryRow(mydb, "", tableName, id, item)
 	err := item.ScanRow(row)
 
 	// imageCtrl := imageController.Controller{}
 
 	// if item.ImageLicense_id.Valid {
-	// 	license, err := imageCtrl.Item(db, item.ImageLicense_id.Int)
+	// 	license, err := imageCtrl.Item(mydb, item.ImageLicense_id.Int)
 	// 	if err != nil {
 	// 		return item, err
 	// 	}
@@ -70,7 +70,7 @@ func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error
 	// }
 
 	// if item.ImageBizCard_id.Valid {
-	// 	bizcard, err := imageCtrl.Item(db, item.ImageBizCard_id.Int)
+	// 	bizcard, err := imageCtrl.Item(mydb, item.ImageBizCard_id.Int)
 	// 	if err != nil {
 	// 		return item, err
 	// 	}
@@ -80,14 +80,14 @@ func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, itemRec interface{}, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, itemRec interface{}, userId int) (modelName, error) {
 
 	item := itemRec.(modelName)
 
 	folder := models.Folder{}
 
 	// company folder
-	newFolder, errInsert := utils.DbQueryInsert(db, "folder", folder)
+	newFolder, errInsert := utils.DbQueryInsert(mydb, "folder", folder)
 	folderId, err := newFolder.LastInsertId()
 
 	if err != nil {
@@ -97,7 +97,7 @@ func (b repositoryName) AddRow(db *sql.DB, itemRec interface{}, userId int) (mod
 	item.UpdateUser_id = nulls.NewInt(userId)
 	item.Gallary_folder_id = nulls.NewInt(int(folderId))
 
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
 		return item, errInsert
@@ -118,7 +118,7 @@ func (b repositoryName) AddRow(db *sql.DB, itemRec interface{}, userId int) (mod
 	folder.RefSource = nulls.NewString("company.gallary_folder_id")
 	folder.RefId = item.ID
 
-	result, row, errFolderUpdate := utils.DbQueryUpdate(db, "folder", "folder", folder)
+	result, row, errFolderUpdate := utils.DbQueryUpdate(mydb, "folder", "folder", folder)
 	folder.ScanRow(row)
 
 	if errFolderUpdate != nil {
@@ -128,13 +128,13 @@ func (b repositoryName) AddRow(db *sql.DB, itemRec interface{}, userId int) (mod
 	return item, errId
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, itemRec interface{}, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, itemRec interface{}, userId int) (int64, error) {
 
 	fmt.Println("h", itemRec)
 	item := itemRec.(modelName)
 
 	item.UpdateUser_id = nulls.NewInt(userId)
-	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 	item.ScanRow(row)
 
 	// fmt.Println("database updateRow", item)
@@ -152,13 +152,16 @@ func (b repositoryName) UpdateRow(db *sql.DB, itemRec interface{}, userId int) (
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
-	var item modelName
-	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
-	err = item.ScanRow(row)
+	item, err := b.GetRow(mydb, id, userId)
 
-	fmt.Println("scaned 扫描以后", item)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := utils.DbQueryDelete(mydb, tableName, tableName, id, item)
+
 	// result, err := db.Exec("DELETE f, c FROM company c LEFT JOIN folder f ON f.id = c.gallary_folder_id WHERE c.id = ?", id)
 
 	if err != nil {
@@ -174,9 +177,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
@@ -188,16 +191,24 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 }
 
 // 公司专用，取当前类别，当前前缀的code里最大的那个返回
-func (b repositoryName) GetRow_byCode(db *sql.DB, companyType int, keyWord string, userId int) (modelName, error) {
+func (b repositoryName) GetRow_byCode(mydb models.MyDb, companyType int, keyWord string, userId int) (modelName, error) {
 
 	var item modelName
 	// row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
 
-	row := db.QueryRow(`SELECT company.*
+	query := `SELECT company.*
 	FROM company 
 	WHERE UPPER(code) LIKE CONCAT(UPPER(?), "%") AND companyType = ?
 	AND CONVERT(SUBSTRING(code, ?, length(code)), UNSIGNED) > 0
-	ORDER BY CONVERT(SUBSTRING(code, ?, length(code)), UNSIGNED) DESC LIMIT 1`, keyWord, companyType, len(keyWord)+1, len(keyWord)+1)
+	ORDER BY CONVERT(SUBSTRING(code, ?, length(code)), UNSIGNED) DESC LIMIT 1`
+
+	var row *sql.Row
+
+	if mydb.Tx != nil {
+		row = mydb.Tx.QueryRow(query, keyWord, companyType, len(keyWord)+1, len(keyWord)+1)
+	} else {
+		row = mydb.Db.QueryRow(query, keyWord, companyType, len(keyWord)+1, len(keyWord)+1)
+	}
 
 	err := row.Scan(item.Receivers()...)
 

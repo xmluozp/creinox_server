@@ -1,7 +1,6 @@
 package buyContractRepository
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -29,14 +28,14 @@ var combineName = "combine_buy_contract"
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
 	var item modelName
 
 	// rows这里是一个cursor.
-	rows, err := utils.DbQueryRows(db, "", combineName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", combineName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -50,7 +49,7 @@ func (b repositoryName) GetRows(
 
 		item.ScanRowsView(rows)
 
-		trans1_list, _, _ := financialTransactionRepository.GetRows_fromOrderForm(db, item.Order_form_id.Int, userId)
+		trans1_list, _, _ := financialTransactionRepository.GetRows_fromOrderForm(mydb, item.Order_form_id.Int, userId)
 		item.FinancialTransactionList = trans1_list
 
 		items = append(items, item)
@@ -63,16 +62,16 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 	var item modelName
-	row := utils.DbQueryRow(db, "", combineName, id, item)
+	row := utils.DbQueryRow(mydb, "", combineName, id, item)
 
 	err := item.ScanRowView(row)
 
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (modelName, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
 
@@ -93,7 +92,7 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	orderitem.Order_memo = item.Order_memo
 
 	orderFormRepo := orderFormRepo.Repository{}
-	orderItem, errInsert := orderFormRepo.AddRow(db, orderitem, userId)
+	orderItem, errInsert := orderFormRepo.AddRow(mydb, orderitem, userId)
 
 	if errInsert != nil {
 		return item, errInsert
@@ -103,10 +102,10 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 	// -------------------
 
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
-		orderFormRepo.DeleteRow(db, orderItem.ID.Int, userId)
+		orderFormRepo.DeleteRow(mydb, orderItem.ID.Int, userId)
 		utils.Log(nil, "添加合同详情失败，删除合同")
 		return item, errInsert
 	}
@@ -119,20 +118,20 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 	// 记录日志
 	var mapBefore map[string]interface{}
-	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
-	newItem, _ := b.GetRow(db, item.ID.Int, userId)
-	b.ToUserLog(db, enums.LogActions["c"], mapBefore, mapAfter, newItem, userId)
+	mapAfter, _ := b.GetPrintSource(mydb, item.ID.Int, userId)
+	newItem, _ := b.GetRow(mydb, item.ID.Int, userId)
+	b.ToUserLog(mydb, enums.LogActions["c"], mapBefore, mapAfter, newItem, userId)
 
 	return item, errId
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
 
-	mapBefore, _ := b.GetPrintSource(db, item.ID.Int, userId)
+	mapBefore, _ := b.GetPrintSource(mydb, item.ID.Int, userId)
 
 	item.UpdateUser_id = nulls.NewInt(userId)
 
-	result, updatedRow, err := utils.DbQueryUpdate(db, tableName, combineName, item)
+	result, updatedRow, err := utils.DbQueryUpdate(mydb, tableName, combineName, item)
 
 	var olditem modelName
 	olditem.ScanRow(updatedRow)
@@ -164,7 +163,7 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	orderitem.Order_memo = item.Order_memo
 
 	orderFormRepo := orderFormRepo.Repository{}
-	_, err = orderFormRepo.UpdateRow(db, orderitem, userId)
+	_, err = orderFormRepo.UpdateRow(mydb, orderitem, userId)
 
 	if err != nil {
 		return 0, err
@@ -172,25 +171,24 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	// -------------------
 
 	// 记录日志
-	mapAfter, _ := b.GetPrintSource(db, item.ID.Int, userId)
-	newItem, _ := b.GetRow(db, item.ID.Int, userId)
-	b.ToUserLog(db, enums.LogActions["u"], mapBefore, mapAfter, newItem, userId)
+	mapAfter, _ := b.GetPrintSource(mydb, item.ID.Int, userId)
+	newItem, _ := b.GetRow(mydb, item.ID.Int, userId)
+	b.ToUserLog(mydb, enums.LogActions["u"], mapBefore, mapAfter, newItem, userId)
 
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
-	var item modelName
-	mapBefore, _ := b.GetPrintSource(db, id, userId)
+	mapBefore, _ := b.GetPrintSource(mydb, id, userId)
 
-	result, row, err := utils.DbQueryDelete(db, tableName, combineName, id, item)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = item.ScanRow(row)
+	result, err := utils.DbQueryDelete(mydb, tableName, combineName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -204,23 +202,23 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	// 删掉对应的order
 	orderFormRepo := orderFormRepo.Repository{}
-	_, err = orderFormRepo.DeleteRow(db, item.Order_form_id.Int, userId)
+	_, err = orderFormRepo.DeleteRow(mydb, item.Order_form_id.Int, userId)
 
 	// 记录日志
 	var mapAfter map[string]interface{}
-	b.ToUserLog(db, enums.LogActions["d"], mapBefore, mapAfter, item, userId)
+	b.ToUserLog(mydb, enums.LogActions["d"], mapBefore, mapAfter, item, userId)
 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	buySubitemRepository := buySubitemRepository.Repository{}
 
 	//----------如果打印子列表，需要取出来
-	subitem_list, _, err := buySubitemRepository.GetRows_fromBuyContract(db, id, userId)
+	subitem_list, _, err := buySubitemRepository.GetRows_fromBuyContract(mydb, id, userId)
 	item.BuySubitem = subitem_list
 
 	if err != nil {
@@ -269,12 +267,12 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 
 // =============================================== customized
 
-func (b repositoryName) GetRow_GetLast(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow_GetLast(mydb models.MyDb, id int, userId int) (modelName, error) {
 
 	sqlstr := "SELECT * FROM " + combineName + " ORDER BY updateAt DESC LIMIT 1"
 
 	var item modelName
-	row := utils.DbQueryRow(db, sqlstr, combineName, 0, item)
+	row := utils.DbQueryRow(mydb, sqlstr, combineName, 0, item)
 
 	err := row.Scan(item.Receivers()...)
 
@@ -283,7 +281,7 @@ func (b repositoryName) GetRow_GetLast(db *sql.DB, id int, userId int) (modelNam
 
 // 用来在销售合同界面，显示下属的采购合同列表
 func (b repositoryName) GetRows_fromSellContract(
-	db *sql.DB,
+	mydb models.MyDb,
 	sell_contract_id int,
 	userId int) ([]modelName, models.Pagination, error) {
 
@@ -298,10 +296,10 @@ func (b repositoryName) GetRows_fromSellContract(
 	searchTerms["sell_contract_id"] = sell_contract_id_str
 
 	// 这个应该是取出所有
-	return b.GetRows(db, pagination, searchTerms, userId)
+	return b.GetRows(mydb, pagination, searchTerms, userId)
 }
 
-func (b repositoryName) ToUserLog(db *sql.DB, action string, before map[string]interface{}, after map[string]interface{}, item modelName, userId int) {
+func (b repositoryName) ToUserLog(mydb models.MyDb, action string, before map[string]interface{}, after map[string]interface{}, item modelName, userId int) {
 
 	memo := fmt.Sprintf(`
 		ID:			%d
@@ -320,5 +318,5 @@ func (b repositoryName) ToUserLog(db *sql.DB, action string, before map[string]i
 	userLog.SnapshotBefore = nulls.NewString(string(logBefore))
 	userLog.SnapshotAfter = nulls.NewString(string(logAfter))
 
-	userLogRepository.Repository{}.AddRow(db, userLog, userId)
+	userLogRepository.Repository{}.AddRow(mydb, userLog, userId)
 }

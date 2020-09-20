@@ -1,7 +1,6 @@
 package commodityController
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"reflect"
@@ -21,51 +20,51 @@ type modelName = models.Commodity
 var authName = "commodity"
 
 // =============================================== HTTP REQUESTS
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems(w, r, db)
+		c.C_GetItems(w, r, mydb)
 	}
 }
 
-func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems_DropDown(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems_DropDown(w, r, db)
+		c.C_GetItems_DropDown(w, r, mydb)
 	}
 }
 
-func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItem(w, r, db)
+		c.C_GetItem(w, r, mydb)
 	}
 }
-func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) AddItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItem(w, r, db)
-	}
-}
-
-func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_UpdateItem(w, r, db)
+		c.C_AddItem(w, r, mydb)
 	}
 }
 
-func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) UpdateItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_DeleteItem(w, r, db)
+		c.C_UpdateItem(w, r, mydb)
 	}
 }
 
-func (c Controller) Print(db *sql.DB) http.HandlerFunc {
+func (c Controller) DeleteItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_Print(w, r, db)
+		c.C_DeleteItem(w, r, mydb)
+	}
+}
+
+func (c Controller) Print(mydb models.MyDb) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_Print(w, r, mydb)
 	}
 }
 
 // =============================================== basic CRUD
-func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -73,13 +72,13 @@ func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.D
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -87,13 +86,13 @@ func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, 
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo, userId)
+	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(mydb, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -109,9 +108,9 @@ func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB
 	repo := repository.Repository{}
 
 	if commodity_id != 0 {
-		item, err = repo.GetRow(db, commodity_id, userId)
+		item, err = repo.GetRow(mydb, commodity_id, userId)
 	} else {
-		item, err = repo.GetRow_ByProduct(db, product_id, userId)
+		item, err = repo.GetRow_ByProduct(mydb, product_id, userId)
 	}
 
 	if err != nil {
@@ -124,9 +123,9 @@ func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB
 	utils.SendJson(w, http.StatusOK, returnValue, err)
 }
 
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -144,7 +143,7 @@ func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB
 		return
 	}
 
-	_, err = repo.AddRow_WithProduct(db, commodity_product, userId)
+	_, err = repo.AddRow_WithProduct(mydb, commodity_product, userId)
 
 	if err != nil {
 		returnValue.Info = err.Error()
@@ -155,22 +154,22 @@ func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB
 	utils.SendJson(w, http.StatusOK, returnValue, err)
 }
 
-func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -178,13 +177,13 @@ func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -194,7 +193,7 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 
 	// 生成打印数据(取map出来而不是item，是为了方便篡改)
 	repo := repository.Repository{}
-	dataSource, err := repo.GetPrintSource(db, id, userId)
+	dataSource, err := repo.GetPrintSource(mydb, id, userId)
 
 	if err != nil {
 		w.Write([]byte("error on generating source data," + err.Error()))
@@ -211,7 +210,7 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 
 // ==================customized
 // 用在"新建产品的时候，顺便建立商品"用. provides product_is, create commodity and commodity_product
-func (c Controller) Add_ByProduct(db *sql.DB, product_id int, userId int) error {
+func (c Controller) Add_ByProduct(mydb models.MyDb, product_id int, userId int) error {
 
 	var commodity_product models.Commodity_product
 
@@ -219,7 +218,7 @@ func (c Controller) Add_ByProduct(db *sql.DB, product_id int, userId int) error 
 
 	commodity_product.Product_id = nulls.NewInt(product_id)
 
-	_, err := repo.AddRow_WithProduct(db, commodity_product, userId)
+	_, err := repo.AddRow_WithProduct(mydb, commodity_product, userId)
 
 	if err != nil {
 		return err
@@ -228,10 +227,10 @@ func (c Controller) Add_ByProduct(db *sql.DB, product_id int, userId int) error 
 	return nil
 }
 
-func (c Controller) GetItems_ByProduct(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems_ByProduct(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(mydb, w, r, authName)
 		if !pass {
 			return
 		}
@@ -239,16 +238,16 @@ func (c Controller) GetItems_ByProduct(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_ByProduct", repo, userId)
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(mydb, w, r, reflect.TypeOf(item), "GetRows_ByProduct", repo, userId)
 		utils.SendJson(w, status, returnValue, err)
 	}
 }
 
-func (c Controller) Assemble(db *sql.DB) http.HandlerFunc {
+func (c Controller) Assemble(mydb models.MyDb) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(mydb, w, r, authName)
 		if !pass {
 			return
 		}
@@ -262,7 +261,7 @@ func (c Controller) Assemble(db *sql.DB) http.HandlerFunc {
 		commodity_id, _ := strconv.Atoi(params["commodity_id"])
 		product_id, _ := strconv.Atoi(params["product_id"])
 
-		err := repo.Assemble(db, commodity_id, product_id, userId)
+		err := repo.Assemble(mydb, commodity_id, product_id, userId)
 
 		if err != nil {
 			returnValue.Info = err.Error()
@@ -274,11 +273,11 @@ func (c Controller) Assemble(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func (c Controller) Disassemble(db *sql.DB) http.HandlerFunc {
+func (c Controller) Disassemble(mydb models.MyDb) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(mydb, w, r, authName)
 		if !pass {
 			return
 		}
@@ -292,7 +291,7 @@ func (c Controller) Disassemble(db *sql.DB) http.HandlerFunc {
 		commodity_id, _ := strconv.Atoi(params["commodity_id"])
 		product_id, _ := strconv.Atoi(params["product_id"])
 
-		err := repo.Disassemble(db, commodity_id, product_id, userId)
+		err := repo.Disassemble(mydb, commodity_id, product_id, userId)
 
 		if err != nil {
 			returnValue.Info = err.Error()

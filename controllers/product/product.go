@@ -1,7 +1,6 @@
 package productController
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -27,69 +26,69 @@ type modelName = models.Product
 var authName = "product"
 
 // =============================================== HTTP REQUESTS
-func (c Controller) GetItems(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems(w, r, db)
+		c.C_GetItems(w, r, mydb)
 	}
 }
 
-func (c Controller) GetItems_DropDown(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems_DropDown(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems_DropDown(w, r, db)
+		c.C_GetItems_DropDown(w, r, mydb)
 	}
 }
 
-func (c Controller) GetItems_DropDown_sellContract(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems_DropDown_sellContract(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems_DropDown_sellContract(w, r, db)
+		c.C_GetItems_DropDown_sellContract(w, r, mydb)
 	}
 }
 
-func (c Controller) GetItems_DropDown_sellSubitem(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems_DropDown_sellSubitem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems_DropDown_sellSubitem(w, r, db)
+		c.C_GetItems_DropDown_sellSubitem(w, r, mydb)
 	}
 }
 
-func (c Controller) GetItems_ByCommodity(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItems_ByCommodity(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItems_ByCommodity(w, r, db)
+		c.C_GetItems_ByCommodity(w, r, mydb)
 	}
 }
 
-func (c Controller) GetItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_GetItem(w, r, db)
+		c.C_GetItem(w, r, mydb)
 	}
 }
-func (c Controller) AddItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) AddItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_AddItem(w, r, db)
-	}
-}
-
-func (c Controller) UpdateItem(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_UpdateItem(w, r, db)
+		c.C_AddItem(w, r, mydb)
 	}
 }
 
-func (c Controller) DeleteItem(db *sql.DB) http.HandlerFunc {
+func (c Controller) UpdateItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_DeleteItem(w, r, db)
+		c.C_UpdateItem(w, r, mydb)
 	}
 }
 
-func (c Controller) Print(db *sql.DB) http.HandlerFunc {
+func (c Controller) DeleteItem(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.C_Print(w, r, db)
+		c.C_DeleteItem(w, r, mydb)
+	}
+}
+
+func (c Controller) Print(mydb models.MyDb) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.C_Print(w, r, mydb)
 	}
 }
 
 // =============================================== basic CRUD
-func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -97,14 +96,14 @@ func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.D
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowsWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -112,13 +111,13 @@ func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, 
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo, userId)
+	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(mydb, w, r, reflect.TypeOf(item), "GetRows_DropDown", repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_GetItems_DropDown_sellContract(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems_DropDown_sellContract(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -126,13 +125,13 @@ func (c Controller) C_GetItems_DropDown_sellContract(w http.ResponseWriter, r *h
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown_sellContract", repo, userId)
+	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(mydb, w, r, reflect.TypeOf(item), "GetRows_DropDown_sellContract", repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_GetItems_DropDown_sellSubitem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems_DropDown_sellSubitem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -140,13 +139,13 @@ func (c Controller) C_GetItems_DropDown_sellSubitem(w http.ResponseWriter, r *ht
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_DropDown_sellSubitem", repo, userId)
+	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(mydb, w, r, reflect.TypeOf(item), "GetRows_DropDown_sellSubitem", repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_GetItems_ByCommodity(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems_ByCommodity(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -154,35 +153,47 @@ func (c Controller) C_GetItems_ByCommodity(w http.ResponseWriter, r *http.Reques
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_ByCommodity", repo, userId)
+	status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(mydb, w, r, reflect.TypeOf(item), "GetRows_ByCommodity", repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
 
 	var item modelName
 	repo := repository.Repository{}
-	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, err := utils.GetFunc_RowWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, "")
+	pass, userId := auth.CheckAuth(mydb, w, r, "")
 	if !pass {
 		return
 	}
 
 	var item modelName
-	repo := repository.Repository{}
-	// f, _, _ := utils.GetFunc_AddWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	var returnValue models.JsonRowsReturn
 
-	status, returnValue, returnItem, files, err := utils.GetFunc_AddWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
+	repo := repository.Repository{}
+	// f, _, _ := utils.GetFunc_AddWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
+
+	// ====================================== tx begin
+	tx, err := mydb.Db.Begin()
+	defer tx.Rollback()
+	if err != nil {
+		utils.Log(err)
+		return
+	}
+	mydb.Tx = tx
+	// ====================================== tx begin
+
+	status, returnValue, returnItem, files, err := utils.GetFunc_AddWithHTTPReturn_FormData(mydb, w, r, reflect.TypeOf(item), repo, userId)
 
 	// 验证不通过之类的问题就不需要传图
 	if err != nil {
@@ -203,44 +214,43 @@ func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB
 	// 	currentCode = ""
 	// }
 
-	ca.Update_currentCode(db, itemFromRequest.Category_id.Int, itemFromRequest.Code.String, userId)
+	err = ca.Update_currentCode(mydb, itemFromRequest.Category_id.Int, itemFromRequest.Code.String, userId)
 
 	if err != nil {
-		var returnValue models.JsonRowsReturn
 		returnValue.Info = "编码更新错误" + err.Error()
 		utils.SendError(w, http.StatusInternalServerError, returnValue)
 		return
 	}
 
 	// 更新image数据库, 上传图片
-	err = updateImage(db, itemFromRequest, files, userId)
+	err = updateImage(mydb, itemFromRequest, files, userId)
 
 	if err != nil {
-		var returnValue models.JsonRowsReturn
 		returnValue.Info = "文件上传错误" + err.Error()
 		utils.SendError(w, http.StatusInternalServerError, returnValue)
 		return
 	}
 
+	// 假如设置为商品，就更新商品表
 	if itemFromRequest.IsCreateCommodity.Bool {
 		commodityCtrl := commodityController.Controller{}
-		err = commodityCtrl.Add_ByProduct(db, itemFromRequest.ID.Int, userId)
+		err = commodityCtrl.Add_ByProduct(mydb, itemFromRequest.ID.Int, userId)
 
 		if err != nil {
-			var returnValue models.JsonRowsReturn
 			returnValue.Info = "设置为商品时出错" + err.Error()
 			utils.SendError(w, http.StatusInternalServerError, returnValue)
 			return
 		}
 	}
-	// 假如设置为商品，就更新商品表
+
+	err = tx.Commit()
 
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, "")
+	pass, userId := auth.CheckAuth(mydb, w, r, "")
 	if !pass {
 		return
 	}
@@ -248,8 +258,18 @@ func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql
 	var item modelName
 	repo := repository.Repository{}
 
+	// ====================================== tx begin
+	tx, err := mydb.Db.Begin()
+	defer tx.Rollback()
+	if err != nil {
+		utils.Log(err)
+		return
+	}
+	mydb.Tx = tx
+	// ====================================== tx begin
+
 	// upload form
-	status, returnValue, returnItem, files, err := utils.GetFunc_UpdateWithHTTPReturn_FormData(db, w, r, reflect.TypeOf(item), repo, userId)
+	status, returnValue, returnItem, files, err := utils.GetFunc_UpdateWithHTTPReturn_FormData(mydb, w, r, reflect.TypeOf(item), repo, userId)
 
 	// 验证不通过之类的问题就不需要传图
 	if err != nil {
@@ -260,8 +280,8 @@ func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql
 	// convert "reflected" item into company type
 	itemFromRequest := returnItem.(modelName)
 
-	// 更新公司的两张图片. 如果没有就是删除
-	err = updateImage(db, itemFromRequest, files, userId)
+	// 更新产品图片图片. 如果没有就是删除
+	err = updateImage(mydb, itemFromRequest, files, userId)
 
 	if err != nil {
 		var returnValue models.JsonRowsReturn
@@ -271,16 +291,18 @@ func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql
 	}
 
 	// 取最新row返回
-	updatedItem, err := repo.GetRow(db, itemFromRequest.ID.Int, userId)
+	updatedItem, err := repo.GetRow(mydb, itemFromRequest.ID.Int, userId)
 	returnValue.Row = updatedItem
+
+	err = tx.Commit()
 
 	// send success message to front-end
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, "")
+	pass, userId := auth.CheckAuth(mydb, w, r, "")
 	if !pass {
 		return
 	}
@@ -288,27 +310,40 @@ func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql
 	var item modelName
 	repo := repository.Repository{}
 
-	status, returnValue, itemReturn, err := utils.GetFunc_DeleteWithHTTPReturn(db, w, r, reflect.TypeOf(item), repo, userId)
+	// ====================================== tx begin
+	tx, err := mydb.Db.Begin()
+	defer tx.Rollback()
+	if err != nil {
+		utils.Log(err)
+		return
+	}
+	mydb.Tx = tx
+	// ====================================== tx begin
+
+	status, returnValue, itemReturn, err := utils.GetFunc_DeleteWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 	product := itemReturn.(modelName)
 
 	if err == nil {
 
 		// 删除产品图片
 		imageCtrl := imageController.Controller{}
-		err = imageCtrl.Delete(db, product.Image_id.Int, userId)
+		err = imageCtrl.Delete(mydb, product.Image_id.Int, userId)
 
 		if err != nil {
-			returnValue.Info = "删除产品对应图库失败" + err.Error()
+			utils.Log(err, "删除产品对应图库失败")
+			returnValue.Info = "删除产品对应图库失败, " + err.Error()
 			utils.SendJson(w, http.StatusFailedDependency, returnValue, err)
+			return
 		}
 	}
 
+	err = tx.Commit()
 	utils.SendJson(w, status, returnValue, err)
 }
 
-func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
-	pass, userId := auth.CheckAuth(db, w, r, authName)
+	pass, userId := auth.CheckAuth(mydb, w, r, authName)
 	if !pass {
 		return
 	}
@@ -318,7 +353,7 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 
 	// 生成打印数据(取map出来而不是item，是为了方便篡改)
 	repo := repository.Repository{}
-	dataSource, err := repo.GetPrintSource(db, id, userId)
+	dataSource, err := repo.GetPrintSource(mydb, id, userId)
 
 	if err != nil {
 		w.Write([]byte("error on generating source data," + err.Error()))
@@ -334,10 +369,10 @@ func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) 
 }
 
 // ================= components
-func (c Controller) GetComponents(db *sql.DB) http.HandlerFunc {
+func (c Controller) GetComponents(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(mydb, w, r, authName)
 		if !pass {
 			return
 		}
@@ -345,7 +380,7 @@ func (c Controller) GetComponents(db *sql.DB) http.HandlerFunc {
 		var item modelName
 		repo := repository.Repository{}
 
-		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(db, w, r, reflect.TypeOf(item), "GetRows_Component", repo, userId)
+		status, returnValue, err := utils.GetFunc_FetchListHTTPReturn(mydb, w, r, reflect.TypeOf(item), "GetRows_Component", repo, userId)
 
 		fmt.Println("*************")
 		fmt.Println(w, status, returnValue, err)
@@ -355,11 +390,11 @@ func (c Controller) GetComponents(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func (c Controller) Assemble(db *sql.DB) http.HandlerFunc {
+func (c Controller) Assemble(mydb models.MyDb) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(mydb, w, r, authName)
 		if !pass {
 			return
 		}
@@ -373,7 +408,7 @@ func (c Controller) Assemble(db *sql.DB) http.HandlerFunc {
 		parent_id, _ := strconv.Atoi(params["parent_id"])
 		child_id, _ := strconv.Atoi(params["child_id"])
 
-		err := repo.Assemble(db, parent_id, child_id, userId)
+		err := repo.Assemble(mydb, parent_id, child_id, userId)
 
 		if err != nil {
 			returnValue.Info = err.Error()
@@ -385,11 +420,11 @@ func (c Controller) Assemble(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func (c Controller) Disassemble(db *sql.DB) http.HandlerFunc {
+func (c Controller) Disassemble(mydb models.MyDb) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		pass, userId := auth.CheckAuth(db, w, r, authName)
+		pass, userId := auth.CheckAuth(mydb, w, r, authName)
 		if !pass {
 			return
 		}
@@ -403,7 +438,7 @@ func (c Controller) Disassemble(db *sql.DB) http.HandlerFunc {
 		parent_id, _ := strconv.Atoi(params["parent_id"])
 		child_id, _ := strconv.Atoi(params["child_id"])
 
-		err := repo.Disassemble(db, parent_id, child_id, userId)
+		err := repo.Disassemble(mydb, parent_id, child_id, userId)
 
 		if err != nil {
 			returnValue.Info = err.Error()
@@ -417,12 +452,12 @@ func (c Controller) Disassemble(db *sql.DB) http.HandlerFunc {
 
 // 以下这段代码找不到方法generalization，只好复制粘贴到各自的controllers里。但代码都是一样的：把业务表里附带的image update到image表、上传到文件夹、更新业务表对应fk
 // =====image
-func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int) error {
+func updateImage(mydb models.MyDb, item modelName, files map[string][]byte, userId int) error {
 
 	repo := repository.Repository{}
 
 	// update
-	updatedItem, _ := repo.GetRow(db, item.ID.Int, userId)
+	updatedItem, _ := repo.GetRow(mydb, item.ID.Int, userId)
 	newImageIds := make(map[string]int)
 
 	// upload image(here will be twice: license, biscard), return new image id -------------------------------------
@@ -445,7 +480,7 @@ func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int
 
 		var err error
 		fileName := fmt.Sprintf("product.%s.%d", columnName, item.ID.Int)
-		newImageId, err := imageCtrl.Upload(db, oldImage_id, fileName, fileBytes, -1, userId)
+		newImageId, err := imageCtrl.Upload(mydb, oldImage_id, fileName, fileBytes, -1, userId)
 
 		if newImageId != 0 {
 			newImageIds[columnName] = newImageId
@@ -460,7 +495,7 @@ func updateImage(db *sql.DB, item modelName, files map[string][]byte, userId int
 	if len(newImageIds) > 0 {
 		jsonString, err := json.Marshal(newImageIds)
 		json.Unmarshal(jsonString, &updatedItem)
-		_, err = repo.UpdateRow(db, updatedItem, userId)
+		_, err = repo.UpdateRow(mydb, updatedItem, userId)
 
 		// send error of upload file to front-end
 		if err != nil {

@@ -17,14 +17,14 @@ var tableName = "product_purchase"
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
 	var item modelName
 
 	// rows这里是一个cursor.
-	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -46,19 +46,19 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 	var item modelName
-	row := utils.DbQueryRow(db, "", tableName, id, item)
+	row := utils.DbQueryRow(mydb, "", tableName, id, item)
 
 	err := item.ScanRow(row)
 
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (modelName, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
 		return item, errInsert
@@ -73,10 +73,10 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	return item, errId
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
-	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 	item.ScanRow(row)
 
 	if err != nil {
@@ -92,17 +92,15 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
-	var item modelName
-
-	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = item.ScanRow(row)
+	result, err := utils.DbQueryDelete(mydb, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -117,9 +115,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
@@ -133,7 +131,7 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 // =============================================== customized
 
 func (b repositoryName) GetRows_GroupByCompany(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
@@ -143,7 +141,7 @@ func (b repositoryName) GetRows_GroupByCompany(
 	product_id := searchTerms["product_id"]
 	// delete(searchTerms, "product_id")
 
-	// rows, err := utils.DbQueryRows_Customized(db, "", tableName, &pagination, searchTerms, item, " GROUP BY company_id, currency_id")
+	// rows, err := utils.DbQueryRows_Customized(mydb, "", tableName, &pagination, searchTerms, item, " GROUP BY company_id, currency_id")
 	//select * from product_purchase where id in (select max(id) from product_purchase WHERE product_id = 10 group by company_id, currency_id) order by id desc
 	// old: 	"(SELECT m1.* FROM product_purchase m1 LEFT JOIN product_purchase m2 ON (m1.company_id = m2.company_id AND m1.currency_id = m2.currency_id AND m1.id < m2.id) WHERE m2.id IS NULL)",
 
@@ -152,10 +150,10 @@ func (b repositoryName) GetRows_GroupByCompany(
 			where id in 
 			(select max(id) from product_purchase 	
 				WHERE product_id = %s 
-				group by company_id, currency_id) 
+				group by company_id, currency_id, memo) 
 				order by id desc)`, product_id)
 
-	rows, err := utils.DbQueryRows_Customized(db, "",
+	rows, err := utils.DbQueryRows_Customized(mydb, "",
 		sqlString,
 		&pagination,
 		searchTerms,
@@ -188,7 +186,7 @@ func (b repositoryName) GetRows_GroupByCompany(
 }
 
 func (b repositoryName) GetRows_History(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
@@ -202,8 +200,8 @@ func (b repositoryName) GetRows_History(
 
 	// root_id_int, err := strconv.Atoi(root_id)
 
-	// rows, err := utils.DbQueryRows_Customized(db, "", tableName, &pagination, searchTerms, item, " GROUP BY company_id, currency_id")
-	rows, err := utils.DbQueryRows_Customized(db, "",
+	// rows, err := utils.DbQueryRows_Customized(mydb, "", tableName, &pagination, searchTerms, item, " GROUP BY company_id, currency_id")
+	rows, err := utils.DbQueryRows_Customized(mydb, "",
 		"(SELECT a.* FROM product_purchase a LEFT JOIN product_purchase b ON a.company_id = b.company_id AND a.product_id = b.product_id WHERE b.id = "+productpurchase_id+")",
 		&pagination,
 		searchTerms,
@@ -235,18 +233,29 @@ func (b repositoryName) GetRows_History(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow_ByProductId(db *sql.DB, product_id int, company_id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow_ByProductId(mydb models.MyDb, product_id int, company_id int, userId int) (modelName, error) {
 
 	var item modelName
 
 	var row *sql.Row
 
 	if company_id > 0 {
-		row = db.QueryRow("SELECT a.* FROM "+tableName+" a WHERE a.product_id = ? AND company_id = ? ORDER BY a.activeAt DESC LIMIT 1",
-			product_id, company_id)
+		query := "SELECT a.* FROM " + tableName + " a WHERE a.product_id = ? AND company_id = ? ORDER BY a.activeAt DESC LIMIT 1"
+
+		if mydb.Tx != nil {
+			row = mydb.Tx.QueryRow(query, product_id, company_id)
+		} else {
+			row = mydb.Db.QueryRow(query, product_id, company_id)
+		}
+
 	} else {
-		row = db.QueryRow("SELECT a.* FROM "+tableName+" a WHERE a.product_id = ?  ORDER BY a.activeAt DESC LIMIT 1",
-			product_id)
+		query := "SELECT a.* FROM " + tableName + " a WHERE a.product_id = ?  ORDER BY a.activeAt DESC LIMIT 1"
+		if mydb.Tx != nil {
+			row = mydb.Tx.QueryRow(query, product_id)
+		} else {
+			row = mydb.Db.QueryRow(query, product_id)
+		}
+
 	}
 
 	err := row.Scan(item.Receivers()...)

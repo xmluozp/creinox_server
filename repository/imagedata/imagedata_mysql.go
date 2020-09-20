@@ -19,7 +19,7 @@ var subsql = fmt.Sprintf("(SELECT m1.*, m2.memo FROM %s m1 LEFT JOIN folder m2 O
 // =============================================== basic CRUD
 
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
@@ -30,7 +30,7 @@ func (b repositoryName) GetRows(
 		pagination.PerPage = 100
 	}
 
-	rows, err := utils.DbQueryRows(db, "", subsql, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", subsql, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -51,19 +51,19 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 
 	var item modelName
-	row := utils.DbQueryRow(db, "", subsql, id, item)
+	row := utils.DbQueryRow(mydb, "", subsql, id, item)
 
 	err := item.ScanRow(row)
 	return item.Getter(), err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (modelName, error) {
 
 	// result, errInsert := db.Exec("INSERT INTO role (name, rank, auth) VALUES(?, ?, ?);", item.Name, item.Rank, item.Auth)
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
 		return item, errInsert
@@ -78,9 +78,9 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	return item, errId
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
 
-	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 	item.ScanRow(row)
 
 	if err != nil {
@@ -96,26 +96,20 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
 	var item modelName
 
 	// customized
-	rowDeleted := utils.DbQueryRow(db, "", subsql, id, item)
-	// --- customized end
-
-	var itemNotused modelName
-
-	result, rowNotused, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
-
-	// 仅仅为了关闭连接
-	itemNotused.ScanRow(rowNotused)
-
+	rowDeleted := utils.DbQueryRow(mydb, "", subsql, id, item)
+	err := item.ScanRow(rowDeleted)
 	if err != nil {
 		return nil, err
 	}
 
-	err = item.ScanRow(rowDeleted)
+	// --- customized end
+
+	result, err := utils.DbQueryDelete(mydb, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -130,9 +124,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
@@ -144,14 +138,19 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 }
 
 func (b repositoryName) GetRowsByFolder(
-	db *sql.DB,
+	mydb models.MyDb,
 	folderId int,
 	userId int) (items []modelName, err error) {
 
 	fmt.Println("folder?", folderId)
 
+	var rows *sql.Rows
 	// 需要用join SELECT a.runoob_id, a.runoob_author, b.runoob_count FROM runoob_tbl a INNER JOIN tcount_tbl b ON a.runoob_author = b.runoob_author;
-	rows, err := db.Query("SELECT maintable.* FROM "+subsql+" maintable WHERE maintable.gallary_folder_id=?", folderId)
+	if mydb.Tx != nil {
+		rows, err = mydb.Tx.Query("SELECT maintable.* FROM "+subsql+" maintable WHERE maintable.gallary_folder_id=?", folderId)
+	} else {
+		rows, err = mydb.Db.Query("SELECT maintable.* FROM "+subsql+" maintable WHERE maintable.gallary_folder_id=?", folderId)
+	}
 
 	if err != nil {
 		return items, err

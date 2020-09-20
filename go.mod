@@ -26,4 +26,5 @@ require (
 	github.com/tealeg/xlsx v1.0.5
 	golang.org/x/crypto v0.0.0-20190605123033-f99c8df09eb5
 	google.golang.org/appengine v1.6.5 // indirect
+	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 )

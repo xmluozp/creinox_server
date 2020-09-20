@@ -1,7 +1,6 @@
 package financialTransactionRepository
 
 import (
-	"database/sql"
 	"fmt"
 	"math"
 	"net/http"
@@ -27,14 +26,14 @@ var tableName = "financial_transaction"
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
 	var item modelName
 
 	// rows这里是一个cursor.
-	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -55,20 +54,20 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 	var item modelName
 	// row := db.QueryRow("SELECT * FROM "+tableName+" WHERE id = ?", id)
-	row := utils.DbQueryRow(db, "", tableName, id, item)
+	row := utils.DbQueryRow(mydb, "", tableName, id, item)
 
 	err := item.ScanRow(row)
 
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (modelName, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
 		return item, errInsert
@@ -81,12 +80,12 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	}
 
 	// 只有添加才有side effect，修改转账记录禁止修改会导致side effect的字段
-	err := b.sideEffects(db, item, userId)
+	err := b.sideEffects(mydb, item, userId)
 
 	return item, err
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
 
 	// 部分列不允许修改，因为每条记录都有balance，如果金额、目标账户、目标合同改了，从今往后的balance就全错了：
 	item.Amount_in = nulls.Float32{Float32: 0, Valid: false}
@@ -96,7 +95,7 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	item.FinancialAccount_id = nulls.Int{Int: 0, Valid: false}
 	item.UpdateUser_id = nulls.NewInt(userId)
 
-	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 	item.ScanRow(row)
 
 	if err != nil {
@@ -112,17 +111,15 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
-	var item modelName
-
-	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = item.ScanRow(row)
+	result, err := utils.DbQueryDelete(mydb, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -135,7 +132,7 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	}
 
 	// 去掉对应的金额。balance不处理。客户需要保证删除的是当前账户的最后一条记录
-	err = b.sideEffectsReverse(db, item, userId)
+	err = b.sideEffectsReverse(mydb, item, userId)
 
 	if err != nil {
 		return nil, err
@@ -144,9 +141,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
@@ -157,13 +154,13 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 	return ds, err
 }
 
-func (b repositoryName) GetPrintSourceList(db *sql.DB, r *http.Request, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSourceList(mydb models.MyDb, r *http.Request, userId int) (map[string]interface{}, error) {
 
 	// 分页，排序，搜索关键词
 	pagination := utils.GetPagination(r)
 	searchTerms := utils.GetSearchTerms(r)
 
-	items, _, err := b.GetRows(db, pagination, searchTerms, userId)
+	items, _, err := b.GetRows(mydb, pagination, searchTerms, userId)
 
 	// 统计数据
 	totalIn := float32(0)
@@ -209,7 +206,7 @@ func (b repositoryName) GetPrintSourceList(db *sql.DB, r *http.Request, userId i
 
 // 收付款以及子合同的收付款
 func (b repositoryName) GetRows_fromOrderForms(
-	db *sql.DB,
+	mydb models.MyDb,
 	order_form_ids string,
 	userId int) ([]modelName, models.Pagination, error) {
 
@@ -226,12 +223,12 @@ func (b repositoryName) GetRows_fromOrderForms(
 	fmt.Println("合同：", order_form_id_str)
 
 	// 这个应该是取出所有
-	return b.GetRows(db, pagination, searchTerms, userId)
+	return b.GetRows(mydb, pagination, searchTerms, userId)
 }
 
 // 根据合同号取出对应的item
 func (b repositoryName) GetRows_fromOrderForm(
-	db *sql.DB,
+	mydb models.MyDb,
 	order_form_id int,
 	userId int) ([]modelName, models.Pagination, error) {
 
@@ -245,10 +242,10 @@ func (b repositoryName) GetRows_fromOrderForm(
 	searchTerms["order_form_id"] = order_form_id_str
 
 	// 这个应该是取出所有
-	return b.GetRows(db, pagination, searchTerms, userId)
+	return b.GetRows(mydb, pagination, searchTerms, userId)
 }
 
-func (b repositoryName) getVoucher(db *sql.DB, item modelName) (
+func (b repositoryName) getVoucher(mydb models.MyDb, item modelName) (
 	debit models.FinancialVoucher,
 	credit models.FinancialVoucher) {
 
@@ -305,14 +302,14 @@ func (b repositoryName) getVoucher(db *sql.DB, item modelName) (
 }
 
 // 删除一条错误的记录
-func (b repositoryName) sideEffectsReverse(db *sql.DB, item modelName, userId int) error {
+func (b repositoryName) sideEffectsReverse(mydb models.MyDb, item modelName, userId int) error {
 
 	// ======================= 取消sideeffect
 	// 如果是合同，已付款复原
 	if item.IsContractPayment.Bool {
 
 		orderFormRepo := orderFormRepo.Repository{}
-		orderForm, err := orderFormRepo.GetRow(db, item.Order_form_id.Int, userId)
+		orderForm, err := orderFormRepo.GetRow(mydb, item.Order_form_id.Int, userId)
 		if err != nil {
 			fmt.Println("转账删除后连锁反应，取合同出错", err)
 			return err
@@ -322,7 +319,7 @@ func (b repositoryName) sideEffectsReverse(db *sql.DB, item modelName, userId in
 		orderForm.ReceivablePaid = nulls.NewFloat32(item.Amount_in.Float32 - orderForm.ReceivablePaid.Float32)
 		orderForm.PayablePaid = nulls.NewFloat32(item.Amount_out.Float32 - orderForm.PayablePaid.Float32)
 
-		_, err = orderFormRepo.UpdateRow(db, orderForm, userId)
+		_, err = orderFormRepo.UpdateRow(mydb, orderForm, userId)
 
 		if err != nil {
 			fmt.Println("更新合同出错", err)
@@ -332,7 +329,7 @@ func (b repositoryName) sideEffectsReverse(db *sql.DB, item modelName, userId in
 
 	// ===================== 账号的balance还原
 	financialAccountRepo := financialAccountRepo.Repository{}
-	financialAccountItem, err := financialAccountRepo.GetRow(db, item.FinancialAccount_id.Int, userId)
+	financialAccountItem, err := financialAccountRepo.GetRow(mydb, item.FinancialAccount_id.Int, userId)
 
 	if err != nil {
 		fmt.Println("连锁反应取账号合同出错", err)
@@ -341,7 +338,7 @@ func (b repositoryName) sideEffectsReverse(db *sql.DB, item modelName, userId in
 	oldBalance := financialAccountItem.Balance.Float32
 	newBalance := oldBalance - item.Amount_in.Float32 + item.Amount_out.Float32
 	financialAccountItem.Balance = nulls.NewFloat32(newBalance)
-	_, err = financialAccountRepo.UpdateRow(db, financialAccountItem, userId)
+	_, err = financialAccountRepo.UpdateRow(mydb, financialAccountItem, userId)
 
 	if err != nil {
 		fmt.Println("更新transaction时，更新账户余额出错", err)
@@ -350,22 +347,22 @@ func (b repositoryName) sideEffectsReverse(db *sql.DB, item modelName, userId in
 
 	// ===================== 删掉 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
-	voucherItemDebit, voucherItemCredit := b.getVoucher(db, item)
+	voucherItemDebit, voucherItemCredit := b.getVoucher(mydb, item)
 
-	_, err = financialVoucherRepo.DeleteVoucher(db, voucherItemDebit.Resource_code.String, userId)
-	_, err = financialVoucherRepo.DeleteVoucher(db, voucherItemCredit.Resource_code.String, userId)
+	_, err = financialVoucherRepo.DeleteVoucher(mydb, voucherItemDebit.Resource_code.String, userId)
+	_, err = financialVoucherRepo.DeleteVoucher(mydb, voucherItemCredit.Resource_code.String, userId)
 	return err
 }
 
 // 增加transaction之后触发的其他改动： 记录本身，3个balance：合同收付款，账户balance，transaction的balance.
 // 如果是合同付款，强行指定目标公司。前台也不让修改
-func (b repositoryName) sideEffects(db *sql.DB, item modelName, userId int) error {
+func (b repositoryName) sideEffects(mydb models.MyDb, item modelName, userId int) error {
 
 	// ===================== 如果是针对合同付款的交易，更新合同本身以及生成对应的明细
 	if item.IsContractPayment.Bool {
 
 		orderFormRepo := orderFormRepo.Repository{}
-		orderForm, err := orderFormRepo.GetRow(db, item.Order_form_id.Int, userId)
+		orderForm, err := orderFormRepo.GetRow(mydb, item.Order_form_id.Int, userId)
 		if err != nil {
 			fmt.Println("转账后连锁反应，取合同出错", err)
 			return err
@@ -388,7 +385,7 @@ func (b repositoryName) sideEffects(db *sql.DB, item modelName, userId int) erro
 		orderForm.ReceivablePaid = nulls.NewFloat32(item.Amount_in.Float32 + orderForm.ReceivablePaid.Float32)
 		orderForm.PayablePaid = nulls.NewFloat32(item.Amount_out.Float32 + orderForm.PayablePaid.Float32)
 
-		_, err = orderFormRepo.UpdateRow(db, orderForm, userId)
+		_, err = orderFormRepo.UpdateRow(mydb, orderForm, userId)
 
 		if err != nil {
 			fmt.Println("更新合同出错", err)
@@ -398,7 +395,7 @@ func (b repositoryName) sideEffects(db *sql.DB, item modelName, userId int) erro
 
 	// ===================== 无论是不是合同，更新账户balance
 	financialAccountRepo := financialAccountRepo.Repository{}
-	financialAccountItem, err := financialAccountRepo.GetRow(db, item.FinancialAccount_id.Int, userId)
+	financialAccountItem, err := financialAccountRepo.GetRow(mydb, item.FinancialAccount_id.Int, userId)
 
 	if err != nil {
 		fmt.Println("连锁反应取账号合同出错", err)
@@ -407,7 +404,7 @@ func (b repositoryName) sideEffects(db *sql.DB, item modelName, userId int) erro
 	oldBalance := financialAccountItem.Balance.Float32
 	newBalance := oldBalance + item.Amount_in.Float32 - item.Amount_out.Float32
 	financialAccountItem.Balance = nulls.NewFloat32(newBalance)
-	_, err = financialAccountRepo.UpdateRow(db, financialAccountItem, userId)
+	_, err = financialAccountRepo.UpdateRow(mydb, financialAccountItem, userId)
 	if err != nil {
 		fmt.Println("更新transaction时，更新账户余额出错", err)
 		return err
@@ -415,7 +412,7 @@ func (b repositoryName) sideEffects(db *sql.DB, item modelName, userId int) erro
 
 	// ===================== 通过update, 更新刚生成的transaction里的balance
 	item.Balance = nulls.NewFloat32(newBalance)
-	_, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	_, row, err := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 	item.ScanRow(row)
 
 	if err != nil {
@@ -425,14 +422,14 @@ func (b repositoryName) sideEffects(db *sql.DB, item modelName, userId int) erro
 
 	// ===================== 生成 voucher。新建的时候，借贷科目如果没填，就不生成voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
-	voucherItemDebit, voucherItemCredit := b.getVoucher(db, item)
+	voucherItemDebit, voucherItemCredit := b.getVoucher(mydb, item)
 
 	if item.FinancialLedgerDebit_id.Valid {
-		_, err = financialVoucherRepo.AddRow(db, voucherItemDebit, userId)
+		_, err = financialVoucherRepo.AddRow(mydb, voucherItemDebit, userId)
 	}
 
 	if item.FinancialLedgerCredit_id.Valid {
-		_, err = financialVoucherRepo.AddRow(db, voucherItemCredit, userId)
+		_, err = financialVoucherRepo.AddRow(mydb, voucherItemCredit, userId)
 	}
 
 	return err

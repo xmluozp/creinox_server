@@ -1,7 +1,6 @@
 package orderFormRepository
 
 import (
-	"database/sql"
 	"fmt"
 	"math"
 
@@ -21,14 +20,14 @@ var tableName = "order_form"
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
 	var item modelName
 
 	// rows这里是一个cursor.
-	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -49,18 +48,18 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 	var item modelName
-	row := utils.DbQueryRow(db, "", tableName, id, item)
+	row := utils.DbQueryRow(mydb, "", tableName, id, item)
 
 	err := item.ScanRow(row)
 
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (modelName, error) {
 
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
 		utils.Log(errInsert, "添加合同出错")
@@ -78,21 +77,21 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 
 	// =========================== 生成 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
-	voucherItem1, voucherItem2 := b.getVoucher(db, item)
-	_, err = financialVoucherRepo.AddRow(db, voucherItem1, userId)
-	_, err = financialVoucherRepo.AddRow(db, voucherItem2, userId)
+	voucherItem1, voucherItem2 := b.getVoucher(mydb, item)
+	_, err = financialVoucherRepo.AddRow(mydb, voucherItem1, userId)
+	_, err = financialVoucherRepo.AddRow(mydb, voucherItem2, userId)
 
 	if err != nil {
 		utils.Log(err, "添加凭证失败, 删除合同")
-		b.DeleteRow(db, item.ID.Int, userId)
+		b.DeleteRow(mydb, item.ID.Int, userId)
 	}
 
 	return item, err
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
 
-	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 	item.ScanRow(row)
 
 	if err != nil {
@@ -109,24 +108,22 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 
 	// =========================== 修改 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
-	debit, credit := b.getVoucher(db, item)
+	debit, credit := b.getVoucher(mydb, item)
 	fmt.Println("更新合同后更新凭证", debit, credit)
-	_, err = financialVoucherRepo.UpdateVoucher(db, debit, credit, userId)
+	_, err = financialVoucherRepo.UpdateVoucher(mydb, debit, credit, userId)
 
 	return rowsUpdated, err
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
-	var item modelName
-
-	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = item.ScanRow(row)
+	result, err := utils.DbQueryDelete(mydb, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -140,9 +137,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 
 	// =========================== 删除 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
-	voucherItem1, voucherItem2 := b.getVoucher(db, item)
-	_, err = financialVoucherRepo.DeleteVoucher(db, voucherItem1.Resource_code.String, userId)
-	_, err = financialVoucherRepo.DeleteVoucher(db, voucherItem2.Resource_code.String, userId)
+	voucherItem1, voucherItem2 := b.getVoucher(mydb, item)
+	_, err = financialVoucherRepo.DeleteVoucher(mydb, voucherItem1.Resource_code.String, userId)
+	_, err = financialVoucherRepo.DeleteVoucher(mydb, voucherItem2.Resource_code.String, userId)
 
 	if err != nil {
 		utils.Log(err, "删除凭证失败")
@@ -150,9 +147,9 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
@@ -166,7 +163,7 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 // ================= customized
 
 func (b repositoryName) GetRows_DropDown(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
@@ -174,7 +171,7 @@ func (b repositoryName) GetRows_DropDown(
 	var item modelName
 
 	// rows这里是一个cursor.
-	rows, err := utils.DbQueryRows(db, "", tableName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", tableName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -196,7 +193,7 @@ func (b repositoryName) GetRows_DropDown(
 }
 
 // 合同修改的时候，价格会变动，所以需要同步票据里的价格。以下根据resource code和item生成需要修改的票据里的value
-func (b repositoryName) getVoucher(db *sql.DB, item modelName) (debit models.FinancialVoucher, credit models.FinancialVoucher) {
+func (b repositoryName) getVoucher(mydb models.MyDb, item modelName) (debit models.FinancialVoucher, credit models.FinancialVoucher) {
 
 	// 返回的item1是借，item2是贷
 	Debit_financialLedger_id := enums.FinancialLedgerType.UnDecided

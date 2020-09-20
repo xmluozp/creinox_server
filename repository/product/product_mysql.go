@@ -1,7 +1,6 @@
 package productRepository
 
 import (
-	"database/sql"
 	"fmt"
 
 	"github.com/gobuffalo/nulls"
@@ -20,7 +19,7 @@ var viewName = "view_product"
 
 // =============================================== basic CRUD
 func (b repositoryName) GetRows(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
@@ -44,7 +43,7 @@ func (b repositoryName) GetRows(
 		whereString += fmt.Sprintf(" AND mainTable.category_id IN (SELECT id FROM category WHERE path LIKE '%%,%s' OR id = %s)", category_id, category_id)
 	}
 
-	rows, err := utils.DbQueryRows_Customized(db, "", tableName, &pagination, searchTerms, item, "", whereString)
+	rows, err := utils.DbQueryRows_Customized(mydb, "", tableName, &pagination, searchTerms, item, "", whereString)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -64,19 +63,19 @@ func (b repositoryName) GetRows(
 	return items, pagination, nil
 }
 
-func (b repositoryName) GetRow(db *sql.DB, id int, userId int) (modelName, error) {
+func (b repositoryName) GetRow(mydb models.MyDb, id int, userId int) (modelName, error) {
 	var item modelName
 
-	row := utils.DbQueryRow(db, "", tableName, id, item)
+	row := utils.DbQueryRow(mydb, "", tableName, id, item)
 	err := item.ScanRow(row)
 
 	return item, err
 }
 
-func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelName, error) {
+func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (modelName, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
-	result, errInsert := utils.DbQueryInsert(db, tableName, item)
+	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	fmt.Println("add row", item)
 
@@ -93,10 +92,10 @@ func (b repositoryName) AddRow(db *sql.DB, item modelName, userId int) (modelNam
 	return item, errId
 }
 
-func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64, error) {
+func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
 
 	item.UpdateUser_id = nulls.NewInt(userId)
-	result, row, err := utils.DbQueryUpdate(db, tableName, tableName, item)
+	result, row, err := utils.DbQueryUpdate(mydb, tableName, tableName, item)
 	item.ScanRow(row)
 
 	if err != nil {
@@ -109,42 +108,52 @@ func (b repositoryName) UpdateRow(db *sql.DB, item modelName, userId int) (int64
 		return 0, err
 	}
 
-	// 对应的商品需要跟着更新货号和分类
+	// 对应的商品需要跟着更新货号和分类. 因为第一次上传产品也会运行这个用来更新图片地址，所以要防止商品为空时出错
 	commodityRepo := commodityRepo.Repository{}
-	commodityItem, err := commodityRepo.GetRow_ByProduct(db, item.ID.Int, userId)
-
-	fmt.Println("test========= ", commodityItem)
-	fmt.Println("from========= ", item)
+	commodityItem, err := commodityRepo.GetRow_ByProduct(mydb, item.ID.Int, userId)
 
 	if err == nil {
 		fmt.Println("升级？========= ")
 		commodityItem.Code = item.Code
 		commodityItem.Category_id = item.Category_id
-		_, err = commodityRepo.UpdateRow(db, commodityItem, userId)
+		_, err = commodityRepo.UpdateRow(mydb, commodityItem, userId)
+
+		if err != nil {
+			utils.Log(err, "同步货号出错")
+			return rowsUpdated, err
+		}
 	}
 
-	if err != nil {
-		utils.Log(err, "同步货号出错")
-	}
+	// ========================================== 会报错的代码。测试事务用。
+	// if err == nil {
+	// 	fmt.Println("升级？========= ")
+	// 	commodityItem.Code = item.Code
+	// 	commodityItem.Category_id = item.Category_id
+	// 	_, err = commodityRepo.UpdateRow(mydb, commodityItem, userId)
+	// }
 
-	return rowsUpdated, err
+	// if err != nil {
+	// 	utils.Log(err, "同步货号出错")
+	// 	return rowsUpdated, err
+	// }
+	// ==========================================
+
+	return rowsUpdated, nil
 }
 
-func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, error) {
-
-	var item modelName
+func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
 
 	// 在删除前取出meta商品id备用 (因为删除后的cascade会导致关联信息消失)
 	commodityRepo := commodityRepo.Repository{}
-	commodityItem, err := commodityRepo.GetRow_ByProduct(db, id, userId)
+	commodityItem, err := commodityRepo.GetRow_ByProduct(mydb, id, userId)
 
-	result, row, err := utils.DbQueryDelete(db, tableName, tableName, id, item)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
 	}
 
-	err = item.ScanRow(row)
+	result, err := utils.DbQueryDelete(mydb, tableName, tableName, id, item)
 
 	if err != nil {
 		return nil, err
@@ -157,14 +166,14 @@ func (b repositoryName) DeleteRow(db *sql.DB, id int, userId int) (interface{}, 
 	}
 
 	// 如果删除产品成功，也删除对应的元商品
-	commodityRepo.DeleteRow(db, commodityItem.ID.Int, userId)
+	commodityRepo.DeleteRow(mydb, commodityItem.ID.Int, userId)
 
 	return item, err
 }
 
-func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[string]interface{}, error) {
+func (b repositoryName) GetPrintSource(mydb models.MyDb, id int, userId int) (map[string]interface{}, error) {
 
-	item, err := b.GetRow(db, id, userId)
+	item, err := b.GetRow(mydb, id, userId)
 
 	if err != nil {
 		return nil, err
@@ -177,7 +186,7 @@ func (b repositoryName) GetPrintSource(db *sql.DB, id int, userId int) (map[stri
 
 //---------------- customized
 func (b repositoryName) GetRows_DropDown(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
@@ -198,7 +207,7 @@ func (b repositoryName) GetRows_DropDown(
 		sqlString = fmt.Sprintf("SELECT mainTable.* FROM %s mainTable WHERE mainTable.id NOT IN (SELECT b.product_id FROM commodity_product b WHERE b.isMeta = 1)", viewName)
 	}
 
-	rows, err := utils.DbQueryRows(db, sqlString, viewName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, sqlString, viewName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -223,7 +232,7 @@ func (b repositoryName) GetRows_DropDown(
 
 // 根据销售合同取产品
 func (b repositoryName) GetRows_DropDown_sellContract(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
@@ -241,7 +250,7 @@ func (b repositoryName) GetRows_DropDown_sellContract(
 		viewName,
 		sell_contract_id)
 
-	rows, err := utils.DbQueryRows(db, sqlString, viewName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, sqlString, viewName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -268,7 +277,7 @@ func (b repositoryName) GetRows_DropDown_sellContract(
 
 // 根据合同的子合同，去搜索子合同对应的商品，然后关联到下属产品
 func (b repositoryName) GetRows_DropDown_sellSubitem(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination,
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
@@ -284,7 +293,7 @@ func (b repositoryName) GetRows_DropDown_sellSubitem(
 	sqlString := fmt.Sprintf("SELECT mainTable.* FROM sell_subitem a LEFT JOIN commodity b ON a.commodity_id = b.id LEFT JOIN commodity_product c ON b.id = c.commodity_id LEFT JOIN %s mainTable ON c.product_id = mainTable.id WHERE a.id = %s",
 		viewName,
 		sell_subitem_id)
-	rows, err := utils.DbQueryRows(db, sqlString, viewName, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, sqlString, viewName, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -310,7 +319,7 @@ func (b repositoryName) GetRows_DropDown_sellSubitem(
 }
 
 func (b repositoryName) GetRows_Component(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
@@ -330,7 +339,7 @@ func (b repositoryName) GetRows_Component(
 		subsql = fmt.Sprintf("(SELECT m1.* FROM "+tableName+" m1 LEFT JOIN product_component m2 ON m1.id = m2.parent_id WHERE m2.child_id = %s)", child_id)
 	}
 
-	rows, err := utils.DbQueryRows(db, "", subsql, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", subsql, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -351,7 +360,7 @@ func (b repositoryName) GetRows_Component(
 }
 
 func (b repositoryName) GetRows_ByCommodity(
-	db *sql.DB,
+	mydb models.MyDb,
 	pagination models.Pagination, // 需要返回总页数
 	searchTerms map[string]string,
 	userId int) (items []modelName, returnPagination models.Pagination, err error) {
@@ -364,7 +373,7 @@ func (b repositoryName) GetRows_ByCommodity(
 	// 包括商品的元产品（避免用户迷惑，但还是需要标注出来）
 	subsql := fmt.Sprintf("(SELECT m1.* FROM "+tableName+" m1 LEFT JOIN commodity_product m2 ON m1.id = m2.product_id WHERE m2.commodity_id = %s)", commodity_id)
 
-	rows, err := utils.DbQueryRows(db, "", subsql, &pagination, searchTerms, item)
+	rows, err := utils.DbQueryRows(mydb, "", subsql, &pagination, searchTerms, item)
 
 	if err != nil {
 		return []modelName{}, pagination, err
@@ -384,17 +393,27 @@ func (b repositoryName) GetRows_ByCommodity(
 	return items, pagination, nil
 }
 
-func (b repositoryName) Assemble(db *sql.DB, parent_id int, child_id int, userId int) error {
+func (b repositoryName) Assemble(mydb models.MyDb, parent_id int, child_id int, userId int) (err error) {
 
-	_, err := db.Exec("INSERT INTO product_component (parent_id, child_id) VALUES(?, ?);", parent_id, child_id)
+	if mydb.Tx != nil {
+		_, err = mydb.Tx.Exec("INSERT INTO product_component (parent_id, child_id) VALUES(?, ?);", parent_id, child_id)
+
+	} else {
+		_, err = mydb.Db.Exec("INSERT INTO product_component (parent_id, child_id) VALUES(?, ?);", parent_id, child_id)
+	}
 
 	return err
 
 }
 
-func (b repositoryName) Disassemble(db *sql.DB, parent_id int, child_id int, userId int) error {
+func (b repositoryName) Disassemble(mydb models.MyDb, parent_id int, child_id int, userId int) (err error) {
 
-	_, err := db.Exec("DELETE FROM product_component WHERE parent_id = ? AND child_id=?;", parent_id, child_id)
+	if mydb.Tx != nil {
+		_, err = mydb.Tx.Exec("DELETE FROM product_component WHERE parent_id = ? AND child_id=?;", parent_id, child_id)
+
+	} else {
+		_, err = mydb.Db.Exec("DELETE FROM product_component WHERE parent_id = ? AND child_id=?;", parent_id, child_id)
+	}
 
 	return err
 }

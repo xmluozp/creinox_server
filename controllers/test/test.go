@@ -13,6 +13,7 @@ import (
 	"github.com/gobuffalo/nulls"
 	"github.com/gorilla/mux"
 	"github.com/xmluozp/creinox_server/auth"
+	"github.com/xmluozp/creinox_server/models"
 	"github.com/xmluozp/creinox_server/utils"
 )
 
@@ -23,31 +24,31 @@ type Controller struct{}
 var authName = ""
 
 // =============================================== basic CRUD
-func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
 }
 
-func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItems_DropDown(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
 }
 
-func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_GetItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
 }
 
-func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
 }
 
-func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
 }
 
-func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
 }
 
-func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func (c Controller) C_Print(w http.ResponseWriter, r *http.Request, mydb models.MyDb) {
 
 }
 
@@ -56,8 +57,86 @@ type TestModel struct {
 	Money nulls.Int    `json:"money"`
 }
 
+type MyDbModel struct {
+	Db *sql.DB
+	Tx *sql.Tx
+}
+
+type MakeErr struct {
+	Test *sql.Tx
+}
+
 // =============================================== HTTP REQUESTS
-func (c Controller) Test(db *sql.DB) http.HandlerFunc {
+
+// ===========================================================事务回滚
+func (c Controller) TestTx(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		params := mux.Vars(r)
+		v, _ := params["v"]
+
+		mydb := MyDbModel{Db: db}
+
+		// 初始值
+		result, err := mydb.Db.Exec(`
+			UPDATE product SET name = ?
+			WHERE id = 16538
+		`, "begin")
+
+		tx, err := db.Begin()
+		defer tx.Rollback()
+
+		mydb.Tx = tx
+
+		result, err = mydb.Tx.Exec(`
+			UPDATE product SET name = ?
+			WHERE id = 16538
+		`, v)
+
+		result, err = mydb.Tx.Exec(`
+			UPDATE product SET name = ?
+			WHERE id = 16538
+		`, v+"jjj")
+
+		// =============================== 制造一个错误
+		// me := MakeErr{}
+		// result, err = db.Exec(`
+		// 	lkjlkjlkj
+		// `, v+"jjj")
+
+		// if err != nil {
+		// 	fmt.Println("出错了")
+		// 	return
+		// }
+		// ===============================
+
+		// result, err = mydb.Tx.Exec(`
+		// 	UPDATE product SET name = ?
+		// 	WHERE id = 16538
+		// `, v+"kkk")
+
+		result, err = PassTx(mydb, v)
+
+		tx.Commit()
+
+		fmt.Println("mydb:", mydb)
+
+		fmt.Println("Test output:", result, err)
+	}
+}
+
+func PassTx(mydb MyDbModel, v string) (result sql.Result, err error) {
+
+	return mydb.Tx.Exec(`
+	UPDATE product SET name = ?
+	WHERE id = 16538
+	`, v+"kjk")
+}
+
+// ===========================================================事务回滚
+
+// =============================================== HTTP REQUESTS
+func (c Controller) Test(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		params := mux.Vars(r)
@@ -74,7 +153,7 @@ func (c Controller) Test(db *sql.DB) http.HandlerFunc {
 }
 
 // 测试提交http请求
-func (c Controller) TestApp(db *sql.DB) http.HandlerFunc {
+func (c Controller) TestApp(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// ====================================================== 申请
@@ -102,7 +181,7 @@ func (c Controller) TestApp(db *sql.DB) http.HandlerFunc {
 		req.Header = r.Header.Clone()
 
 		// 当前权限
-		pass, userId := auth.CheckAuth(db, w, r, "")
+		pass, userId := auth.CheckAuth(mydb, w, r, "")
 		fmt.Println("========当前权限")
 		fmt.Println(pass, "userId:", userId)
 
@@ -145,7 +224,7 @@ func (c Controller) TestApp(db *sql.DB) http.HandlerFunc {
 }
 
 // 测试提交http请求
-func (c Controller) TestAppReceive(db *sql.DB) http.HandlerFunc {
+func (c Controller) TestAppReceive(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Println("==================第二层")
@@ -155,7 +234,7 @@ func (c Controller) TestAppReceive(db *sql.DB) http.HandlerFunc {
 
 		fmt.Println("==================解开")
 
-		pass, userId := auth.CheckAuth(db, w, r, "")
+		pass, userId := auth.CheckAuth(mydb, w, r, "")
 		fmt.Println("========确认以后审批人权限")
 		fmt.Println(pass, "userId:", userId)
 
