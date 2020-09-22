@@ -77,7 +77,7 @@ func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (mo
 
 	// =========================== 生成 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
-	voucherItem1, voucherItem2 := b.getVoucher(mydb, item)
+	voucherItem1, voucherItem2 := b.getVoucher(item)
 	_, err = financialVoucherRepo.AddRow(mydb, voucherItem1, userId)
 	_, err = financialVoucherRepo.AddRow(mydb, voucherItem2, userId)
 
@@ -108,7 +108,7 @@ func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) 
 
 	// =========================== 修改 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
-	debit, credit := b.getVoucher(mydb, item)
+	debit, credit := b.getVoucher(item)
 	fmt.Println("更新合同后更新凭证", debit, credit)
 	_, err = financialVoucherRepo.UpdateVoucher(mydb, debit, credit, userId)
 
@@ -137,7 +137,7 @@ func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interfa
 
 	// =========================== 删除 voucher
 	financialVoucherRepo := financialVoucherRepo.Repository{}
-	voucherItem1, voucherItem2 := b.getVoucher(mydb, item)
+	voucherItem1, voucherItem2 := b.getVoucher(item)
 	_, err = financialVoucherRepo.DeleteVoucher(mydb, voucherItem1.Resource_code.String, userId)
 	_, err = financialVoucherRepo.DeleteVoucher(mydb, voucherItem2.Resource_code.String, userId)
 
@@ -193,7 +193,7 @@ func (b repositoryName) GetRows_DropDown(
 }
 
 // 合同修改的时候，价格会变动，所以需要同步票据里的价格。以下根据resource code和item生成需要修改的票据里的value
-func (b repositoryName) getVoucher(mydb models.MyDb, item modelName) (debit models.FinancialVoucher, credit models.FinancialVoucher) {
+func (b repositoryName) getVoucher(item modelName) (debit models.FinancialVoucher, credit models.FinancialVoucher) {
 
 	// 返回的item1是借，item2是贷
 	Debit_financialLedger_id := enums.FinancialLedgerType.UnDecided

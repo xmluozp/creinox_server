@@ -332,7 +332,7 @@ func (b repositoryName) sideEffectsReverse(mydb models.MyDb, item modelName, use
 	financialAccountItem, err := financialAccountRepo.GetRow(mydb, item.FinancialAccount_id.Int, userId)
 
 	if err != nil {
-		fmt.Println("连锁反应取账号合同出错", err)
+		fmt.Println("reverse side effect 连锁反应取账号合同出错", err)
 		return err
 	}
 	oldBalance := financialAccountItem.Balance.Float32
@@ -386,6 +386,7 @@ func (b repositoryName) sideEffects(mydb models.MyDb, item modelName, userId int
 		orderForm.PayablePaid = nulls.NewFloat32(item.Amount_out.Float32 + orderForm.PayablePaid.Float32)
 
 		_, err = orderFormRepo.UpdateRow(mydb, orderForm, userId)
+		fmt.Println("=====update row?")
 
 		if err != nil {
 			fmt.Println("更新合同出错", err)
@@ -398,7 +399,7 @@ func (b repositoryName) sideEffects(mydb models.MyDb, item modelName, userId int
 	financialAccountItem, err := financialAccountRepo.GetRow(mydb, item.FinancialAccount_id.Int, userId)
 
 	if err != nil {
-		fmt.Println("连锁反应取账号合同出错", err)
+		fmt.Println("side effect 连锁反应取账号合同出错", err)
 		return err
 	}
 	oldBalance := financialAccountItem.Balance.Float32

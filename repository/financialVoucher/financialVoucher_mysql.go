@@ -199,13 +199,13 @@ func (b repositoryName) UpdateVoucher(mydb models.MyDb, debit modelName, credit 
 	sqlCredit := fmt.Sprintf(sqlstr, tableName, credit.FinancialLedger_id.Int, credit.Resource_code.String)
 	sqlDebit := fmt.Sprintf(sqlstr, tableName, debit.FinancialLedger_id.Int, debit.Resource_code.String)
 
-	rowDebit := utils.DbQueryRow(mydb, sqlCredit, tableName, 0, debit)
-	rowCredit := utils.DbQueryRow(mydb, sqlDebit, tableName, 0, credit)
-
 	var idDebit int
 	var idCredit int
 
+	rowDebit := utils.DbQueryRow(mydb, sqlCredit, tableName, 0, debit)
 	err = rowDebit.Scan(&idDebit)
+
+	rowCredit := utils.DbQueryRow(mydb, sqlDebit, tableName, 0, credit)
 	err = rowCredit.Scan(&idCredit)
 
 	if err != nil {
