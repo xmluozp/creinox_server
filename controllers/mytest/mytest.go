@@ -1,4 +1,4 @@
-package testController
+package mytestController
 
 import (
 	"bytes"
@@ -69,7 +69,7 @@ type MakeErr struct {
 // =============================================== HTTP REQUESTS
 
 // ===========================================================事务回滚
-func (c Controller) TestTx(db *sql.DB) http.HandlerFunc {
+func (c Controller) MytestTx(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		params := mux.Vars(r)
@@ -136,7 +136,7 @@ func PassTx(mydb MyDbModel, v string) (result sql.Result, err error) {
 // ===========================================================事务回滚
 
 // =============================================== HTTP REQUESTS
-func (c Controller) Test(mydb models.MyDb) http.HandlerFunc {
+func (c Controller) Mytest(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		params := mux.Vars(r)
@@ -153,7 +153,7 @@ func (c Controller) Test(mydb models.MyDb) http.HandlerFunc {
 }
 
 // 测试提交http请求
-func (c Controller) TestApp(mydb models.MyDb) http.HandlerFunc {
+func (c Controller) MytestApp(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// ====================================================== 申请
@@ -224,7 +224,7 @@ func (c Controller) TestApp(mydb models.MyDb) http.HandlerFunc {
 }
 
 // 测试提交http请求
-func (c Controller) TestAppReceive(mydb models.MyDb) http.HandlerFunc {
+func (c Controller) MytestAppReceive(mydb models.MyDb) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		fmt.Println("==================第二层")
@@ -245,4 +245,8 @@ func (c Controller) TestAppReceive(mydb models.MyDb) http.HandlerFunc {
 		// 看权限
 
 	}
+}
+
+func Hello() string {
+	return "Hello, world"
 }

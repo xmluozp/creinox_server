@@ -2,7 +2,6 @@ package buySubitemRepository
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -87,17 +86,13 @@ func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (mo
 	}
 
 	// 记录日志
-	var mapBefore map[string]interface{}
-	mapAfter, _ := b.GetPrintSource(mydb, item.ID.Int, userId)
 	newItem, _ := b.GetRow(mydb, item.ID.Int, userId)
-	b.ToUserLog(mydb, enums.LogActions["c"], mapBefore, mapAfter, newItem, userId)
+	b.ToUserLog(mydb, enums.LogActions["c"], newItem, userId)
 
 	return item, errId
 }
 
 func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) (int64, error) {
-
-	mapBefore, _ := b.GetPrintSource(mydb, item.ID.Int, userId)
 
 	// 更新相应订单的总金额. 取出order_form_id
 	order_form_id, err := b.getOrderFormId(mydb, item.ID.Int)
@@ -126,16 +121,13 @@ func (b repositoryName) UpdateRow(mydb models.MyDb, item modelName, userId int) 
 	}
 
 	// 记录日志
-	mapAfter, _ := b.GetPrintSource(mydb, item.ID.Int, userId)
 	newItem, _ := b.GetRow(mydb, item.ID.Int, userId)
-	b.ToUserLog(mydb, enums.LogActions["u"], mapBefore, mapAfter, newItem, userId)
+	b.ToUserLog(mydb, enums.LogActions["u"], newItem, userId)
 
 	return rowsUpdated, err
 }
 
 func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interface{}, error) {
-
-	mapBefore, _ := b.GetPrintSource(mydb, id, userId)
 
 	// 更新相应订单的总金额. 取出order_form_id
 	order_form_id, err := b.getOrderFormId(mydb, id)
@@ -169,8 +161,7 @@ func (b repositoryName) DeleteRow(mydb models.MyDb, id int, userId int) (interfa
 	}
 
 	// 记录日志
-	var mapAfter map[string]interface{}
-	b.ToUserLog(mydb, enums.LogActions["d"], mapBefore, mapAfter, item, userId)
+	b.ToUserLog(mydb, enums.LogActions["d"], item, userId)
 
 	return item, err
 }
@@ -285,7 +276,7 @@ func (b repositoryName) UpdateTotalPrice(mydb models.MyDb, order_form_id int, us
 	return err
 }
 
-func (b repositoryName) ToUserLog(mydb models.MyDb, action string, before map[string]interface{}, after map[string]interface{}, item modelName, userId int) {
+func (b repositoryName) ToUserLog(mydb models.MyDb, action string, item modelName, userId int) {
 
 	memo := fmt.Sprintf(`
 		ID:			%d
@@ -299,15 +290,10 @@ func (b repositoryName) ToUserLog(mydb models.MyDb, action string, before map[st
 		item.Amount.Int,
 		item.UnitPrice.Float32*float32(item.Amount.Int))
 
-	logBefore, _ := json.Marshal(before)
-	logAfter, _ := json.Marshal(after)
-
 	var userLog models.UserLog
 	userLog.Type = nulls.NewString(tableName)
 	userLog.FunctionName = nulls.NewString(action)
 	userLog.Memo = nulls.NewString(memo)
-	userLog.SnapshotBefore = nulls.NewString(string(logBefore))
-	userLog.SnapshotAfter = nulls.NewString(string(logAfter))
 
 	userLogRepository.Repository{}.AddRow(mydb, userLog, userId)
 }

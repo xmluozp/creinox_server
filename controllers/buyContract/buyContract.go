@@ -103,6 +103,7 @@ func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, mydb model
 	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 
 	if err != nil {
+		utils.Log(err, "事务运行失败")
 		err = tx.Rollback()
 	} else {
 		err = tx.Commit()
@@ -133,6 +134,7 @@ func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, mydb mo
 	status, returnValue, _, err := utils.GetFunc_UpdateWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 
 	if err != nil {
+		utils.Log(err, "事务运行失败")
 		err = tx.Rollback()
 	} else {
 		err = tx.Commit()
@@ -163,6 +165,7 @@ func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, mydb mo
 	status, returnValue, _, err := utils.GetFunc_DeleteWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 
 	if err != nil {
+		utils.Log(err, "事务运行失败")
 		err = tx.Rollback()
 	} else {
 		err = tx.Commit()

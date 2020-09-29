@@ -29,7 +29,7 @@ import (
 
 	mouldContractController "github.com/xmluozp/creinox_server/controllers/mouldContract"
 
-	testController "github.com/xmluozp/creinox_server/controllers/test"
+	mytestController "github.com/xmluozp/creinox_server/controllers/mytest"
 	textTemplateController "github.com/xmluozp/creinox_server/controllers/textTemplate"
 
 	imageController "github.com/xmluozp/creinox_server/controllers/imagedata"
@@ -47,11 +47,11 @@ import (
 func Routing(router *mux.Router, mydb models.MyDb) {
 
 	// ------------ test
-	testController := testController.Controller{}
-	router.HandleFunc("/api/test/{v}", testController.Test(mydb)).Methods("GET")                      // 加个api避免混淆
-	router.HandleFunc("/api/testApp/{v}", testController.TestApp(mydb)).Methods("POST")               // 加个api避免混淆
-	router.HandleFunc("/api/testAppReceive/{v}", testController.TestAppReceive(mydb)).Methods("POST") // 加个api避免混淆
-	router.HandleFunc("/api/testTx/{v}", testController.TestTx(mydb.Db)).Methods("GET")               // 加个api避免混淆
+	mytestController := mytestController.Controller{}
+	router.HandleFunc("/api/test/{v}", mytestController.Mytest(mydb)).Methods("GET")                      // 加个api避免混淆
+	router.HandleFunc("/api/testApp/{v}", mytestController.MytestApp(mydb)).Methods("POST")               // 加个api避免混淆
+	router.HandleFunc("/api/testAppReceive/{v}", mytestController.MytestAppReceive(mydb)).Methods("POST") // 加个api避免混淆
+	router.HandleFunc("/api/testTx/{v}", mytestController.MytestTx(mydb.Db)).Methods("GET")               // 加个api避免混淆
 
 	// ------------ application 申请(泛申请，暂未开发)
 	applicationController := applicationController.Controller{}
