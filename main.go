@@ -65,7 +65,10 @@ func main() {
 	//第一个是端口，第二个是响应端口用的function。这里是router
 
 	//解决cors用
-	headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
+
+	
+	headers := handlers.AllowedHeaders([]string{"Access-Control-Allow-Origin", "Content-Type", "Authorization"})
+	// headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	methods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE"})
 	// origins := handlers.AllowedOrigins([]string{"*"}) // domain
 	origins := handlers.AllowedOrigins([]string{_CLIENTURL}) // domain

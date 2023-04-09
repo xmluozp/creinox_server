@@ -24,8 +24,9 @@ import (
 var validate *validator.Validate
 
 func SendJson(w http.ResponseWriter, status int, data models.JsonRowsReturn, err error) {
+
 	if err != nil {
-		Log(err, data.Info)
+		Log(err, "SendJson出错 ", data.Info, status)
 		w.WriteHeader(status)
 	} else {
 		w.Header().Set("Content-Type", "application/json")

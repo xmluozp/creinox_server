@@ -101,10 +101,10 @@ func (c Controller) C_AddItem(w http.ResponseWriter, r *http.Request, mydb model
 	status, returnValue, _, err := utils.GetFunc_AddWithHTTPReturn(mydb, w, r, reflect.TypeOf(item), repo, userId)
 
 	if err != nil {
-		utils.Log(err, "事务运行失败")
-		err = tx.Rollback()
+		utils.Log(err, "事务运行失败", status)
+		tx.Rollback()
 	} else {
-		err = tx.Commit()
+		tx.Commit()
 	}
 
 	utils.SendJson(w, status, returnValue, err)
@@ -133,9 +133,9 @@ func (c Controller) C_UpdateItem(w http.ResponseWriter, r *http.Request, mydb mo
 
 	if err != nil {
 		utils.Log(err, "事务运行失败")
-		err = tx.Rollback()
+		tx.Rollback()
 	} else {
-		err = tx.Commit()
+		tx.Commit()
 	}
 
 	utils.SendJson(w, status, returnValue, err)
@@ -164,9 +164,9 @@ func (c Controller) C_DeleteItem(w http.ResponseWriter, r *http.Request, mydb mo
 
 	if err != nil {
 		utils.Log(err, "事务运行失败")
-		err = tx.Rollback()
+		tx.Rollback()
 	} else {
-		err = tx.Commit()
+		tx.Commit()
 	}
 
 	utils.SendJson(w, status, returnValue, err)

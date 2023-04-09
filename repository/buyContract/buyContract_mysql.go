@@ -104,8 +104,9 @@ func (b repositoryName) AddRow(mydb models.MyDb, item modelName, userId int) (mo
 	result, errInsert := utils.DbQueryInsert(mydb, tableName, item)
 
 	if errInsert != nil {
-		orderFormRepo.DeleteRow(mydb, orderItem.ID.Int, userId)
-		utils.Log(nil, "添加合同详情失败，删除合同")
+		// orderFormRepo.DeleteRow(mydb, orderItem.ID.Int, userId)
+		// utils.Log(nil, "添加合同详情失败，删除合同")
+		utils.Log(errInsert, "添加合同详情失败")
 		return item, errInsert
 	}
 
